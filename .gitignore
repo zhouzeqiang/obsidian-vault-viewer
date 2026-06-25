@@ -2,3 +2,5 @@ node_modules/
 main.js.map
 *.hot-update.js
 *.hot-update.json
+.omo/
+.superpowers/
