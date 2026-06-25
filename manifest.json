@@ -1,0 +1,10 @@
+{
+  "id": "vault-viewer",
+  "name": "Vault Viewer",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Browse all file types, filter/sort, and preview Office documents in Obsidian",
+  "author": "",
+  "authorUrl": "",
+  "isDesktopOnly": true
+}
