@@ -49,7 +49,7 @@ export class VaultViewerSettingTab extends PluginSettingTab {
             this.plugin.settings.theme = val;
             await this.plugin.saveSettings();
             setIconTheme(val);
-            this.plugin.activateView(true);
+            void this.plugin.activateView(true);
           })
       );
 
@@ -66,8 +66,8 @@ export class VaultViewerSettingTab extends PluginSettingTab {
             this.plugin.settings.lang = val;
             await this.plugin.saveSettings();
             setLang(val);
-            this.display();
-            this.plugin.activateView(true);
+            (this as unknown as { display(): void }).display();
+            void this.plugin.activateView(true);
           })
       );
 

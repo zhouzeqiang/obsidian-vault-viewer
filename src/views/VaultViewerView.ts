@@ -233,8 +233,8 @@ export class VaultViewerView extends ItemView {
       try {
         await this.app.vault.create(filePath, "");
         this.renderTree();
-        const file = this.app.vault.getAbstractFileByPath(filePath) as TFile;
-        if (file) this.locateInTree(file);
+        const file = this.app.vault.getAbstractFileByPath(filePath);
+        if (file instanceof TFile) this.locateInTree(file);
         new Notice(t("notice.fileCreated", `${name}.md`));
       } catch (e) {
         new Notice(t("notice.createFailed", (e as Error).message));
@@ -291,7 +291,7 @@ export class VaultViewerView extends ItemView {
   // ─── File list toolbar (top row, buttons on right) ───
 
   private buildRightToolbar(): void {
-    const spacer = this.toolbarEl.createDiv({ cls: "vault-viewer-toolbar-spacer" });
+    this.toolbarEl.createDiv({ cls: "vault-viewer-toolbar-spacer" });
 
     this.eyeToggleEl = this.toolbarEl.createEl("button", {
       cls: "vault-viewer-toolbar-icon-btn",
@@ -380,7 +380,7 @@ export class VaultViewerView extends ItemView {
       });
     }
 
-    const sep = dropdown.createDiv({ cls: "vault-viewer-sort-separator" });
+    dropdown.createDiv({ cls: "vault-viewer-sort-separator" });
 
     const resetEl = dropdown.createDiv({ cls: "vault-viewer-sort-option" });
     resetEl.createSpan({ text: t("sort.reset") });
@@ -417,7 +417,7 @@ export class VaultViewerView extends ItemView {
     this.treeEl.empty();
 
     const rootFolder = this.app.vault.getAbstractFileByPath("/");
-    if (!rootFolder) return;
+    if (!(rootFolder instanceof TFolder)) return;
 
     const rootRow = this.treeEl.createDiv({
       cls: "vault-viewer-tree-row vault-viewer-folder vault-viewer-folder-root",
@@ -431,12 +431,12 @@ export class VaultViewerView extends ItemView {
     const vaultName = this.app.vault.getName() || "Vault";
     rootRow.createSpan({ cls: "vault-viewer-tree-name", text: vaultName });
 
-    const rootChildren = (rootFolder as TFolder).children;
+    const rootChildren = rootFolder.children;
     const mdCount = rootChildren
-      ? rootChildren.filter((c: TAbstractFile) => "extension" in c && (c as TFile).extension === "md").length
+      ? rootChildren.filter((c): c is TFile => c instanceof TFile && c.extension === "md").length
       : 0;
     const otherCount = rootChildren
-      ? rootChildren.filter((c: TAbstractFile) => "extension" in c && (c as TFile).extension && (c as TFile).extension !== "md").length
+      ? rootChildren.filter((c): c is TFile => c instanceof TFile && c.extension !== "md").length
       : 0;
     rootRow.createSpan({ cls: "vault-viewer-tree-count", text: `md ${mdCount} / other ${otherCount}` });
 
@@ -453,14 +453,14 @@ export class VaultViewerView extends ItemView {
       icon.empty();
       setLucideIcon(icon, isHidden ? "FolderOpenDot" : "Folder");
       this.highlightRow(rootRow);
-      this.onFolderClick(rootFolder as TFolder);
+      this.onFolderClick(rootFolder);
     });
     rootRow.addEventListener("contextmenu", (e) => {
-      this.showTreeContextMenu(e, rootFolder as TFolder, true);
+      this.showTreeContextMenu(e, rootFolder, true);
     });
     rootRow.draggable = true;
     rootRow.addEventListener("dragstart", (ev: DragEvent) => {
-      ev.dataTransfer?.setData("text/plain", (rootFolder as TFolder).path);
+      ev.dataTransfer?.setData("text/plain", rootFolder.path);
       if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
     });
     rootRow.addEventListener("dragover", (ev: DragEvent) => {
@@ -477,10 +477,10 @@ export class VaultViewerView extends ItemView {
       const srcPath = ev.dataTransfer?.getData("text/plain");
       if (!srcPath) return;
       if (srcPath === "/") return;
-      this.moveTreeItem(srcPath, rootFolder as TFolder);
+      this.moveTreeItem(srcPath, rootFolder);
     });
 
-    this.renderFolder(rootFolder as TFolder, childrenEl, 1);
+    this.renderFolder(rootFolder, childrenEl, 1);
     this.restoreExpandedState(savedExpanded);
   }
 
@@ -517,10 +517,10 @@ export class VaultViewerView extends ItemView {
       setLucideIcon(folderIcon, "Folder");
       row.createSpan({ cls: "vault-viewer-tree-name", text: subfolder.name });
       const folderMdCount = subfolder.children
-        ? subfolder.children.filter((c: TAbstractFile) => "extension" in c && (c as TFile).extension === "md").length
+        ? subfolder.children.filter((c): c is TFile => c instanceof TFile && c.extension === "md").length
         : 0;
       const folderOtherCount = subfolder.children
-        ? subfolder.children.filter((c: TAbstractFile) => "extension" in c && (c as TFile).extension && (c as TFile).extension !== "md").length
+        ? subfolder.children.filter((c): c is TFile => c instanceof TFile && c.extension !== "md").length
         : 0;
       row.createSpan({ cls: "vault-viewer-tree-count", text: `md ${folderMdCount} / other ${folderOtherCount}` });
 
@@ -614,7 +614,7 @@ export class VaultViewerView extends ItemView {
   }
 
   private onFileClick(file: TFile): void {
-    this.app.workspace.openLinkText(file.path, "/", false);
+    void this.app.workspace.openLinkText(file.path, "/", false);
 
     if (file.extension === "md") {
       this.currentFile = file;
@@ -825,7 +825,7 @@ export class VaultViewerView extends ItemView {
         return;
       }
     }
-    this.app.workspace.openLinkText(link.file.path, "/", false);
+    void this.app.workspace.openLinkText(link.file.path, "/", false);
     if (link.file.extension === "md") {
       this.renderFileListModeB(link.file);
       this.updateDynamicToolbar();
@@ -893,7 +893,7 @@ export class VaultViewerView extends ItemView {
     if (lastSep <= 0) {
       // Item is at root — just show root
       const root = this.app.vault.getAbstractFileByPath("/");
-      if (root && "children" in root) this.onFolderClick(root as TFolder);
+      if (root instanceof TFolder) this.onFolderClick(root);
       return;
     }
     const parentPath = item.path.slice(0, lastSep);
@@ -928,7 +928,7 @@ export class VaultViewerView extends ItemView {
 
     // Switch file list to parent folder
     const target = this.app.vault.getAbstractFileByPath(`/${accumulated}`);
-    if (target && "children" in target) this.onFolderClick(target as TFolder);
+    if (target instanceof TFolder) this.onFolderClick(target);
   }
 
   private expandTreeNode(row: HTMLElement): void {
@@ -981,7 +981,7 @@ export class VaultViewerView extends ItemView {
       { icon: "Paperclip", text: t("context.openExternal"), action: () => {
         const electron = getElectron();
         if (electron?.shell) {
-          electron.shell.openPath(fullPath);
+          void electron.shell.openPath(fullPath);
         } else {
           window.open(fullPath);
         }
@@ -1083,7 +1083,7 @@ export class VaultViewerView extends ItemView {
     copyBtn.createSpan({ text: ` ${t("treeContext.copyPath")}` });
     copyBtn.addEventListener("click", () => {
       this.closeTreeContextMenu();
-      navigator.clipboard.writeText(item.path);
+      void navigator.clipboard.writeText(item.path);
       new Notice(t("notice.pathCopied"));
     });
 
@@ -1122,10 +1122,9 @@ export class VaultViewerView extends ItemView {
   private onTreeItemDelete(item: TAbstractFile, isFolder: boolean): void {
     const prefix = isFolder ? t("modal.folderName") : t("modal.fileName");
     const name = `${prefix} "${item.name}"`;
-    if (isFolder) {
-      const folder = item as TFolder;
-      if (!folder.children) return;
-      const nonEmpty = folder.children.filter((c: TAbstractFile) => "children" in c || "extension" in c);
+    if (isFolder && item instanceof TFolder) {
+      if (!item.children) return;
+      const nonEmpty = item.children.filter((c: TAbstractFile) => c instanceof TFolder || c instanceof TFile);
       if (nonEmpty.length > 0) {
         new Notice(t("notice.cantDeleteNonEmpty", name), 5000);
         return;
@@ -1133,7 +1132,7 @@ export class VaultViewerView extends ItemView {
     }
     new ConfirmModal(this.app, t("modal.confirmDelete"), t("modal.confirmDeleteBody", name), () => {
       try {
-        this.app.fileManager.trashFile(item);
+        void this.app.fileManager.trashFile(item);
         new Notice(isFolder ? t("notice.folderDeleted", name) : t("notice.fileDeleted", name));
         const savedExpanded = this.saveExpandedState();
         this.renderTree();
@@ -1156,7 +1155,7 @@ export class VaultViewerView extends ItemView {
       : `${targetFolder.path}/${file.name}`;
     if (newPath === srcPath) return;
     try {
-      this.app.vault.rename(file, newPath);
+      void this.app.vault.rename(file, newPath);
       new Notice(`已移动到 ${targetFolder.name || "根目录"}`);
       const savedExpanded = this.saveExpandedState();
       this.renderTree();
@@ -1209,7 +1208,7 @@ export class VaultViewerView extends ItemView {
     this.updateDynamicToolbar();
   }
 
-  private getCurrentDisplayFiles(): any[] {
+  private getCurrentDisplayFiles(): TFile[] {
     if (!this.plugin.fileService) return [];
     if (this.currentMode === "directory") {
       const path = this.currentFolder ? this.currentFolder.path : "/";
@@ -1218,13 +1217,13 @@ export class VaultViewerView extends ItemView {
     } else if (this.currentFile && this.plugin.linkService) {
       return this.plugin.linkService
         .getForwardLinks(this.currentFile)
-        .filter((l) => l.file)
+        .filter((l): l is ResolvedLink & { file: TFile } => !!l.file)
         .map((l) => l.file);
     }
     return [];
   }
 
-  private getDisplayedFilesForFilters(): any[] {
+  private getDisplayedFilesForFilters(): TFile[] {
     if (!this.plugin.fileService) return [];
     if (this.currentMode === "directory") {
       const path = this.currentFolder ? this.currentFolder.path : "/";
@@ -1239,7 +1238,7 @@ export class VaultViewerView extends ItemView {
     } else if (this.currentFile && this.plugin.linkService) {
       return this.plugin.linkService
         .getForwardLinks(this.currentFile)
-        .filter((l) => l.file)
+        .filter((l): l is ResolvedLink & { file: TFile } => !!l.file)
         .map((l) => l.file);
     }
     return [];
@@ -1252,7 +1251,7 @@ export class VaultViewerView extends ItemView {
         void this.plugin.openOfficeFile(file);
       }
     } else {
-      this.app.workspace.openLinkText(file.path, "/", false);
+      void this.app.workspace.openLinkText(file.path, "/", false);
     }
   }
 }

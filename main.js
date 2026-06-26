@@ -3092,7 +3092,7 @@ var VaultViewerSettingTab = class extends import_obsidian.PluginSettingTab {
         this.plugin.settings.theme = val;
         await this.plugin.saveSettings();
         setIconTheme(val);
-        this.plugin.activateView(true);
+        void this.plugin.activateView(true);
       })
     );
     new import_obsidian.Setting(containerEl).setName(t("settings.lang")).setDesc(t("settings.langDesc")).addDropdown(
@@ -3101,7 +3101,7 @@ var VaultViewerSettingTab = class extends import_obsidian.PluginSettingTab {
         await this.plugin.saveSettings();
         setLang(val);
         this.display();
-        this.plugin.activateView(true);
+        void this.plugin.activateView(true);
       })
     );
     new import_obsidian.Setting(containerEl).setName(t("settings.defaultSort")).setHeading();
@@ -3170,7 +3170,7 @@ var InputModal = class extends import_obsidian2.Modal {
     });
     inputEl.addEventListener("keydown", (e) => {
       if (e.key === "Enter")
-        this.submit();
+        void this.submit();
     });
     inputEl.select();
     window.setTimeout(() => inputEl.focus(), 50);
@@ -3179,7 +3179,7 @@ var InputModal = class extends import_obsidian2.Modal {
       cls: "vault-viewer-input-btn mod-cta",
       text: "\u786E\u5B9A"
     });
-    okBtn.addEventListener("click", () => this.submit());
+    okBtn.addEventListener("click", () => void this.submit());
     const cancelBtn = btnContainer.createEl("button", {
       cls: "vault-viewer-input-btn",
       text: "\u53D6\u6D88"
@@ -3217,10 +3217,12 @@ var ConfirmModal = class extends import_obsidian3.Modal {
       cls: "vault-viewer-input-btn mod-cta",
       text: "\u786E\u8BA4\u5220\u9664"
     });
-    okBtn.addEventListener("click", async () => {
-      this.resolved = true;
-      await this.onConfirm();
-      this.close();
+    okBtn.addEventListener("click", () => {
+      void (async () => {
+        this.resolved = true;
+        await this.onConfirm();
+        this.close();
+      })();
     });
     const cancelBtn = btnContainer.createEl("button", {
       cls: "vault-viewer-input-btn",
@@ -3426,7 +3428,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
         await this.app.vault.create(filePath, "");
         this.renderTree();
         const file = this.app.vault.getAbstractFileByPath(filePath);
-        if (file)
+        if (file instanceof import_obsidian4.TFile)
           this.locateInTree(file);
         new import_obsidian4.Notice(t("notice.fileCreated", `${name}.md`));
       } catch (e) {
@@ -3479,7 +3481,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
   }
   // ─── File list toolbar (top row, buttons on right) ───
   buildRightToolbar() {
-    const spacer = this.toolbarEl.createDiv({ cls: "vault-viewer-toolbar-spacer" });
+    this.toolbarEl.createDiv({ cls: "vault-viewer-toolbar-spacer" });
     this.eyeToggleEl = this.toolbarEl.createEl("button", {
       cls: "vault-viewer-toolbar-icon-btn",
       attr: { title: t("toolbar.toggleTree") }
@@ -3560,7 +3562,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
         this.refreshFileList();
       });
     }
-    const sep = dropdown.createDiv({ cls: "vault-viewer-sort-separator" });
+    dropdown.createDiv({ cls: "vault-viewer-sort-separator" });
     const resetEl = dropdown.createDiv({ cls: "vault-viewer-sort-option" });
     resetEl.createSpan({ text: t("sort.reset") });
     resetEl.addEventListener("click", () => {
@@ -3583,7 +3585,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     const savedExpanded = this.saveExpandedState();
     this.treeEl.empty();
     const rootFolder = this.app.vault.getAbstractFileByPath("/");
-    if (!rootFolder)
+    if (!(rootFolder instanceof import_obsidian4.TFolder))
       return;
     const rootRow = this.treeEl.createDiv({
       cls: "vault-viewer-tree-row vault-viewer-folder vault-viewer-folder-root"
@@ -3596,8 +3598,8 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     const vaultName = this.app.vault.getName() || "Vault";
     rootRow.createSpan({ cls: "vault-viewer-tree-name", text: vaultName });
     const rootChildren = rootFolder.children;
-    const mdCount = rootChildren ? rootChildren.filter((c) => "extension" in c && c.extension === "md").length : 0;
-    const otherCount = rootChildren ? rootChildren.filter((c) => "extension" in c && c.extension && c.extension !== "md").length : 0;
+    const mdCount = rootChildren ? rootChildren.filter((c) => c instanceof import_obsidian4.TFile && c.extension === "md").length : 0;
+    const otherCount = rootChildren ? rootChildren.filter((c) => c instanceof import_obsidian4.TFile && c.extension !== "md").length : 0;
     rootRow.createSpan({ cls: "vault-viewer-tree-count", text: `md ${mdCount} / other ${otherCount}` });
     const childrenEl = this.treeEl.createDiv({ cls: "vault-viewer-children" });
     childrenEl.style.setProperty("--vv-line-left", `${0 * 12 + 12}px`);
@@ -3671,8 +3673,8 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       const folderIcon = row.createSpan({ cls: "vault-viewer-folder-icon" });
       setLucideIcon(folderIcon, "Folder");
       row.createSpan({ cls: "vault-viewer-tree-name", text: subfolder.name });
-      const folderMdCount = subfolder.children ? subfolder.children.filter((c) => "extension" in c && c.extension === "md").length : 0;
-      const folderOtherCount = subfolder.children ? subfolder.children.filter((c) => "extension" in c && c.extension && c.extension !== "md").length : 0;
+      const folderMdCount = subfolder.children ? subfolder.children.filter((c) => c instanceof import_obsidian4.TFile && c.extension === "md").length : 0;
+      const folderOtherCount = subfolder.children ? subfolder.children.filter((c) => c instanceof import_obsidian4.TFile && c.extension !== "md").length : 0;
       row.createSpan({ cls: "vault-viewer-tree-count", text: `md ${folderMdCount} / other ${folderOtherCount}` });
       const childrenEl = parentEl.createDiv({ cls: "vault-viewer-children" });
       childrenEl.style.setProperty("--vv-line-left", `${depth * 12 + 12}px`);
@@ -3765,7 +3767,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     this.updateDynamicToolbar();
   }
   onFileClick(file) {
-    this.app.workspace.openLinkText(file.path, "/", false);
+    void this.app.workspace.openLinkText(file.path, "/", false);
     if (file.extension === "md") {
       this.currentFile = file;
       this.currentMode = "references";
@@ -3946,7 +3948,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
         return;
       }
     }
-    this.app.workspace.openLinkText(link.file.path, "/", false);
+    void this.app.workspace.openLinkText(link.file.path, "/", false);
     if (link.file.extension === "md") {
       this.renderFileListModeB(link.file);
       this.updateDynamicToolbar();
@@ -4018,7 +4020,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     const lastSep = item.path.lastIndexOf("/");
     if (lastSep <= 0) {
       const root = this.app.vault.getAbstractFileByPath("/");
-      if (root && "children" in root)
+      if (root instanceof import_obsidian4.TFolder)
         this.onFolderClick(root);
       return;
     }
@@ -4047,7 +4049,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     if (parentRow)
       this.highlightRow(parentRow);
     const target = this.app.vault.getAbstractFileByPath(`/${accumulated}`);
-    if (target && "children" in target)
+    if (target instanceof import_obsidian4.TFolder)
       this.onFolderClick(target);
   }
   expandTreeNode(row) {
@@ -4103,7 +4105,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       { icon: "Paperclip", text: t("context.openExternal"), action: () => {
         const electron = getElectron();
         if (electron == null ? void 0 : electron.shell) {
-          electron.shell.openPath(fullPath);
+          void electron.shell.openPath(fullPath);
         } else {
           window.open(fullPath);
         }
@@ -4203,7 +4205,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     copyBtn.createSpan({ text: ` ${t("treeContext.copyPath")}` });
     copyBtn.addEventListener("click", () => {
       this.closeTreeContextMenu();
-      navigator.clipboard.writeText(item.path);
+      void navigator.clipboard.writeText(item.path);
       new import_obsidian4.Notice(t("notice.pathCopied"));
     });
     menu.createDiv({ cls: "vault-viewer-context-separator" });
@@ -4239,11 +4241,10 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
   onTreeItemDelete(item, isFolder) {
     const prefix = isFolder ? t("modal.folderName") : t("modal.fileName");
     const name = `${prefix} "${item.name}"`;
-    if (isFolder) {
-      const folder = item;
-      if (!folder.children)
+    if (isFolder && item instanceof import_obsidian4.TFolder) {
+      if (!item.children)
         return;
-      const nonEmpty = folder.children.filter((c) => "children" in c || "extension" in c);
+      const nonEmpty = item.children.filter((c) => c instanceof import_obsidian4.TFolder || c instanceof import_obsidian4.TFile);
       if (nonEmpty.length > 0) {
         new import_obsidian4.Notice(t("notice.cantDeleteNonEmpty", name), 5e3);
         return;
@@ -4251,7 +4252,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     }
     new ConfirmModal(this.app, t("modal.confirmDelete"), t("modal.confirmDeleteBody", name), () => {
       try {
-        this.app.fileManager.trashFile(item);
+        void this.app.fileManager.trashFile(item);
         new import_obsidian4.Notice(isFolder ? t("notice.folderDeleted", name) : t("notice.fileDeleted", name));
         const savedExpanded = this.saveExpandedState();
         this.renderTree();
@@ -4272,7 +4273,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     if (newPath === srcPath)
       return;
     try {
-      this.app.vault.rename(file, newPath);
+      void this.app.vault.rename(file, newPath);
       new import_obsidian4.Notice(`\u5DF2\u79FB\u52A8\u5230 ${targetFolder.name || "\u6839\u76EE\u5F55"}`);
       const savedExpanded = this.saveExpandedState();
       this.renderTree();
@@ -4331,7 +4332,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       const allFiles = this.plugin.fileService.getAllFiles();
       return this.plugin.fileService.getDirectoryChildren(path, allFiles);
     } else if (this.currentFile && this.plugin.linkService) {
-      return this.plugin.linkService.getForwardLinks(this.currentFile).filter((l) => l.file).map((l) => l.file);
+      return this.plugin.linkService.getForwardLinks(this.currentFile).filter((l) => !!l.file).map((l) => l.file);
     }
     return [];
   }
@@ -4349,7 +4350,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
         this.plugin.settings.sortOrder
       );
     } else if (this.currentFile && this.plugin.linkService) {
-      return this.plugin.linkService.getForwardLinks(this.currentFile).filter((l) => l.file).map((l) => l.file);
+      return this.plugin.linkService.getForwardLinks(this.currentFile).filter((l) => !!l.file).map((l) => l.file);
     }
     return [];
   }
@@ -4360,7 +4361,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
         void this.plugin.openOfficeFile(file);
       }
     } else {
-      this.app.workspace.openLinkText(file.path, "/", false);
+      void this.app.workspace.openLinkText(file.path, "/", false);
     }
   }
 };
@@ -4403,7 +4404,7 @@ var OfficeView = class extends import_obsidian5.ItemView {
     openExternalBtn.addEventListener("click", () => {
       void this.openExternally();
     });
-    const title = actionBar.createSpan({
+    actionBar.createSpan({
       cls: "office-view-title",
       text: this.file.name
     });
@@ -4442,7 +4443,7 @@ var OfficeView = class extends import_obsidian5.ItemView {
       }
     } catch (e) {
     }
-    this.app.workspace.openLinkText(this.file.path, "/", false);
+    void this.app.workspace.openLinkText(this.file.path, "/", false);
   }
   async onClose() {
     this.contentEl.empty();

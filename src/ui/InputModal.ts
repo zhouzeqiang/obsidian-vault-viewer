@@ -28,7 +28,7 @@ export class InputModal extends Modal {
       this.result = inputEl.value;
     });
     inputEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") this.submit();
+      if (e.key === "Enter") void this.submit();
     });
     inputEl.select();
     window.setTimeout(() => inputEl.focus(), 50);
@@ -38,7 +38,7 @@ export class InputModal extends Modal {
       cls: "vault-viewer-input-btn mod-cta",
       text: "确定",
     });
-    okBtn.addEventListener("click", () => this.submit());
+    okBtn.addEventListener("click", () => void this.submit());
     const cancelBtn = btnContainer.createEl("button", {
       cls: "vault-viewer-input-btn",
       text: "取消",

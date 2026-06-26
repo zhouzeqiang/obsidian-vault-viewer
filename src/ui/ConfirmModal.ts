@@ -22,10 +22,12 @@ export class ConfirmModal extends Modal {
       cls: "vault-viewer-input-btn mod-cta",
       text: "确认删除",
     });
-    okBtn.addEventListener("click", async () => {
-      this.resolved = true;
-      await this.onConfirm();
-      this.close();
+    okBtn.addEventListener("click", () => {
+      void (async () => {
+        this.resolved = true;
+        await this.onConfirm();
+        this.close();
+      })();
     });
     const cancelBtn = btnContainer.createEl("button", {
       cls: "vault-viewer-input-btn",

@@ -107,7 +107,7 @@ export class OfficeRenderer {
           const td = tr.createEl("td", { text: val });
           if (cell?.style) {
             for (const [prop, value] of Object.entries(cell.style)) {
-              td.style.setProperty(prop, value as string);
+              td.style.setProperty(prop, value);
             }
           }
         }

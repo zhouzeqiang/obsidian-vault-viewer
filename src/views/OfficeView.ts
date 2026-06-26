@@ -51,7 +51,7 @@ export class OfficeView extends ItemView {
       void this.openExternally();
     });
 
-    const title = actionBar.createSpan({
+    actionBar.createSpan({
       cls: "office-view-title",
       text: this.file.name,
     });
@@ -93,11 +93,11 @@ export class OfficeView extends ItemView {
         await electron.shell.openPath(fullPath);
         return;
       }
-    } catch (e) {
+    } catch {
       // Electron not available
     }
 
-    this.app.workspace.openLinkText(this.file.path, "/", false);
+    void this.app.workspace.openLinkText(this.file.path, "/", false);
   }
 
   async onClose() {
