@@ -140,7 +140,7 @@ export class VaultViewerView extends ItemView {
         const delta = ev.clientY - startY;
         const newHeight = Math.max(40, startHeight + delta);
         this.treeEl.style.setProperty("height", `${newHeight}px`);
-        this.treeEl.style.setProperty("flex", "none");
+        this.treeEl.addClass("vault-viewer-tree-fixed");
       };
 
       const onMouseUp = () => {
@@ -227,13 +227,6 @@ export class VaultViewerView extends ItemView {
     });
     setLucideIcon(collapseBtn, "ChevronsDownUp");
     collapseBtn.addEventListener("click", () => this.collapseAllFolders());
-
-    const locateBtn = btnRow.createEl("button", {
-      cls: "vault-viewer-toolbar-icon-btn",
-      attr: { title: t("tree.locateCurrentFile") },
-    });
-    setLucideIcon(locateBtn, "Locate");
-    locateBtn.addEventListener("click", () => this.syncWithActiveEditor());
   }
 
   private onNewFile(): void {
@@ -430,9 +423,8 @@ export class VaultViewerView extends ItemView {
     if (!rootFolder) return;
 
     const rootRow = this.treeEl.createDiv({
-      cls: "vault-viewer-tree-row vault-viewer-folder",
+      cls: "vault-viewer-tree-row vault-viewer-folder vault-viewer-folder-root",
     });
-    rootRow.style.setProperty("padding-left", "4px");
     rootRow.dataset.path = "/";
 
     const toggle = rootRow.createSpan({ cls: "vault-viewer-toggle-icon" });

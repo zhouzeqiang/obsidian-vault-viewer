@@ -150,7 +150,7 @@ export function setLucideIcon(el: HTMLElement, name: string, size: number = 16):
   const themePaths = iconSets[currentTheme] || iconSets.default;
   const iconPath = themePaths[name];
   if (!iconPath) return;
-  
+
   const svgNS = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(svgNS, "svg");
   svg.setAttribute("width", String(size));
@@ -161,7 +161,16 @@ export function setLucideIcon(el: HTMLElement, name: string, size: number = 16):
   svg.setAttribute("stroke-width", "2");
   svg.setAttribute("stroke-linecap", "round");
   svg.setAttribute("stroke-linejoin", "round");
-  svg.setAttribute("style", "pointer-events:none");
-  svg.innerHTML = iconPath;
+  svg.setAttribute("class", "vv-icon");
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<svg xmlns="${svgNS}">${iconPath}</svg>`, "image/svg+xml");
+  const parsedSvg = doc.querySelector("svg");
+  if (parsedSvg) {
+    for (const child of Array.from(parsedSvg.childNodes)) {
+      svg.appendChild(child.cloneNode(true));
+    }
+  }
+
   el.appendChild(svg);
 }

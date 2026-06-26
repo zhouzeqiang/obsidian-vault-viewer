@@ -3056,8 +3056,15 @@ function setLucideIcon(el, name, size = 16) {
   svg.setAttribute("stroke-width", "2");
   svg.setAttribute("stroke-linecap", "round");
   svg.setAttribute("stroke-linejoin", "round");
-  svg.setAttribute("style", "pointer-events:none");
-  svg.innerHTML = iconPath;
+  svg.setAttribute("class", "vv-icon");
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<svg xmlns="${svgNS}">${iconPath}</svg>`, "image/svg+xml");
+  const parsedSvg = doc.querySelector("svg");
+  if (parsedSvg) {
+    for (const child of Array.from(parsedSvg.childNodes)) {
+      svg.appendChild(child.cloneNode(true));
+    }
+  }
   el.appendChild(svg);
 }
 
@@ -3337,7 +3344,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
         const delta = ev.clientY - startY;
         const newHeight = Math.max(40, startHeight + delta);
         this.treeEl.style.setProperty("height", `${newHeight}px`);
-        this.treeEl.style.setProperty("flex", "none");
+        this.treeEl.addClass("vault-viewer-tree-fixed");
       };
       const onMouseUp = () => {
         this.isResizing = false;
@@ -3412,12 +3419,6 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     });
     setLucideIcon(collapseBtn, "ChevronsDownUp");
     collapseBtn.addEventListener("click", () => this.collapseAllFolders());
-    const locateBtn = btnRow.createEl("button", {
-      cls: "vault-viewer-toolbar-icon-btn",
-      attr: { title: t("tree.locateCurrentFile") }
-    });
-    setLucideIcon(locateBtn, "Locate");
-    locateBtn.addEventListener("click", () => this.syncWithActiveEditor());
   }
   onNewFile() {
     const folder = this.currentFolder || this.app.vault.getRoot();
@@ -3587,9 +3588,8 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     if (!rootFolder)
       return;
     const rootRow = this.treeEl.createDiv({
-      cls: "vault-viewer-tree-row vault-viewer-folder"
+      cls: "vault-viewer-tree-row vault-viewer-folder vault-viewer-folder-root"
     });
-    rootRow.style.setProperty("padding-left", "4px");
     rootRow.dataset.path = "/";
     const toggle = rootRow.createSpan({ cls: "vault-viewer-toggle-icon" });
     setLucideIcon(toggle, "ChevronRight");

@@ -96,7 +96,6 @@
 }
 
 .vault-viewer-children {
-  display: block;
   margin-left: 4px;
   position: relative;
 }
@@ -688,6 +687,18 @@
   color: var(--vv-text, var(--text-normal));
 }
 
+.vv-icon {
+  pointer-events: none;
+}
+
+.vault-viewer-folder-root {
+  padding-left: 4px;
+}
+
+.vault-viewer-tree-fixed {
+  flex: none;
+}
+
 .vault-viewer-tree-row .vault-viewer-toggle-icon {
   order: -1;
 }
@@ -854,6 +865,11 @@
 .vault-viewer-list-area,
 .vault-viewer-tree {
   transition: flex 0.25s ease, max-height 0.25s ease, opacity 0.25s ease;
+}
+
+body.vault-viewer-resizing {
+  cursor: row-resize !important;
+  user-select: none !important;
 }
 
 /* PPTX slide images */
