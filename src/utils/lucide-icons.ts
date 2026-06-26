@@ -147,6 +147,21 @@ export function createLucideIcon(name: string, size: number = 16): string {
 
 export function setLucideIcon(el: HTMLElement, name: string, size: number = 16): void {
   el.empty();
-  const svg = createLucideIcon(name, size);
-  if (svg) el.innerHTML = svg;
+  const themePaths = iconSets[currentTheme] || iconSets.default;
+  const iconPath = themePaths[name];
+  if (!iconPath) return;
+  
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("width", String(size));
+  svg.setAttribute("height", String(size));
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.setAttribute("style", "pointer-events:none");
+  svg.innerHTML = iconPath;
+  el.appendChild(svg);
 }

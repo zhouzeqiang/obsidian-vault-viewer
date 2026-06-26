@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf, TFile } from "obsidian";
 import { OfficeRenderer } from "../services/OfficeRenderer";
-import { createLucideIcon } from "../utils/lucide-icons";
+import { setLucideIcon } from "../utils/lucide-icons";
 import { t } from "../i18n";
 
 export const VIEW_TYPE_OFFICE = "vault-viewer-office";
@@ -45,7 +45,8 @@ export class OfficeView extends ItemView {
     const openExternalBtn = actionBar.createEl("button", {
       cls: "office-view-btn external",
     });
-    openExternalBtn.innerHTML = `${createLucideIcon("Paperclip", 14)} ${t("office.openExternal")}`;
+    setLucideIcon(openExternalBtn.createSpan(), "Paperclip", 14);
+    openExternalBtn.createSpan({ text: ` ${t("office.openExternal")}` });
     openExternalBtn.addEventListener("click", () => {
       this.openExternally();
     });
@@ -73,8 +74,10 @@ export class OfficeView extends ItemView {
         text: t("office.parseError"),
         cls: "office-view-error",
       });
-      openExternalBtn.innerHTML = `${createLucideIcon("Paperclip", 14)} ${t("office.openInEditor")}`;
-      openExternalBtn.style.display = "block";
+      openExternalBtn.empty();
+      setLucideIcon(openExternalBtn.createSpan(), "Paperclip", 14);
+      openExternalBtn.createSpan({ text: ` ${t("office.openInEditor")}` });
+      openExternalBtn.removeClass("hidden");
     }
   }
 

@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf, Notice } from "obsidian";
 import VaultViewerPlugin from "../main";
-import { createLucideIcon, setLucideIcon } from "../utils/lucide-icons";
+import { setLucideIcon } from "../utils/lucide-icons";
 import { InputModal } from "../ui/InputModal";
 import { ConfirmModal } from "../ui/ConfirmModal";
 import { t } from "../i18n";
@@ -130,8 +130,7 @@ export class VaultViewerView extends ItemView {
   private setupResizer(): void {
     const onMouseDown = (e: MouseEvent) => {
       this.isResizing = true;
-      document.body.style.cursor = "row-resize";
-      document.body.style.userSelect = "none";
+      document.body.addClass("vault-viewer-resizing");
 
       const startY = e.clientY;
       const startHeight = this.treeEl.offsetHeight;
@@ -140,14 +139,13 @@ export class VaultViewerView extends ItemView {
         if (!this.isResizing) return;
         const delta = ev.clientY - startY;
         const newHeight = Math.max(40, startHeight + delta);
-        this.treeEl.style.height = `${newHeight}px`;
-        this.treeEl.style.flex = "none";
+        this.treeEl.style.setProperty("height", `${newHeight}px`);
+        this.treeEl.style.setProperty("flex", "none");
       };
 
       const onMouseUp = () => {
         this.isResizing = false;
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
+        document.body.removeClass("vault-viewer-resizing");
         document.removeEventListener("mousemove", onMouseMove);
         document.removeEventListener("mouseup", onMouseUp);
       };
@@ -234,7 +232,7 @@ export class VaultViewerView extends ItemView {
       cls: "vault-viewer-toolbar-icon-btn",
       attr: { title: t("tree.locateCurrentFile") },
     });
-    setLucideIcon(locateBtn, "Target");
+    setLucideIcon(locateBtn, "Locate");
     locateBtn.addEventListener("click", () => this.syncWithActiveEditor());
   }
 
@@ -273,7 +271,7 @@ export class VaultViewerView extends ItemView {
   private expandAllFolders(): void {
     const treeEl = this.treeEl;
     for (const el of Array.from(treeEl.querySelectorAll(".vault-viewer-children"))) {
-      (el as HTMLElement).style.display = "block";
+      (el as HTMLElement).removeClass("hidden");
     }
     for (const el of Array.from(treeEl.querySelectorAll(".vault-viewer-toggle-icon"))) {
       (el as HTMLElement).empty();
@@ -288,7 +286,7 @@ export class VaultViewerView extends ItemView {
   private collapseAllFolders(): void {
     const treeEl = this.treeEl;
     for (const el of Array.from(treeEl.querySelectorAll(".vault-viewer-children"))) {
-      (el as HTMLElement).style.display = "none";
+      (el as HTMLElement).addClass("hidden");
     }
     for (const el of Array.from(treeEl.querySelectorAll(".vault-viewer-toggle-icon"))) {
       (el as HTMLElement).empty();
@@ -365,8 +363,8 @@ export class VaultViewerView extends ItemView {
     const dropdown = document.createElement("div");
     dropdown.className = "vault-viewer-sort-dropdown";
     document.body.appendChild(dropdown);
-    dropdown.style.left = `${btnRect.left}px`;
-    dropdown.style.top = `${btnRect.bottom + 4}px`;
+    dropdown.style.setProperty("left", `${btnRect.left}px`);
+    dropdown.style.setProperty("top", `${btnRect.bottom + 4}px`);
 
     const options: { value: string; label: string }[] = [
       { value: "name", label: t("sort.name") },
@@ -434,7 +432,7 @@ export class VaultViewerView extends ItemView {
     const rootRow = this.treeEl.createDiv({
       cls: "vault-viewer-tree-row vault-viewer-folder",
     });
-    rootRow.style.paddingLeft = "4px";
+    rootRow.style.setProperty("padding-left", "4px");
     rootRow.dataset.path = "/";
 
     const toggle = rootRow.createSpan({ cls: "vault-viewer-toggle-icon" });
@@ -455,12 +453,12 @@ export class VaultViewerView extends ItemView {
 
     const childrenEl = this.treeEl.createDiv({ cls: "vault-viewer-children" });
     childrenEl.style.setProperty("--vv-line-left", `${0 * 12 + 12}px`);
-    childrenEl.style.display = "none";
+    childrenEl.addClass("hidden");
 
     rootRow.addEventListener("click", (e) => {
       e.stopPropagation();
-      const isHidden = childrenEl.style.display === "none";
-      childrenEl.style.display = isHidden ? "block" : "none";
+      const isHidden = childrenEl.hasClass("hidden");
+      childrenEl.toggleClass("hidden", !isHidden);
       toggle.empty();
       setLucideIcon(toggle, isHidden ? "ChevronDown" : "ChevronRight");
       icon.empty();
@@ -521,7 +519,8 @@ export class VaultViewerView extends ItemView {
       const row = parentEl.createDiv({
         cls: "vault-viewer-tree-row vault-viewer-folder",
       });
-      row.style.paddingLeft = `${depth * 12 + 4}px`;
+      row.style.setProperty("padding-left", `${depth * 12 + 4}px`);
+      row.dataset.path = subfolder.path;
 
       const toggle = row.createSpan({ cls: "vault-viewer-toggle-icon" });
       setLucideIcon(toggle, "ChevronRight");
@@ -538,12 +537,12 @@ export class VaultViewerView extends ItemView {
 
       const childrenEl = parentEl.createDiv({ cls: "vault-viewer-children" });
       childrenEl.style.setProperty("--vv-line-left", `${depth * 12 + 12}px`);
-      childrenEl.style.display = "none";
+      childrenEl.addClass("hidden");
 
       row.addEventListener("click", (e) => {
         e.stopPropagation();
-        const isHidden = childrenEl.style.display === "none";
-        childrenEl.style.display = isHidden ? "block" : "none";
+        const isHidden = childrenEl.hasClass("hidden");
+        childrenEl.toggleClass("hidden", !isHidden);
         toggle.empty();
         setLucideIcon(toggle, isHidden ? "ChevronDown" : "ChevronRight");
         folderIcon.empty();
@@ -584,7 +583,8 @@ export class VaultViewerView extends ItemView {
       const row = parentEl.createDiv({
         cls: "vault-viewer-tree-row vault-viewer-file",
       });
-      row.style.paddingLeft = `${depth * 12 + 4}px`;
+      row.style.setProperty("padding-left", `${depth * 12 + 4}px`);
+      row.dataset.path = file.path;
 
       const fileIcon = row.createSpan({ cls: "vault-viewer-file-icon" });
       setLucideIcon(fileIcon, "File");
@@ -845,7 +845,6 @@ export class VaultViewerView extends ItemView {
 
   private locateInTree(file: any): void {
     const pathParts = file.path.split("/");
-    if (pathParts.length <= 1) return;
 
     const treeEl = this.treeEl;
 
@@ -856,14 +855,15 @@ export class VaultViewerView extends ItemView {
     const rootToggle = rootRow?.querySelector(".vault-viewer-toggle-icon") as HTMLElement;
     const rootIcon = rootRow?.querySelector(".vault-viewer-folder-icon") as HTMLElement;
     const rootChildren = rootRow?.nextElementSibling as HTMLElement;
-    if (rootChildren && rootChildren.style.display === "none") {
-      rootChildren.style.display = "block";
+    if (rootChildren && rootChildren.hasClass("hidden")) {
+      rootChildren.removeClass("hidden");
       if (rootToggle) { rootToggle.empty(); setLucideIcon(rootToggle, "ChevronDown"); }
       if (rootIcon) { rootIcon.empty(); setLucideIcon(rootIcon, "FolderOpenDot"); }
     }
 
-    for (let i = 2; i < pathParts.length; i++) {
+    for (let i = 1; i < pathParts.length; i++) {
       const ancestorPath = pathParts.slice(0, i).join("/");
+      if (!ancestorPath) continue;
       const folderRow = treeEl.querySelector(
         `.vault-viewer-folder[data-path="${ancestorPath}"]`
       ) as HTMLElement;
@@ -872,8 +872,8 @@ export class VaultViewerView extends ItemView {
         continue;
       }
       const childrenEl = folderRow.nextElementSibling as HTMLElement;
-      if (childrenEl && childrenEl.style.display === "none") {
-        childrenEl.style.display = "block";
+      if (childrenEl && childrenEl.hasClass("hidden")) {
+        childrenEl.removeClass("hidden");
         const toggle = folderRow.querySelector(".vault-viewer-toggle-icon") as HTMLElement;
         const fIcon = folderRow.querySelector(".vault-viewer-folder-icon") as HTMLElement;
         if (toggle) { toggle.empty(); setLucideIcon(toggle, "ChevronDown"); }
@@ -888,7 +888,7 @@ export class VaultViewerView extends ItemView {
     if (targetRow) {
       this.highlightRow(targetRow);
     } else {
-      const parentFolderPath = pathParts.slice(0, -1).join("/");
+      const parentFolderPath = pathParts.length > 1 ? pathParts.slice(0, -1).join("/") : "/";
       const folderRow = treeEl.querySelector(
         `.vault-viewer-folder[data-path="${parentFolderPath}"]`
       ) as HTMLElement;
@@ -943,8 +943,8 @@ export class VaultViewerView extends ItemView {
   private expandTreeNode(row: HTMLElement): void {
     const childrenEl = row.nextElementSibling as HTMLElement;
     if (!childrenEl?.hasClass?.("vault-viewer-children")) return;
-    if (childrenEl.style.display === "none") {
-      childrenEl.style.display = "block";
+    if (childrenEl.hasClass("hidden")) {
+      childrenEl.removeClass("hidden");
       const toggle = row.querySelector(".vault-viewer-toggle-icon") as HTMLElement;
       if (toggle) { toggle.empty(); setLucideIcon(toggle, "ChevronDown"); }
       const folderIcon = row.querySelector(".vault-viewer-folder-icon") as HTMLElement;
@@ -959,8 +959,8 @@ export class VaultViewerView extends ItemView {
     this.closeContextMenu();
 
     const menu = this.contentEl.createDiv({ cls: "vault-viewer-context-menu" });
-    menu.style.left = `${e.clientX}px`;
-    menu.style.top = `${e.clientY}px`;
+    menu.style.setProperty("left", `${e.clientX}px`);
+    menu.style.setProperty("top", `${e.clientY}px`);
 
     const adapter = this.app.vault.adapter;
     const basePath = (adapter as any).basePath || "";
@@ -1026,7 +1026,7 @@ export class VaultViewerView extends ItemView {
     const paths = new Set<string>();
     for (const el of Array.from(this.treeEl.querySelectorAll(".vault-viewer-children"))) {
       const childrenEl = el as HTMLElement;
-      if (childrenEl.style.display !== "none") {
+      if (!childrenEl.hasClass("hidden")) {
         const prev = childrenEl.previousElementSibling as HTMLElement;
         if (prev?.dataset?.path) paths.add(prev.dataset.path);
       }
@@ -1041,7 +1041,7 @@ export class VaultViewerView extends ItemView {
       if (!paths.has(row.dataset.path)) continue;
       const childrenEl = row.nextElementSibling as HTMLElement;
       if (!childrenEl?.hasClass?.("vault-viewer-children")) continue;
-      childrenEl.style.display = "block";
+      childrenEl.removeClass("hidden");
       const toggle = row.querySelector(".vault-viewer-toggle-icon") as HTMLElement;
       if (toggle) { toggle.empty(); setLucideIcon(toggle, "ChevronDown"); }
       const folderIcon = row.querySelector(".vault-viewer-folder-icon") as HTMLElement;
@@ -1055,11 +1055,12 @@ export class VaultViewerView extends ItemView {
     this.closeTreeContextMenu();
 
     const menu = this.contentEl.createDiv({ cls: "vault-viewer-tree-context-menu" });
-    menu.style.left = `${e.clientX}px`;
-    menu.style.top = `${e.clientY}px`;
+    menu.style.setProperty("left", `${e.clientX}px`);
+    menu.style.setProperty("top", `${e.clientY}px`);
 
     const locateBtn = menu.createEl("button", { cls: "vault-viewer-tree-context-btn" });
-    locateBtn.innerHTML = `${createLucideIcon("FolderUp", 14)} ${t("treeContext.openFolder")}`;
+    setLucideIcon(locateBtn.createSpan(), "FolderUp", 14);
+    locateBtn.createSpan({ text: ` ${t("treeContext.openFolder")}` });
     locateBtn.addEventListener("click", () => {
       this.closeTreeContextMenu();
       const adapter = this.app.vault.adapter;
@@ -1078,7 +1079,8 @@ export class VaultViewerView extends ItemView {
     });
 
     const copyBtn = menu.createEl("button", { cls: "vault-viewer-tree-context-btn" });
-    copyBtn.innerHTML = `${createLucideIcon("Copy", 14)} ${t("treeContext.copyPath")}`;
+    setLucideIcon(copyBtn.createSpan(), "Copy", 14);
+    copyBtn.createSpan({ text: ` ${t("treeContext.copyPath")}` });
     copyBtn.addEventListener("click", () => {
       this.closeTreeContextMenu();
       navigator.clipboard.writeText(item.path);
@@ -1088,7 +1090,8 @@ export class VaultViewerView extends ItemView {
     menu.createDiv({ cls: "vault-viewer-context-separator" });
 
     const deleteBtn = menu.createEl("button", { cls: "vault-viewer-tree-context-btn" });
-    deleteBtn.innerHTML = `${createLucideIcon("Trash2", 14)} ${t("treeContext.delete")}`;
+    setLucideIcon(deleteBtn.createSpan(), "Trash2", 14);
+    deleteBtn.createSpan({ text: ` ${t("treeContext.delete")}` });
     deleteBtn.addEventListener("click", () => {
       this.closeTreeContextMenu();
       this.onTreeItemDelete(item, isFolder);
@@ -1098,8 +1101,8 @@ export class VaultViewerView extends ItemView {
       const rect = menu.getBoundingClientRect();
       const overflowX = rect.right - window.innerWidth;
       const overflowY = rect.bottom - window.innerHeight;
-      if (overflowX > 0) menu.style.left = `${e.clientX - rect.width}px`;
-      if (overflowY > 0) menu.style.top = `${e.clientY - rect.height}px`;
+      if (overflowX > 0) menu.style.setProperty("left", `${e.clientX - rect.width}px`);
+      if (overflowY > 0) menu.style.setProperty("top", `${e.clientY - rect.height}px`);
     });
 
     const clickHandler = (ev: MouseEvent) => {

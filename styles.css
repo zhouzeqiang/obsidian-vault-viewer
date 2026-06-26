@@ -96,9 +96,13 @@
 }
 
 .vault-viewer-children {
-  display: none;
+  display: block;
   margin-left: 4px;
   position: relative;
+}
+
+.vault-viewer-children.hidden {
+  display: none;
 }
 
 .vault-viewer-children::before {
@@ -190,8 +194,16 @@
 
 .vault-viewer-list-icon {
   margin-right: 6px;
-  font-size: 0.9em;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+
+.vault-viewer-list-icon svg {
+  display: block;
+  width: 16px;
+  height: 16px;
 }
 
 .vault-viewer-list-name {
