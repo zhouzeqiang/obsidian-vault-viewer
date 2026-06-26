@@ -40,7 +40,8 @@ export class OfficeRenderer {
     const sheetNames = await this.getSheetNames(zip);
 
     const MAX_ROWS = 1000;
-    let html = '<div class="office-xlsx">';
+    container.empty();
+    const wrapper = container.createDiv({ cls: "office-xlsx" });
 
     for (const sheetName of sheetNames) {
       const sheetFile = await this.findSheetFile(zip, sheetName);
@@ -49,32 +50,29 @@ export class OfficeRenderer {
       const sheetXml = await zip.files[sheetFile].async("string");
       const rows = this.parseXlsxSheet(sheetXml, sharedStrings, styles);
 
-      html += `<h3>${this.escapeHtml(sheetName)}</h3>`;
+      wrapper.createEl("h3", { text: sheetName });
 
       if (rows.length === 0) continue;
 
       if (rows.length > MAX_ROWS) {
-        html += `<p class="office-truncated">该表共 ${rows.length} 行，仅显示前 ${MAX_ROWS} 行</p>`;
+        wrapper.createEl("p", { cls: "office-truncated", text: `该表共 ${rows.length} 行，仅显示前 ${MAX_ROWS} 行` });
         rows.length = MAX_ROWS;
       }
 
       const maxCols = Math.max(...rows.map(r => r.length));
-      html += '<table class="office-table">';
+      const table = wrapper.createEl("table", { cls: "office-table" });
       for (const row of rows) {
-        html += "<tr>";
+        const tr = table.createEl("tr");
         for (let c = 0; c < maxCols; c++) {
           const cell = row[c];
           const style = cell?.style || "";
           const val = cell ? this.escapeHtml(cell.value) : "";
-          html += `<td${style ? ` style="${style}"` : ""}>${val}</td>`;
+          const td = tr.createEl("td", { text: val });
+          if (style) td.setAttribute("style", style);
         }
-        html += "</tr>";
       }
-      html += "</table>";
     }
 
-    html += "</div>";
-    container.innerHTML = html;
     return filename;
   }
 

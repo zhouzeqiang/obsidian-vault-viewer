@@ -20,6 +20,7 @@ const en: Record<string, string | ((...args: any[]) => string)> = {
   "tree.sortFolders": "Sort folders",
   "tree.expandAll": "Expand all",
   "tree.collapseAll": "Collapse all",
+  "tree.locateCurrentFile": "Locate current file",
   "toolbar.search": "Search files",
   "toolbar.sortOptions": "Sort options",
   "toolbar.toggleTree": "Show/Hide file tree",

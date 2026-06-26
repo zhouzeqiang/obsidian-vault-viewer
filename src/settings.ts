@@ -35,7 +35,7 @@ export class VaultViewerSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: t("settings.title") });
+    new Setting(containerEl).setName(t("settings.title")).setHeading();
 
     new Setting(containerEl)
       .setName(t("settings.theme"))
@@ -71,7 +71,7 @@ export class VaultViewerSettingTab extends PluginSettingTab {
           })
       );
 
-    containerEl.createEl("h3", { text: t("settings.defaultSort") });
+    new Setting(containerEl).setName(t("settings.defaultSort")).setHeading();
 
     new Setting(containerEl)
       .setName(t("settings.defaultSort"))
@@ -102,7 +102,7 @@ export class VaultViewerSettingTab extends PluginSettingTab {
           })
       );
 
-    containerEl.createEl("h3", { text: t("settings.hideTypes") });
+    new Setting(containerEl).setName(t("settings.hideTypes")).setHeading();
 
     new Setting(containerEl)
       .setName(t("settings.hideTypes"))
@@ -120,7 +120,7 @@ export class VaultViewerSettingTab extends PluginSettingTab {
           })
       );
 
-    containerEl.createEl("h3", { text: t("settings.treeExtensions") });
+    new Setting(containerEl).setName(t("settings.treeExtensions")).setHeading();
 
     new Setting(containerEl)
       .setName(t("settings.treeExtensions"))

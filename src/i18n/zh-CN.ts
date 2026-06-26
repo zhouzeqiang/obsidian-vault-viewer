@@ -20,6 +20,7 @@ const zhCN: Record<string, string | ((...args: any[]) => string)> = {
   "tree.sortFolders": "文件夹排序",
   "tree.expandAll": "展开全部",
   "tree.collapseAll": "收缩全部",
+  "tree.locateCurrentFile": "定位当前文件",
   "toolbar.search": "搜索文件",
   "toolbar.sortOptions": "排序选项",
   "toolbar.toggleTree": "显示/隐藏文件树",

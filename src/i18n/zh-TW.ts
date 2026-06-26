@@ -20,6 +20,7 @@ const zhTW: Record<string, string | ((...args: any[]) => string)> = {
   "tree.sortFolders": "資料夾排序",
   "tree.expandAll": "展開全部",
   "tree.collapseAll": "收合全部",
+  "tree.locateCurrentFile": "定位當前檔案",
   "toolbar.search": "搜尋檔案",
   "toolbar.sortOptions": "排序選項",
   "toolbar.toggleTree": "顯示/隱藏檔案樹",

@@ -229,6 +229,13 @@ export class VaultViewerView extends ItemView {
     });
     setLucideIcon(collapseBtn, "ChevronsDownUp");
     collapseBtn.addEventListener("click", () => this.collapseAllFolders());
+
+    const locateBtn = btnRow.createEl("button", {
+      cls: "vault-viewer-toolbar-icon-btn",
+      attr: { title: t("tree.locateCurrentFile") },
+    });
+    setLucideIcon(locateBtn, "Target");
+    locateBtn.addEventListener("click", () => this.syncWithActiveEditor());
   }
 
   private onNewFile(): void {

@@ -77,7 +77,7 @@ export default class VaultViewerPlugin extends Plugin {
     }
     const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE_VAULT_VIEWER);
     if (existingLeaves.length > 0) {
-      workspace.revealLeaf(existingLeaves[0]);
+      workspace.setActiveLeaf(existingLeaves[0]);
       return;
     }
 
@@ -89,7 +89,7 @@ export default class VaultViewerPlugin extends Plugin {
       active: true,
     });
 
-    workspace.revealLeaf(leaf);
+    workspace.setActiveLeaf(leaf);
   }
 
   async openOfficeFile(file: TFile): Promise<void> {
@@ -102,11 +102,9 @@ export default class VaultViewerPlugin extends Plugin {
       active: true,
     });
 
-    this.app.workspace.revealLeaf(leaf);
+    this.app.workspace.setActiveLeaf(leaf);
   }
 
   onunload() {
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_VAULT_VIEWER);
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_OFFICE);
   }
 }

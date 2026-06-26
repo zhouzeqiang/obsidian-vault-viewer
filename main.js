@@ -2763,6 +2763,7 @@ var zhCN = {
   "tree.sortFolders": "\u6587\u4EF6\u5939\u6392\u5E8F",
   "tree.expandAll": "\u5C55\u5F00\u5168\u90E8",
   "tree.collapseAll": "\u6536\u7F29\u5168\u90E8",
+  "tree.locateCurrentFile": "\u5B9A\u4F4D\u5F53\u524D\u6587\u4EF6",
   "toolbar.search": "\u641C\u7D22\u6587\u4EF6",
   "toolbar.sortOptions": "\u6392\u5E8F\u9009\u9879",
   "toolbar.toggleTree": "\u663E\u793A/\u9690\u85CF\u6587\u4EF6\u6811",
@@ -2831,6 +2832,7 @@ var zhTW = {
   "tree.sortFolders": "\u8CC7\u6599\u593E\u6392\u5E8F",
   "tree.expandAll": "\u5C55\u958B\u5168\u90E8",
   "tree.collapseAll": "\u6536\u5408\u5168\u90E8",
+  "tree.locateCurrentFile": "\u5B9A\u4F4D\u7576\u524D\u6A94\u6848",
   "toolbar.search": "\u641C\u5C0B\u6A94\u6848",
   "toolbar.sortOptions": "\u6392\u5E8F\u9078\u9805",
   "toolbar.toggleTree": "\u986F\u793A/\u96B1\u85CF\u6A94\u6848\u6A39",
@@ -2899,6 +2901,7 @@ var en = {
   "tree.sortFolders": "Sort folders",
   "tree.expandAll": "Expand all",
   "tree.collapseAll": "Collapse all",
+  "tree.locateCurrentFile": "Locate current file",
   "toolbar.search": "Search files",
   "toolbar.sortOptions": "Sort options",
   "toolbar.toggleTree": "Show/Hide file tree",
@@ -3069,7 +3072,7 @@ var VaultViewerSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: t("settings.title") });
+    new import_obsidian.Setting(containerEl).setName(t("settings.title")).setHeading();
     new import_obsidian.Setting(containerEl).setName(t("settings.theme")).setDesc(t("settings.themeDesc")).addDropdown(
       (dd) => dd.addOption("default", t("settings.themeDefault")).addOption("fresh", t("settings.themeFresh")).setValue(this.plugin.settings.theme).onChange(async (val) => {
         this.plugin.settings.theme = val;
@@ -3100,14 +3103,14 @@ var VaultViewerSettingTab = class extends import_obsidian.PluginSettingTab {
         await this.plugin.saveSettings();
       })
     );
-    containerEl.createEl("h3", { text: t("settings.hideTypes") });
+    new import_obsidian.Setting(containerEl).setName(t("settings.hideTypes")).setHeading();
     new import_obsidian.Setting(containerEl).setName(t("settings.hideTypes")).setDesc(t("settings.hideTypesDesc")).addTextArea(
       (ta) => ta.setPlaceholder(".exe\n.zip\n.dll").setValue(this.plugin.settings.hiddenExtensions.join("\n")).onChange(async (val) => {
         this.plugin.settings.hiddenExtensions = val.split("\n").map((s) => s.trim()).filter((s) => s.startsWith("."));
         await this.plugin.saveSettings();
       })
     );
-    containerEl.createEl("h3", { text: t("settings.treeExtensions") });
+    new import_obsidian.Setting(containerEl).setName(t("settings.treeExtensions")).setHeading();
     new import_obsidian.Setting(containerEl).setName(t("settings.treeExtensions")).setDesc(t("settings.treeExtensionsDesc")).addTextArea(
       (ta) => ta.setPlaceholder(".md\n.canvas\n.excalidraw.md").setValue(this.plugin.settings.treeExtensions.join("\n")).onChange(async (val) => {
         this.plugin.settings.treeExtensions = val.split("\n").map((s) => s.trim()).filter((s) => s.startsWith("."));
@@ -3404,6 +3407,12 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     });
     setLucideIcon(collapseBtn, "ChevronsDownUp");
     collapseBtn.addEventListener("click", () => this.collapseAllFolders());
+    const locateBtn = btnRow.createEl("button", {
+      cls: "vault-viewer-toolbar-icon-btn",
+      attr: { title: t("tree.locateCurrentFile") }
+    });
+    setLucideIcon(locateBtn, "Target");
+    locateBtn.addEventListener("click", () => this.syncWithActiveEditor());
   }
   onNewFile() {
     const folder = this.currentFolder || this.app.vault.getRoot();
@@ -8894,7 +8903,7 @@ var VaultViewerPlugin = class extends import_obsidian6.Plugin {
     }
     const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE_VAULT_VIEWER);
     if (existingLeaves.length > 0) {
-      workspace.revealLeaf(existingLeaves[0]);
+      workspace.setActiveLeaf(existingLeaves[0]);
       return;
     }
     const leaf = workspace.getLeftLeaf(false);
@@ -8904,7 +8913,7 @@ var VaultViewerPlugin = class extends import_obsidian6.Plugin {
       type: VIEW_TYPE_VAULT_VIEWER,
       active: true
     });
-    workspace.revealLeaf(leaf);
+    workspace.setActiveLeaf(leaf);
   }
   async openOfficeFile(file) {
     this.pendingOfficeFile = file;
@@ -8915,11 +8924,9 @@ var VaultViewerPlugin = class extends import_obsidian6.Plugin {
       type: VIEW_TYPE_OFFICE,
       active: true
     });
-    this.app.workspace.revealLeaf(leaf);
+    this.app.workspace.setActiveLeaf(leaf);
   }
   onunload() {
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_VAULT_VIEWER);
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_OFFICE);
   }
 };
 /*! Bundled license information:
