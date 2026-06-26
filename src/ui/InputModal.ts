@@ -7,7 +7,7 @@ export class InputModal extends Modal {
     private titleText: string,
     private placeholder: string,
     private defaultValue: string,
-    private onSubmit: (value: string) => void
+    private onSubmit: (value: string) => void | Promise<void>
   ) {
     super(app);
   }
@@ -31,7 +31,7 @@ export class InputModal extends Modal {
       if (e.key === "Enter") this.submit();
     });
     inputEl.select();
-    setTimeout(() => inputEl.focus(), 50);
+    window.setTimeout(() => inputEl.focus(), 50);
 
     const btnContainer = contentEl.createDiv({ cls: "vault-viewer-input-buttons" });
     const okBtn = btnContainer.createEl("button", {
@@ -46,9 +46,9 @@ export class InputModal extends Modal {
     cancelBtn.addEventListener("click", () => this.close());
   }
 
-  private submit(): void {
+  private async submit(): Promise<void> {
     if (this.result.trim()) {
-      this.onSubmit(this.result.trim());
+      await this.onSubmit(this.result.trim());
       this.close();
     }
   }

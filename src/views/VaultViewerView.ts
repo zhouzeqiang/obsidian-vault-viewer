@@ -94,7 +94,7 @@ export class VaultViewerView extends ItemView {
 
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", () => {
-        clearTimeout(this.syncTimeout);
+        window.clearTimeout(this.syncTimeout);
         this.syncTimeout = window.setTimeout(() => {
           this.syncWithActiveEditor();
         }, 150);
@@ -130,7 +130,7 @@ export class VaultViewerView extends ItemView {
   private setupResizer(): void {
     const onMouseDown = (e: MouseEvent) => {
       this.isResizing = true;
-      document.body.addClass("vault-viewer-resizing");
+      activeDocument.body.addClass("vault-viewer-resizing");
 
       const startY = e.clientY;
       const startHeight = this.treeEl.offsetHeight;
@@ -145,13 +145,13 @@ export class VaultViewerView extends ItemView {
 
       const onMouseUp = () => {
         this.isResizing = false;
-        document.body.removeClass("vault-viewer-resizing");
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
+        activeDocument.body.removeClass("vault-viewer-resizing");
+        activeDocument.removeEventListener("mousemove", onMouseMove);
+        activeDocument.removeEventListener("mouseup", onMouseUp);
       };
 
-      document.addEventListener("mousemove", onMouseMove);
-      document.addEventListener("mouseup", onMouseUp);
+      activeDocument.addEventListener("mousemove", onMouseMove);
+      activeDocument.addEventListener("mouseup", onMouseUp);
     };
 
     this.resizerEl.addEventListener("mousedown", onMouseDown);
@@ -209,7 +209,7 @@ export class VaultViewerView extends ItemView {
     if (this.plugin.settings.treeSortEnabled) sortBtn.addClass("active");
     sortBtn.addEventListener("click", () => {
       this.plugin.settings.treeSortEnabled = !this.plugin.settings.treeSortEnabled;
-      this.plugin.saveSettings();
+      void this.plugin.saveSettings();
       sortBtn.toggleClass("active", this.plugin.settings.treeSortEnabled);
       this.renderTree();
     });
@@ -240,7 +240,7 @@ export class VaultViewerView extends ItemView {
         if (file) this.locateInTree(file);
         new Notice(t("notice.fileCreated", `${name}.md`));
       } catch (e) {
-        new Notice(t("notice.createFailed", e.message));
+        new Notice(t("notice.createFailed", (e as Error).message));
         console.error("Vault Viewer: 新建文件失败", e);
       }
     }).open();
@@ -255,7 +255,7 @@ export class VaultViewerView extends ItemView {
         this.renderTree();
         new Notice(t("notice.folderCreated", name));
       } catch (e) {
-        new Notice(t("notice.createFailed", e.message));
+        new Notice(t("notice.createFailed", (e as Error).message));
         console.error("Vault Viewer: 新建文件夹失败", e);
       }
     }).open();
@@ -340,7 +340,7 @@ export class VaultViewerView extends ItemView {
     this.orderBtnEl.addEventListener("click", () => {
       this.plugin.settings.sortOrder =
         this.plugin.settings.sortOrder === "asc" ? "desc" : "asc";
-      this.plugin.saveSettings();
+      void this.plugin.saveSettings();
       this.refreshFileList();
     });
     this.refreshSortBtnIcon();
@@ -353,9 +353,9 @@ export class VaultViewerView extends ItemView {
     }
 
     const btnRect = this.sortBtnEl.getBoundingClientRect();
-    const dropdown = document.createElement("div");
+    const dropdown = activeDocument.createElement("div");
     dropdown.className = "vault-viewer-sort-dropdown";
-    document.body.appendChild(dropdown);
+    activeDocument.body.appendChild(dropdown);
     dropdown.style.setProperty("left", `${btnRect.left}px`);
     dropdown.style.setProperty("top", `${btnRect.bottom + 4}px`);
 
@@ -376,7 +376,7 @@ export class VaultViewerView extends ItemView {
       optEl.addEventListener("click", () => {
         this.plugin.settings.sortBy = opt.value as any;
         this.plugin.settings.sortOrder = "asc";
-        this.plugin.saveSettings();
+        void this.plugin.saveSettings();
         this.closeSortDropdown();
         this.refreshSortBtnIcon();
         this.refreshFileList();
@@ -390,14 +390,14 @@ export class VaultViewerView extends ItemView {
     resetEl.addEventListener("click", () => {
       this.plugin.settings.sortBy = "name";
       this.plugin.settings.sortOrder = "asc";
-      this.plugin.saveSettings();
+      void this.plugin.saveSettings();
       this.closeSortDropdown();
       this.refreshSortBtnIcon();
       this.refreshFileList();
     });
 
     this.sortDropdownEl = dropdown;
-    setTimeout(() => document.addEventListener("click", this.closeSortDropdown), 0);
+    window.setTimeout(() => activeDocument.addEventListener("click", this.closeSortDropdown), 0);
   }
 
   private closeSortDropdown = (): void => {
@@ -405,7 +405,7 @@ export class VaultViewerView extends ItemView {
       this.sortDropdownEl.remove();
       this.sortDropdownEl = null;
     }
-    document.removeEventListener("click", this.closeSortDropdown);
+    activeDocument.removeEventListener("click", this.closeSortDropdown);
   };
 
   private refreshSortBtnIcon(): void {
@@ -668,7 +668,7 @@ export class VaultViewerView extends ItemView {
         } else {
           this.plugin.settings.hiddenExtensions.push(ext);
         }
-        this.plugin.saveSettings();
+        void this.plugin.saveSettings();
         this.refreshFileList();
       });
     }
@@ -824,7 +824,7 @@ export class VaultViewerView extends ItemView {
     const ext = "." + link.file.extension;
     if ([".docx", ".xlsx", ".pptx", ".sql"].includes(ext)) {
       if (this.plugin.openOfficeFile) {
-        this.plugin.openOfficeFile(link.file);
+        void this.plugin.openOfficeFile(link.file);
         return;
       }
     }
@@ -1003,7 +1003,7 @@ export class VaultViewerView extends ItemView {
     }
 
     this.contextMenuEl = menu;
-    setTimeout(() => document.addEventListener("click", this.closeContextMenu), 0);
+    window.setTimeout(() => activeDocument.addEventListener("click", this.closeContextMenu), 0);
   }
 
   private closeContextMenu = (): void => {
@@ -1011,7 +1011,7 @@ export class VaultViewerView extends ItemView {
       this.contextMenuEl.remove();
       this.contextMenuEl = null;
     }
-    document.removeEventListener("click", this.closeContextMenu);
+    activeDocument.removeEventListener("click", this.closeContextMenu);
   };
 
   private saveExpandedState(): Set<string> {
@@ -1028,7 +1028,8 @@ export class VaultViewerView extends ItemView {
 
   private restoreExpandedState(paths: Set<string>): void {
     if (paths.size === 0) return;
-    for (const row of Array.from(this.treeEl.querySelectorAll(".vault-viewer-folder")) as HTMLElement[]) {
+    for (const el of Array.from(this.treeEl.querySelectorAll(".vault-viewer-folder"))) {
+      const row = el as HTMLElement;
       if (!row.dataset.path) continue;
       if (!paths.has(row.dataset.path)) continue;
       const childrenEl = row.nextElementSibling as HTMLElement;
@@ -1089,7 +1090,7 @@ export class VaultViewerView extends ItemView {
       this.onTreeItemDelete(item, isFolder);
     });
 
-    requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
       const rect = menu.getBoundingClientRect();
       const overflowX = rect.right - window.innerWidth;
       const overflowY = rect.bottom - window.innerHeight;
@@ -1100,10 +1101,10 @@ export class VaultViewerView extends ItemView {
     const clickHandler = (ev: MouseEvent) => {
       if (!menu.contains(ev.target as Node)) {
         this.closeTreeContextMenu();
-        document.removeEventListener("click", clickHandler);
+        activeDocument.removeEventListener("click", clickHandler);
       }
     };
-    setTimeout(() => document.addEventListener("click", clickHandler), 0);
+    window.setTimeout(() => activeDocument.addEventListener("click", clickHandler), 0);
   }
 
   private closeTreeContextMenu(): void {
@@ -1123,7 +1124,7 @@ export class VaultViewerView extends ItemView {
     }
     new ConfirmModal(this.app, t("modal.confirmDelete"), t("modal.confirmDeleteBody", name), () => {
       try {
-        this.app.vault.trash(item, false);
+        this.app.fileManager.trashFile(item);
         new Notice(isFolder ? t("notice.folderDeleted", name) : t("notice.fileDeleted", name));
         const savedExpanded = this.saveExpandedState();
         this.renderTree();
@@ -1239,7 +1240,7 @@ export class VaultViewerView extends ItemView {
     const ext = "." + file.extension;
     if ([".docx", ".xlsx", ".pptx", ".sql"].includes(ext)) {
       if (this.plugin.openOfficeFile) {
-        this.plugin.openOfficeFile(file);
+        void this.plugin.openOfficeFile(file);
       }
     } else {
       this.app.workspace.openLinkText(file.path, "/", false);

@@ -48,7 +48,7 @@ export class OfficeView extends ItemView {
     setLucideIcon(openExternalBtn.createSpan(), "Paperclip", 14);
     openExternalBtn.createSpan({ text: ` ${t("office.openExternal")}` });
     openExternalBtn.addEventListener("click", () => {
-      this.openExternally();
+      void this.openExternally();
     });
 
     const title = actionBar.createSpan({
@@ -83,11 +83,11 @@ export class OfficeView extends ItemView {
 
   private async openExternally(): Promise<void> {
     const adapter = this.app.vault.adapter;
-    const basePath = (adapter as any).basePath || "";
+    const basePath = adapter instanceof (window as any).DataAdapter ? (adapter as any).basePath : "";
     const fullPath = `${basePath}/${this.file.path}`;
 
     try {
-      const electron = (window as any).require("electron");
+      const electron = (window as Record<string, any>).require("electron");
       if (electron && electron.shell) {
         await electron.shell.openPath(fullPath);
         return;

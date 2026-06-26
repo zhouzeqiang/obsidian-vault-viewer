@@ -3047,7 +3047,7 @@ function setLucideIcon(el, name, size = 16) {
   if (!iconPath)
     return;
   const svgNS = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(svgNS, "svg");
+  const svg = activeDocument.createElementNS(svgNS, "svg");
   svg.setAttribute("width", String(size));
   svg.setAttribute("height", String(size));
   svg.setAttribute("viewBox", "0 0 24 24");
@@ -3173,7 +3173,7 @@ var InputModal = class extends import_obsidian2.Modal {
         this.submit();
     });
     inputEl.select();
-    setTimeout(() => inputEl.focus(), 50);
+    window.setTimeout(() => inputEl.focus(), 50);
     const btnContainer = contentEl.createDiv({ cls: "vault-viewer-input-buttons" });
     const okBtn = btnContainer.createEl("button", {
       cls: "vault-viewer-input-btn mod-cta",
@@ -3186,9 +3186,9 @@ var InputModal = class extends import_obsidian2.Modal {
     });
     cancelBtn.addEventListener("click", () => this.close());
   }
-  submit() {
+  async submit() {
     if (this.result.trim()) {
-      this.onSubmit(this.result.trim());
+      await this.onSubmit(this.result.trim());
       this.close();
     }
   }
@@ -3217,9 +3217,9 @@ var ConfirmModal = class extends import_obsidian3.Modal {
       cls: "vault-viewer-input-btn mod-cta",
       text: "\u786E\u8BA4\u5220\u9664"
     });
-    okBtn.addEventListener("click", () => {
+    okBtn.addEventListener("click", async () => {
       this.resolved = true;
-      this.onConfirm();
+      await this.onConfirm();
       this.close();
     });
     const cancelBtn = btnContainer.createEl("button", {
@@ -3255,14 +3255,14 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
         this.sortDropdownEl.remove();
         this.sortDropdownEl = null;
       }
-      document.removeEventListener("click", this.closeSortDropdown);
+      activeDocument.removeEventListener("click", this.closeSortDropdown);
     };
     this.closeContextMenu = () => {
       if (this.contextMenuEl) {
         this.contextMenuEl.remove();
         this.contextMenuEl = null;
       }
-      document.removeEventListener("click", this.closeContextMenu);
+      activeDocument.removeEventListener("click", this.closeContextMenu);
     };
     this.plugin = plugin;
   }
@@ -3307,7 +3307,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     this.updateDynamicToolbar();
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", () => {
-        clearTimeout(this.syncTimeout);
+        window.clearTimeout(this.syncTimeout);
         this.syncTimeout = window.setTimeout(() => {
           this.syncWithActiveEditor();
         }, 150);
@@ -3335,7 +3335,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
   setupResizer() {
     const onMouseDown = (e) => {
       this.isResizing = true;
-      document.body.addClass("vault-viewer-resizing");
+      activeDocument.body.addClass("vault-viewer-resizing");
       const startY = e.clientY;
       const startHeight = this.treeEl.offsetHeight;
       const onMouseMove = (ev) => {
@@ -3348,12 +3348,12 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       };
       const onMouseUp = () => {
         this.isResizing = false;
-        document.body.removeClass("vault-viewer-resizing");
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
+        activeDocument.body.removeClass("vault-viewer-resizing");
+        activeDocument.removeEventListener("mousemove", onMouseMove);
+        activeDocument.removeEventListener("mouseup", onMouseUp);
       };
-      document.addEventListener("mousemove", onMouseMove);
-      document.addEventListener("mouseup", onMouseUp);
+      activeDocument.addEventListener("mousemove", onMouseMove);
+      activeDocument.addEventListener("mouseup", onMouseUp);
     };
     this.resizerEl.addEventListener("mousedown", onMouseDown);
   }
@@ -3403,7 +3403,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       sortBtn.addClass("active");
     sortBtn.addEventListener("click", () => {
       this.plugin.settings.treeSortEnabled = !this.plugin.settings.treeSortEnabled;
-      this.plugin.saveSettings();
+      void this.plugin.saveSettings();
       sortBtn.toggleClass("active", this.plugin.settings.treeSortEnabled);
       this.renderTree();
     });
@@ -3525,7 +3525,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     setLucideIcon(this.orderBtnEl, "ArrowUpDown");
     this.orderBtnEl.addEventListener("click", () => {
       this.plugin.settings.sortOrder = this.plugin.settings.sortOrder === "asc" ? "desc" : "asc";
-      this.plugin.saveSettings();
+      void this.plugin.saveSettings();
       this.refreshFileList();
     });
     this.refreshSortBtnIcon();
@@ -3536,9 +3536,9 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       return;
     }
     const btnRect = this.sortBtnEl.getBoundingClientRect();
-    const dropdown = document.createElement("div");
+    const dropdown = activeDocument.createElement("div");
     dropdown.className = "vault-viewer-sort-dropdown";
-    document.body.appendChild(dropdown);
+    activeDocument.body.appendChild(dropdown);
     dropdown.style.setProperty("left", `${btnRect.left}px`);
     dropdown.style.setProperty("top", `${btnRect.bottom + 4}px`);
     const options = [
@@ -3556,7 +3556,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       optEl.addEventListener("click", () => {
         this.plugin.settings.sortBy = opt.value;
         this.plugin.settings.sortOrder = "asc";
-        this.plugin.saveSettings();
+        void this.plugin.saveSettings();
         this.closeSortDropdown();
         this.refreshSortBtnIcon();
         this.refreshFileList();
@@ -3568,13 +3568,13 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     resetEl.addEventListener("click", () => {
       this.plugin.settings.sortBy = "name";
       this.plugin.settings.sortOrder = "asc";
-      this.plugin.saveSettings();
+      void this.plugin.saveSettings();
       this.closeSortDropdown();
       this.refreshSortBtnIcon();
       this.refreshFileList();
     });
     this.sortDropdownEl = dropdown;
-    setTimeout(() => document.addEventListener("click", this.closeSortDropdown), 0);
+    window.setTimeout(() => activeDocument.addEventListener("click", this.closeSortDropdown), 0);
   }
   refreshSortBtnIcon() {
     setLucideIcon(this.sortBtnEl, "ListFilter");
@@ -3814,7 +3814,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
         } else {
           this.plugin.settings.hiddenExtensions.push(ext);
         }
-        this.plugin.saveSettings();
+        void this.plugin.saveSettings();
         this.refreshFileList();
       });
     }
@@ -3944,7 +3944,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     const ext = "." + link.file.extension;
     if ([".docx", ".xlsx", ".pptx", ".sql"].includes(ext)) {
       if (this.plugin.openOfficeFile) {
-        this.plugin.openOfficeFile(link.file);
+        void this.plugin.openOfficeFile(link.file);
         return;
       }
     }
@@ -4123,7 +4123,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       });
     }
     this.contextMenuEl = menu;
-    setTimeout(() => document.addEventListener("click", this.closeContextMenu), 0);
+    window.setTimeout(() => activeDocument.addEventListener("click", this.closeContextMenu), 0);
   }
   saveExpandedState() {
     var _a;
@@ -4142,7 +4142,8 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     var _a;
     if (paths.size === 0)
       return;
-    for (const row of Array.from(this.treeEl.querySelectorAll(".vault-viewer-folder"))) {
+    for (const el of Array.from(this.treeEl.querySelectorAll(".vault-viewer-folder"))) {
+      const row = el;
       if (!row.dataset.path)
         continue;
       if (!paths.has(row.dataset.path))
@@ -4209,7 +4210,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       this.closeTreeContextMenu();
       this.onTreeItemDelete(item, isFolder);
     });
-    requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
       const rect = menu.getBoundingClientRect();
       const overflowX = rect.right - window.innerWidth;
       const overflowY = rect.bottom - window.innerHeight;
@@ -4221,10 +4222,10 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     const clickHandler = (ev) => {
       if (!menu.contains(ev.target)) {
         this.closeTreeContextMenu();
-        document.removeEventListener("click", clickHandler);
+        activeDocument.removeEventListener("click", clickHandler);
       }
     };
-    setTimeout(() => document.addEventListener("click", clickHandler), 0);
+    window.setTimeout(() => activeDocument.addEventListener("click", clickHandler), 0);
   }
   closeTreeContextMenu() {
     const existing = this.contentEl.querySelector(".vault-viewer-tree-context-menu");
@@ -4243,7 +4244,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     }
     new ConfirmModal(this.app, t("modal.confirmDelete"), t("modal.confirmDeleteBody", name), () => {
       try {
-        this.app.vault.trash(item, false);
+        this.app.fileManager.trashFile(item);
         new import_obsidian4.Notice(isFolder ? t("notice.folderDeleted", name) : t("notice.fileDeleted", name));
         const savedExpanded = this.saveExpandedState();
         this.renderTree();
@@ -4349,7 +4350,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     const ext = "." + file.extension;
     if ([".docx", ".xlsx", ".pptx", ".sql"].includes(ext)) {
       if (this.plugin.openOfficeFile) {
-        this.plugin.openOfficeFile(file);
+        void this.plugin.openOfficeFile(file);
       }
     } else {
       this.app.workspace.openLinkText(file.path, "/", false);
@@ -4393,7 +4394,7 @@ var OfficeView = class extends import_obsidian5.ItemView {
     setLucideIcon(openExternalBtn.createSpan(), "Paperclip", 14);
     openExternalBtn.createSpan({ text: ` ${t("office.openExternal")}` });
     openExternalBtn.addEventListener("click", () => {
-      this.openExternally();
+      void this.openExternally();
     });
     const title = actionBar.createSpan({
       cls: "office-view-title",
@@ -4423,7 +4424,7 @@ var OfficeView = class extends import_obsidian5.ItemView {
   }
   async openExternally() {
     const adapter = this.app.vault.adapter;
-    const basePath = adapter.basePath || "";
+    const basePath = adapter instanceof window.DataAdapter ? adapter.basePath : "";
     const fullPath = `${basePath}/${this.file.path}`;
     try {
       const electron = window.require("electron");
@@ -8889,19 +8890,20 @@ var VaultViewerPlugin = class extends import_obsidian6.Plugin {
       (leaf) => new VaultViewerView(leaf, this)
     );
     this.addCommand({
-      id: "open-vault-viewer",
-      name: "Open Vault Viewer",
-      callback: () => this.activateView()
+      id: "open",
+      name: "Open Viewer",
+      callback: () => void this.activateView()
     });
     this.app.workspace.onLayoutReady(() => {
-      this.activateView();
+      void this.activateView();
     });
   }
   async loadSettings() {
+    const data = await this.loadData();
     this.settings = Object.assign(
       {},
       DEFAULT_SETTINGS,
-      await this.loadData()
+      data
     );
   }
   async saveSettings() {

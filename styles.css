@@ -248,8 +248,9 @@
   font-style: italic;
 }
 
-.vault-viewer-highlighted {
-  background: var(--vv-selected-bg, var(--vv-accent, var(--interactive-accent))) !important;
+.vault-viewer-tree-row.vault-viewer-highlighted,
+.vault-viewer-list-row.vault-viewer-highlighted {
+  background: var(--vv-selected-bg, var(--vv-accent, var(--interactive-accent)));
   color: var(--vv-selected-text, var(--text-on-accent));
   transition: background 0.3s;
 }
@@ -555,13 +556,13 @@
   flex: 1;
 }
 
-.vault-viewer-toolbar-icon-btn,
-.vault-viewer-sort-btn,
-.vault-viewer-order-btn {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  outline: none !important;
+.vault-viewer-container .vault-viewer-toolbar-icon-btn,
+.vault-viewer-container .vault-viewer-sort-btn,
+.vault-viewer-container .vault-viewer-order-btn {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  outline: none;
   cursor: pointer;
   padding: 0;
   border-radius: 0;
@@ -580,26 +581,26 @@
   pointer-events: none;
 }
 
-.vault-viewer-toolbar-icon-btn:hover,
-.vault-viewer-sort-btn:hover,
-.vault-viewer-order-btn:hover {
-  background: transparent !important;
+.vault-viewer-container .vault-viewer-toolbar-icon-btn:hover,
+.vault-viewer-container .vault-viewer-sort-btn:hover,
+.vault-viewer-container .vault-viewer-order-btn:hover {
+  background: transparent;
   color: var(--vv-text, var(--text-normal));
 }
 
-.vault-viewer-toolbar-icon-btn:focus,
-.vault-viewer-sort-btn:focus,
-.vault-viewer-order-btn:focus,
-.vault-viewer-toolbar-icon-btn:focus-visible,
-.vault-viewer-sort-btn:focus-visible,
-.vault-viewer-order-btn:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
+.vault-viewer-container .vault-viewer-toolbar-icon-btn:focus,
+.vault-viewer-container .vault-viewer-sort-btn:focus,
+.vault-viewer-container .vault-viewer-order-btn:focus,
+.vault-viewer-container .vault-viewer-toolbar-icon-btn:focus-visible,
+.vault-viewer-container .vault-viewer-sort-btn:focus-visible,
+.vault-viewer-container .vault-viewer-order-btn:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
-.vault-viewer-toolbar-icon-btn.active,
-.vault-viewer-sort-btn.active {
-  background: transparent !important;
+.vault-viewer-container .vault-viewer-toolbar-icon-btn.active,
+.vault-viewer-container .vault-viewer-sort-btn.active {
+  background: transparent;
   color: var(--vv-accent, var(--interactive-accent));
 }
 
@@ -867,9 +868,9 @@
   transition: flex 0.25s ease, max-height 0.25s ease, opacity 0.25s ease;
 }
 
-body.vault-viewer-resizing {
-  cursor: row-resize !important;
-  user-select: none !important;
+.vault-viewer-resizing.vault-viewer-resizing {
+  cursor: row-resize;
+  user-select: none;
 }
 
 /* PPTX slide images */

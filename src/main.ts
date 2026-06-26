@@ -48,21 +48,22 @@ export default class VaultViewerPlugin extends Plugin {
     );
 
     this.addCommand({
-      id: "open-vault-viewer",
-      name: "Open Vault Viewer",
-      callback: () => this.activateView(),
+      id: "open",
+      name: "Open Viewer",
+      callback: () => void this.activateView(),
     });
 
     this.app.workspace.onLayoutReady(() => {
-      this.activateView();
+      void this.activateView();
     });
   }
 
   async loadSettings() {
+    const data = await this.loadData();
     this.settings = Object.assign(
       {},
       DEFAULT_SETTINGS,
-      await this.loadData()
+      data
     );
   }
 

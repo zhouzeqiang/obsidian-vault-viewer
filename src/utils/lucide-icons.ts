@@ -152,7 +152,7 @@ export function setLucideIcon(el: HTMLElement, name: string, size: number = 16):
   if (!iconPath) return;
 
   const svgNS = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(svgNS, "svg");
+  const svg = activeDocument.createElementNS(svgNS, "svg");
   svg.setAttribute("width", String(size));
   svg.setAttribute("height", String(size));
   svg.setAttribute("viewBox", "0 0 24 24");
