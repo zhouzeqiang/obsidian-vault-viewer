@@ -65,10 +65,13 @@ export class OfficeRenderer {
         const tr = table.createEl("tr");
         for (let c = 0; c < maxCols; c++) {
           const cell = row[c];
-          const style = cell?.style || "";
           const val = cell ? this.escapeHtml(cell.value) : "";
           const td = tr.createEl("td", { text: val });
-          if (style) td.setAttribute("style", style);
+          if (cell?.style) {
+            for (const [prop, value] of Object.entries(cell.style)) {
+              td.style.setProperty(prop, value as string);
+            }
+          }
         }
       }
     }
@@ -262,42 +265,39 @@ export class OfficeRenderer {
     return rows;
   }
 
-  private buildXlsxCellStyle(styleIdx: number, styles: any): string {
-    const parts: string[] = [];
+  private buildXlsxCellStyle(styleIdx: number, styles: any): Record<string, string> {
+    const result: Record<string, string> = {};
     const xf = styles.cellXfs?.[styleIdx];
-    if (!xf) return "";
+    if (!xf) return result;
 
     if (xf.fontId != null) {
       const font = styles.fonts?.[xf.fontId];
       if (font) {
-        if (font.bold) parts.push("font-weight: bold");
-        if (font.italic) parts.push("font-style: italic");
-        if (font.size) parts.push(`font-size: ${font.size}pt`);
-        if (font.color) parts.push(`color: #${font.color}`);
+        if (font.bold) result["font-weight"] = "bold";
+        if (font.italic) result["font-style"] = "italic";
+        if (font.size) result["font-size"] = `${font.size}pt`;
+        if (font.color) result["color"] = `#${font.color}`;
       }
     }
 
     if (xf.fillId != null) {
       const fill = styles.fills?.[xf.fillId];
       if (fill?.fgColor && xf.fillId > 0) {
-        parts.push(`background: #${fill.fgColor}`);
+        result["background"] = `#${fill.fgColor}`;
       }
     }
 
     if (xf.borderId != null) {
       const border = styles.borders?.[xf.borderId];
       if (border) {
-        let topB = "", bottomB = "", leftB = "", rightB = "";
-        if (border.top) topB = `border-top: 1px solid`;
-        if (border.bottom) bottomB = `border-bottom: 1px solid`;
-        if (border.left) leftB = `border-left: 1px solid`;
-        if (border.right) rightB = `border-right: 1px solid`;
-        const bParts = [topB, bottomB, leftB, rightB].filter(Boolean);
-        if (bParts.length) parts.push(bParts.join(";"));
+        if (border.top) result["border-top"] = "1px solid";
+        if (border.bottom) result["border-bottom"] = "1px solid";
+        if (border.left) result["border-left"] = "1px solid";
+        if (border.right) result["border-right"] = "1px solid";
       }
     }
 
-    return parts.join("; ");
+    return result;
   }
 }
 
