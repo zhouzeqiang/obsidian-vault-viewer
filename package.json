@@ -1,6 +1,6 @@
 {
   "name": "vault-viewer",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "description": "Obsidian plugin for enhanced file browsing and Office preview",
   "main": "main.js",
   "scripts": {
