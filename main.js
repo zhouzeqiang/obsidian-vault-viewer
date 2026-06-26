@@ -1209,8 +1209,8 @@ var require_jszip_min = __commonJS({
               a.data = i = ++i % 2;
             };
           } else if (t3.setImmediate || void 0 === t3.MessageChannel)
-            r = "document" in t3 && "onreadystatechange" in t3.document.createElement("script") ? function() {
-              var e3 = t3.document.createElement("script");
+            r = "document" in t3 && "onreadystatechange" in t3.document.createElement("div") ? function() {
+              var e3 = t3.document.createElement("div");
               e3.onreadystatechange = function() {
                 u(), e3.onreadystatechange = null, e3.parentNode.removeChild(e3), e3 = null;
               }, t3.document.documentElement.appendChild(e3);
@@ -2668,8 +2668,8 @@ var require_jszip_min = __commonJS({
                 c(e4.data);
               }, function(e4) {
                 t3.port2.postMessage(e4);
-              }) : l && "onreadystatechange" in l.createElement("script") ? (s = l.documentElement, function(e4) {
-                var t4 = l.createElement("script");
+              }) : l && "onreadystatechange" in l.createElement("div") ? (s = l.documentElement, function(e4) {
+                var t4 = l.createElement("div");
                 t4.onreadystatechange = function() {
                   c(e4), t4.onreadystatechange = null, s.removeChild(t4), t4 = null;
                 }, s.appendChild(t4);
@@ -3358,19 +3358,17 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     this.resizerEl.addEventListener("mousedown", onMouseDown);
   }
   syncWithActiveEditor() {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
-    const activeView = this.app.workspace.getActiveViewOfType(
-      ((_e = (_d = (_c = (_b = (_a = this.app.internalPlugins) == null ? void 0 : _a.getPluginById("markdown")) == null ? void 0 : _b.instance) == null ? void 0 : _c.View) == null ? void 0 : _d.prototype) == null ? void 0 : _e.constructor) || Object
-    );
+    var _a, _b, _c;
+    const activeView = this.app.workspace.getActiveViewOfType(import_obsidian4.MarkdownView);
     if (!activeView)
       return;
     const file = activeView.file;
     if (!file || file.extension !== "md")
       return;
     this.locateInTree(file);
-    if (this.currentMode === "references" && ((_f = this.currentFile) == null ? void 0 : _f.path) === file.path)
+    if (this.currentMode === "references" && ((_a = this.currentFile) == null ? void 0 : _a.path) === file.path)
       return;
-    if (this.currentMode === "directory" && ((_g = this.currentFolder) == null ? void 0 : _g.path) === ((_h = file.parent) == null ? void 0 : _h.path))
+    if (this.currentMode === "directory" && ((_b = this.currentFolder) == null ? void 0 : _b.path) === ((_c = file.parent) == null ? void 0 : _c.path))
       return;
     const parentPath = file.parent ? file.parent.path : "/";
     this.currentFolder = file.parent || this.app.vault.getRoot();
@@ -3598,8 +3596,8 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     const vaultName = this.app.vault.getName() || "Vault";
     rootRow.createSpan({ cls: "vault-viewer-tree-name", text: vaultName });
     const rootChildren = rootFolder.children;
-    const mdCount = rootChildren ? rootChildren.filter((c) => c.extension === "md").length : 0;
-    const otherCount = rootChildren ? rootChildren.filter((c) => c.extension && c.extension !== "md").length : 0;
+    const mdCount = rootChildren ? rootChildren.filter((c) => "extension" in c && c.extension === "md").length : 0;
+    const otherCount = rootChildren ? rootChildren.filter((c) => "extension" in c && c.extension && c.extension !== "md").length : 0;
     rootRow.createSpan({ cls: "vault-viewer-tree-count", text: `md ${mdCount} / other ${otherCount}` });
     const childrenEl = this.treeEl.createDiv({ cls: "vault-viewer-children" });
     childrenEl.style.setProperty("--vv-line-left", `${0 * 12 + 12}px`);
@@ -3652,8 +3650,8 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     if (!folder.children)
       return;
     const children = folder.children;
-    const subfolders = children.filter((c) => c.children !== void 0);
-    const allFiles = children.filter((c) => c.extension);
+    const subfolders = children.filter((c) => "children" in c);
+    const allFiles = children.filter((c) => "extension" in c);
     const treeFiles = this.plugin.fileService ? this.plugin.fileService.getTreeFiles(
       allFiles,
       this.plugin.settings.treeExtensions
@@ -3673,8 +3671,8 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       const folderIcon = row.createSpan({ cls: "vault-viewer-folder-icon" });
       setLucideIcon(folderIcon, "Folder");
       row.createSpan({ cls: "vault-viewer-tree-name", text: subfolder.name });
-      const folderMdCount = subfolder.children ? subfolder.children.filter((c) => c.extension === "md").length : 0;
-      const folderOtherCount = subfolder.children ? subfolder.children.filter((c) => c.extension && c.extension !== "md").length : 0;
+      const folderMdCount = subfolder.children ? subfolder.children.filter((c) => "extension" in c && c.extension === "md").length : 0;
+      const folderOtherCount = subfolder.children ? subfolder.children.filter((c) => "extension" in c && c.extension && c.extension !== "md").length : 0;
       row.createSpan({ cls: "vault-viewer-tree-count", text: `md ${folderMdCount} / other ${folderOtherCount}` });
       const childrenEl = parentEl.createDiv({ cls: "vault-viewer-children" });
       childrenEl.style.setProperty("--vv-line-left", `${depth * 12 + 12}px`);
@@ -4019,7 +4017,9 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
   locateParentInTree(item) {
     const lastSep = item.path.lastIndexOf("/");
     if (lastSep <= 0) {
-      this.onFolderClick({ path: "/" });
+      const root = this.app.vault.getAbstractFileByPath("/");
+      if (root && "children" in root)
+        this.onFolderClick(root);
       return;
     }
     const parentPath = item.path.slice(0, lastSep);
@@ -4046,7 +4046,9 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     );
     if (parentRow)
       this.highlightRow(parentRow);
-    this.onFolderClick({ path: `/${accumulated}` });
+    const target = this.app.vault.getAbstractFileByPath(`/${accumulated}`);
+    if (target && "children" in target)
+      this.onFolderClick(target);
   }
   expandTreeNode(row) {
     var _a;
@@ -4075,11 +4077,12 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     menu.style.setProperty("left", `${e.clientX}px`);
     menu.style.setProperty("top", `${e.clientY}px`);
     const adapter = this.app.vault.adapter;
-    const basePath = adapter.basePath || "";
+    const basePath = adapter instanceof import_obsidian4.FileSystemAdapter ? adapter.getBasePath() : "";
     const fullPath = `${basePath}/${file.path}`;
     const getElectron = () => {
       try {
-        return window.require("electron");
+        const _window = window;
+        return _window.require("electron");
       } catch (e2) {
         return null;
       }
@@ -4177,11 +4180,12 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     locateBtn.addEventListener("click", () => {
       this.closeTreeContextMenu();
       const adapter = this.app.vault.adapter;
-      const basePath = adapter.basePath || "";
+      const basePath = adapter instanceof import_obsidian4.FileSystemAdapter ? adapter.getBasePath() : "";
       const fullPath = `${basePath}/${item.path}`;
       const getElectron = () => {
         try {
-          return window.require("electron");
+          const _window = window;
+          return _window.require("electron");
         } catch (e2) {
           return null;
         }
@@ -4235,8 +4239,11 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
   onTreeItemDelete(item, isFolder) {
     const prefix = isFolder ? t("modal.folderName") : t("modal.fileName");
     const name = `${prefix} "${item.name}"`;
-    if (isFolder && item.children) {
-      const nonEmpty = item.children.filter((c) => c.children !== void 0 || c.extension);
+    if (isFolder) {
+      const folder = item;
+      if (!folder.children)
+        return;
+      const nonEmpty = folder.children.filter((c) => "children" in c || "extension" in c);
       if (nonEmpty.length > 0) {
         new import_obsidian4.Notice(t("notice.cantDeleteNonEmpty", name), 5e3);
         return;
@@ -4424,10 +4431,11 @@ var OfficeView = class extends import_obsidian5.ItemView {
   }
   async openExternally() {
     const adapter = this.app.vault.adapter;
-    const basePath = adapter instanceof window.DataAdapter ? adapter.basePath : "";
+    const basePath = adapter instanceof import_obsidian5.FileSystemAdapter ? adapter.getBasePath() : "";
     const fullPath = `${basePath}/${this.file.path}`;
     try {
-      const electron = window.require("electron");
+      const _window = window;
+      const electron = _window.require("electron");
       if (electron && electron.shell) {
         await electron.shell.openPath(fullPath);
         return;
@@ -8541,7 +8549,7 @@ var OfficeRenderer = class {
   async parseXlsxStyles(zip) {
     const styleFile = zip.files["xl/styles.xml"];
     if (!styleFile)
-      return { fonts: [], fills: [], borders: [] };
+      return { fonts: [], fills: [], borders: [], cellXfs: [] };
     const xml = await styleFile.async("string");
     const fonts = [];
     const fontRegex = /<font[^>]*>([\s\S]*?)<\/font>/gi;

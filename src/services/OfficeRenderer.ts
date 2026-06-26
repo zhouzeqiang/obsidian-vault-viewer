@@ -2,6 +2,44 @@ import { TFile, Vault } from "obsidian";
 import * as docx from "docx-preview";
 import JSZip from "jszip";
 
+interface XlsxFont {
+  bold?: boolean;
+  italic?: boolean;
+  size?: number;
+  color?: string;
+  name?: string;
+}
+
+interface XlsxFill {
+  fgColor?: string;
+  bgColor?: string;
+}
+
+interface XlsxBorder {
+  left?: string;
+  right?: string;
+  top?: string;
+  bottom?: string;
+}
+
+interface XlsxCellStyle {
+  fontId?: number;
+  fillId?: number;
+  borderId?: number;
+}
+
+interface XlsxStyles {
+  fonts: XlsxFont[];
+  fills: XlsxFill[];
+  borders: XlsxBorder[];
+  cellXfs: XlsxCellStyle[];
+}
+
+interface XlsxCellData {
+  value: string;
+  style: Record<string, string>;
+}
+
 export class OfficeRenderer {
   private vault: Vault;
 
@@ -105,18 +143,18 @@ export class OfficeRenderer {
 
   // ============== XLSX helpers ==============
 
-  private async parseXlsxStyles(zip: JSZip): Promise<any> {
+  private async parseXlsxStyles(zip: JSZip): Promise<XlsxStyles> {
     const styleFile = zip.files["xl/styles.xml"];
-    if (!styleFile) return { fonts: [], fills: [], borders: [] };
+    if (!styleFile) return { fonts: [], fills: [], borders: [], cellXfs: [] };
 
     const xml = await styleFile.async("string");
 
-    const fonts: any[] = [];
+    const fonts: XlsxFont[] = [];
     const fontRegex = /<font[^>]*>([\s\S]*?)<\/font>/gi;
     let match;
     while ((match = fontRegex.exec(xml)) !== null) {
       const fb = match[1];
-      const font: any = {};
+      const font: XlsxFont = {};
       if (/<b[>\s/]/.test(fb)) font.bold = true;
       if (/<i[>\s/]/.test(fb)) font.italic = true;
       const szMatch = fb.match(/<sz[^>]*val="([^"]+)"/);
@@ -128,11 +166,11 @@ export class OfficeRenderer {
       fonts.push(font);
     }
 
-    const fills: any[] = [];
+    const fills: XlsxFill[] = [];
     const fillRegex = /<fill[^>]*>([\s\S]*?)<\/fill>/gi;
     while ((match = fillRegex.exec(xml)) !== null) {
       const fb = match[1];
-      const fill: any = {};
+      const fill: XlsxFill = {};
       const fgMatch = fb.match(/<fgColor[^>]*rgb="([^"]+)"/);
       if (fgMatch) fill.fgColor = fgMatch[1];
       const bgMatch = fb.match(/<bgColor[^>]*rgb="([^"]+)"/);
@@ -140,23 +178,23 @@ export class OfficeRenderer {
       fills.push(fill);
     }
 
-    const borders: any[] = [];
+    const borders: XlsxBorder[] = [];
     const borderRegex = /<border[^>]*>([\s\S]*?)<\/border>/gi;
     while ((match = borderRegex.exec(xml)) !== null) {
       const bb = match[1];
-      const border: any = {};
-      for (const side of ["left", "right", "top", "bottom"]) {
+      const border: XlsxBorder = {};
+      for (const side of ["left", "right", "top", "bottom"] as const) {
         const sMatch = bb.match(new RegExp(`<${side}[^>]*style="([^"]+)"`));
         if (sMatch) border[side] = sMatch[1];
       }
       borders.push(border);
     }
 
-    const cellXfs: any[] = [];
+    const cellXfs: XlsxCellStyle[] = [];
     const xfRegex = /<xf[^>]*\/>|<xf[^>]*>[\s\S]*?<\/xf>/gi;
     while ((match = xfRegex.exec(xml)) !== null) {
       const xb = match[0];
-      const xf: any = {};
+      const xf: XlsxCellStyle = {};
       const fontIdMatch = xb.match(/fontId="(\d+)"/);
       if (fontIdMatch) xf.fontId = parseInt(fontIdMatch[1]);
       const fillIdMatch = xb.match(/fillId="(\d+)"/);
@@ -229,15 +267,15 @@ export class OfficeRenderer {
   private parseXlsxSheet(
     xml: string,
     sharedStrings: string[],
-    styles: any
-  ): any[][] {
-    const rows: any[][] = [];
+    styles: XlsxStyles
+  ): XlsxCellData[][] {
+    const rows: XlsxCellData[][] = [];
     const rowRegex = /<row[^>]*>([\s\S]*?)<\/row>/gi;
     let rowMatch;
 
     while ((rowMatch = rowRegex.exec(xml)) !== null) {
       const rowXml = rowMatch[1];
-      const cells: any[] = [];
+      const cells: XlsxCellData[] = [];
       const cellRegex = /<c[^>]*>([\s\S]*?)<\/c>/gi;
       let cellMatch;
 
@@ -265,7 +303,7 @@ export class OfficeRenderer {
     return rows;
   }
 
-  private buildXlsxCellStyle(styleIdx: number, styles: any): Record<string, string> {
+  private buildXlsxCellStyle(styleIdx: number, styles: XlsxStyles): Record<string, string> {
     const result: Record<string, string> = {};
     const xf = styles.cellXfs?.[styleIdx];
     if (!xf) return result;

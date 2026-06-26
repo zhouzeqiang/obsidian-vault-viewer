@@ -59,7 +59,7 @@ export default class VaultViewerPlugin extends Plugin {
   }
 
   async loadSettings() {
-    const data = await this.loadData();
+    const data = await this.loadData() as Partial<VaultViewerSettings>;
     this.settings = Object.assign(
       {},
       DEFAULT_SETTINGS,

@@ -1,9 +1,10 @@
-import { ItemView, WorkspaceLeaf, Notice } from "obsidian";
+import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder, TAbstractFile, FileSystemAdapter, MarkdownView } from "obsidian";
 import VaultViewerPlugin from "../main";
 import { setLucideIcon } from "../utils/lucide-icons";
 import { InputModal } from "../ui/InputModal";
 import { ConfirmModal } from "../ui/ConfirmModal";
 import { t } from "../i18n";
+import { ResolvedLink } from "../services/LinkService";
 
 export const VIEW_TYPE_VAULT_VIEWER = "vault-viewer-view";
 
@@ -20,8 +21,8 @@ export class VaultViewerView extends ItemView {
   listEl: HTMLElement;
   contextMenuEl: HTMLElement | null = null;
   currentMode: "directory" | "references" = "directory";
-  currentFolder: any = null;
-  currentFile: any = null;
+  currentFolder: TFolder | null = null;
+  currentFile: TFile | null = null;
   searchQuery: string = "";
   syncTimeout: number = 0;
   sortDropdownEl: HTMLElement | null = null;
@@ -158,13 +159,9 @@ export class VaultViewerView extends ItemView {
   }
 
   private syncWithActiveEditor(): void {
-    const activeView = this.app.workspace.getActiveViewOfType(
-      (this.app as any).internalPlugins?.getPluginById("markdown")?.instance?.View
-        ?.prototype?.constructor || Object
-    );
-
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!activeView) return;
-    const file = (activeView as any).file;
+    const file = activeView.file;
     if (!file || file.extension !== "md") return;
 
     // Always locate in tree first, then skip re-render if already in same context
@@ -236,7 +233,7 @@ export class VaultViewerView extends ItemView {
       try {
         await this.app.vault.create(filePath, "");
         this.renderTree();
-        const file = this.app.vault.getAbstractFileByPath(filePath);
+        const file = this.app.vault.getAbstractFileByPath(filePath) as TFile;
         if (file) this.locateInTree(file);
         new Notice(t("notice.fileCreated", `${name}.md`));
       } catch (e) {
@@ -374,7 +371,7 @@ export class VaultViewerView extends ItemView {
       optEl.createSpan({ text: opt.label });
 
       optEl.addEventListener("click", () => {
-        this.plugin.settings.sortBy = opt.value as any;
+        this.plugin.settings.sortBy = opt.value as "name" | "mtime" | "ctime" | "size";
         this.plugin.settings.sortOrder = "asc";
         void this.plugin.saveSettings();
         this.closeSortDropdown();
@@ -434,12 +431,12 @@ export class VaultViewerView extends ItemView {
     const vaultName = this.app.vault.getName() || "Vault";
     rootRow.createSpan({ cls: "vault-viewer-tree-name", text: vaultName });
 
-    const rootChildren = (rootFolder as any).children;
+    const rootChildren = (rootFolder as TFolder).children;
     const mdCount = rootChildren
-      ? rootChildren.filter((c: any) => c.extension === "md").length
+      ? rootChildren.filter((c: TAbstractFile) => "extension" in c && (c as TFile).extension === "md").length
       : 0;
     const otherCount = rootChildren
-      ? rootChildren.filter((c: any) => c.extension && c.extension !== "md").length
+      ? rootChildren.filter((c: TAbstractFile) => "extension" in c && (c as TFile).extension && (c as TFile).extension !== "md").length
       : 0;
     rootRow.createSpan({ cls: "vault-viewer-tree-count", text: `md ${mdCount} / other ${otherCount}` });
 
@@ -456,14 +453,14 @@ export class VaultViewerView extends ItemView {
       icon.empty();
       setLucideIcon(icon, isHidden ? "FolderOpenDot" : "Folder");
       this.highlightRow(rootRow);
-      this.onFolderClick(rootFolder as any);
+      this.onFolderClick(rootFolder as TFolder);
     });
     rootRow.addEventListener("contextmenu", (e) => {
-      this.showTreeContextMenu(e, rootFolder, true);
+      this.showTreeContextMenu(e, rootFolder as TFolder, true);
     });
     rootRow.draggable = true;
     rootRow.addEventListener("dragstart", (ev: DragEvent) => {
-      ev.dataTransfer?.setData("text/plain", (rootFolder as any).path);
+      ev.dataTransfer?.setData("text/plain", (rootFolder as TFolder).path);
       if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
     });
     rootRow.addEventListener("dragover", (ev: DragEvent) => {
@@ -480,19 +477,19 @@ export class VaultViewerView extends ItemView {
       const srcPath = ev.dataTransfer?.getData("text/plain");
       if (!srcPath) return;
       if (srcPath === "/") return;
-      this.moveTreeItem(srcPath, rootFolder);
+      this.moveTreeItem(srcPath, rootFolder as TFolder);
     });
 
-    this.renderFolder(rootFolder as any, childrenEl, 1);
+    this.renderFolder(rootFolder as TFolder, childrenEl, 1);
     this.restoreExpandedState(savedExpanded);
   }
 
-  private renderFolder(folder: any, parentEl: HTMLElement, depth: number): void {
+  private renderFolder(folder: TFolder, parentEl: HTMLElement, depth: number): void {
     if (!folder.children) return;
 
-    const children = folder.children as any[];
-    const subfolders = children.filter((c: any) => c.children !== undefined);
-    const allFiles = children.filter((c: any) => c.extension);
+    const children = folder.children;
+    const subfolders = children.filter((c): c is TFolder => "children" in c);
+    const allFiles = children.filter((c): c is TFile => "extension" in c);
     const treeFiles = this.plugin.fileService
       ? this.plugin.fileService.getTreeFiles(
           allFiles,
@@ -501,9 +498,9 @@ export class VaultViewerView extends ItemView {
       : [];
 
     const sortedSubfolders = this.plugin.settings.treeSortEnabled
-      ? [...subfolders].sort((a: any, b: any) => a.name.localeCompare(b.name))
+      ? [...subfolders].sort((a: TFolder, b: TFolder) => a.name.localeCompare(b.name))
       : subfolders;
-    const sortedFiles = [...treeFiles].sort((a: any, b: any) =>
+    const sortedFiles = [...treeFiles].sort((a: TFile, b: TFile) =>
       a.name.localeCompare(b.name)
     );
 
@@ -520,10 +517,10 @@ export class VaultViewerView extends ItemView {
       setLucideIcon(folderIcon, "Folder");
       row.createSpan({ cls: "vault-viewer-tree-name", text: subfolder.name });
       const folderMdCount = subfolder.children
-        ? subfolder.children.filter((c: any) => c.extension === "md").length
+        ? subfolder.children.filter((c: TAbstractFile) => "extension" in c && (c as TFile).extension === "md").length
         : 0;
       const folderOtherCount = subfolder.children
-        ? subfolder.children.filter((c: any) => c.extension && c.extension !== "md").length
+        ? subfolder.children.filter((c: TAbstractFile) => "extension" in c && (c as TFile).extension && (c as TFile).extension !== "md").length
         : 0;
       row.createSpan({ cls: "vault-viewer-tree-count", text: `md ${folderMdCount} / other ${folderOtherCount}` });
 
@@ -609,14 +606,14 @@ export class VaultViewerView extends ItemView {
     }
   }
 
-  private onFolderClick(folder: any): void {
+  private onFolderClick(folder: TFolder): void {
     this.currentFolder = folder;
     this.currentMode = "directory";
     this.renderFileListModeA(folder.path);
     this.updateDynamicToolbar();
   }
 
-  private onFileClick(file: any): void {
+  private onFileClick(file: TFile): void {
     this.app.workspace.openLinkText(file.path, "/", false);
 
     if (file.extension === "md") {
@@ -742,7 +739,7 @@ export class VaultViewerView extends ItemView {
 
   // ─── File List Mode B ──────────────────────────────
 
-  private renderFileListModeB(file: any): void {
+  private renderFileListModeB(file: TFile): void {
     this.listEl.empty();
     this.currentMode = "references";
     this.currentFile = file;
@@ -819,7 +816,7 @@ export class VaultViewerView extends ItemView {
     }
   }
 
-  private onReferenceClick(link: any): void {
+  private onReferenceClick(link: ResolvedLink): void {
     if (!link.file) return;
     const ext = "." + link.file.extension;
     if ([".docx", ".xlsx", ".pptx", ".sql"].includes(ext)) {
@@ -835,7 +832,7 @@ export class VaultViewerView extends ItemView {
     }
   }
 
-  private locateInTree(file: any): void {
+  private locateInTree(file: TFile): void {
     const pathParts = file.path.split("/");
 
     const treeEl = this.treeEl;
@@ -890,12 +887,13 @@ export class VaultViewerView extends ItemView {
     }
   }
 
-  private locateParentInTree(item: any): void {
+  private locateParentInTree(item: TAbstractFile): void {
     // Compute parent path from item path (no reliance on Obsidian API)
     const lastSep = item.path.lastIndexOf("/");
     if (lastSep <= 0) {
       // Item is at root — just show root
-      this.onFolderClick({ path: "/" });
+      const root = this.app.vault.getAbstractFileByPath("/");
+      if (root && "children" in root) this.onFolderClick(root as TFolder);
       return;
     }
     const parentPath = item.path.slice(0, lastSep);
@@ -929,7 +927,8 @@ export class VaultViewerView extends ItemView {
     if (parentRow) this.highlightRow(parentRow);
 
     // Switch file list to parent folder
-    this.onFolderClick({ path: `/${accumulated}` });
+    const target = this.app.vault.getAbstractFileByPath(`/${accumulated}`);
+    if (target && "children" in target) this.onFolderClick(target as TFolder);
   }
 
   private expandTreeNode(row: HTMLElement): void {
@@ -946,7 +945,7 @@ export class VaultViewerView extends ItemView {
 
   // ─── Context Menu ─────────────────────────────────────
 
-  private showContextMenu(e: MouseEvent, file: any): void {
+  private showContextMenu(e: MouseEvent, file: TFile): void {
     e.preventDefault();
     this.closeContextMenu();
 
@@ -955,11 +954,15 @@ export class VaultViewerView extends ItemView {
     menu.style.setProperty("top", `${e.clientY}px`);
 
     const adapter = this.app.vault.adapter;
-    const basePath = (adapter as any).basePath || "";
+    const basePath = adapter instanceof FileSystemAdapter ? adapter.getBasePath() : "";
     const fullPath = `${basePath}/${file.path}`;
 
-    const getElectron = () => {
-      try { return (window as any).require("electron"); } catch { return null; }
+    interface ElectronAPI { shell: { openPath: (p: string) => Promise<string>; showItemInFolder: (p: string) => void } }
+    const getElectron = (): ElectronAPI | null => {
+      try {
+        const _window = window as unknown as { require: (mod: string) => ElectronAPI };
+        return _window.require("electron");
+      } catch { return null; }
     };
 
     const items = [
@@ -969,7 +972,7 @@ export class VaultViewerView extends ItemView {
           electron.shell.showItemInFolder(fullPath);
         } else {
           const folderPath = fullPath.slice(0, fullPath.lastIndexOf("/"));
-          (window as any).open(folderPath);
+          window.open(folderPath);
         }
       }},
       { icon: "Clipboard", text: t("context.copyPath"), action: () => navigator.clipboard.writeText(fullPath) },
@@ -980,7 +983,7 @@ export class VaultViewerView extends ItemView {
         if (electron?.shell) {
           electron.shell.openPath(fullPath);
         } else {
-          (window as any).open(fullPath);
+          window.open(fullPath);
         }
       }},
     ];
@@ -1042,7 +1045,7 @@ export class VaultViewerView extends ItemView {
     }
   }
 
-  private showTreeContextMenu(e: MouseEvent, item: any, isFolder: boolean): void {
+  private showTreeContextMenu(e: MouseEvent, item: TAbstractFile, isFolder: boolean): void {
     e.preventDefault();
     e.stopPropagation();
     this.closeTreeContextMenu();
@@ -1057,17 +1060,21 @@ export class VaultViewerView extends ItemView {
     locateBtn.addEventListener("click", () => {
       this.closeTreeContextMenu();
       const adapter = this.app.vault.adapter;
-      const basePath = (adapter as any).basePath || "";
+      const basePath = adapter instanceof FileSystemAdapter ? adapter.getBasePath() : "";
       const fullPath = `${basePath}/${item.path}`;
-      const getElectron = () => {
-        try { return (window as any).require("electron"); } catch { return null; }
+      interface ElectronAPI { shell: { openPath: (p: string) => Promise<string>; showItemInFolder: (p: string) => void } }
+      const getElectron = (): ElectronAPI | null => {
+        try {
+          const _window = window as unknown as { require: (mod: string) => ElectronAPI };
+          return _window.require("electron");
+        } catch { return null; }
       };
       const electron = getElectron();
       if (electron?.shell) {
         electron.shell.showItemInFolder(fullPath);
       } else {
         const folderPath = fullPath.slice(0, fullPath.lastIndexOf("/"));
-        (window as any).open(folderPath);
+        window.open(folderPath);
       }
     });
 
@@ -1112,11 +1119,13 @@ export class VaultViewerView extends ItemView {
     if (existing) existing.remove();
   }
 
-  private onTreeItemDelete(item: any, isFolder: boolean): void {
+  private onTreeItemDelete(item: TAbstractFile, isFolder: boolean): void {
     const prefix = isFolder ? t("modal.folderName") : t("modal.fileName");
     const name = `${prefix} "${item.name}"`;
-    if (isFolder && item.children) {
-      const nonEmpty = (item.children as any[]).filter((c: any) => c.children !== undefined || c.extension);
+    if (isFolder) {
+      const folder = item as TFolder;
+      if (!folder.children) return;
+      const nonEmpty = folder.children.filter((c: TAbstractFile) => "children" in c || "extension" in c);
       if (nonEmpty.length > 0) {
         new Notice(t("notice.cantDeleteNonEmpty", name), 5000);
         return;
@@ -1136,7 +1145,7 @@ export class VaultViewerView extends ItemView {
     }).open();
   }
 
-  private moveTreeItem(srcPath: string, targetFolder: any): void {
+  private moveTreeItem(srcPath: string, targetFolder: TFolder): void {
     const file = this.app.vault.getAbstractFileByPath(srcPath);
     if (!file) {
       new Notice(`未找到文件: ${srcPath}`);
@@ -1160,13 +1169,13 @@ export class VaultViewerView extends ItemView {
 
   // ─── Common helpers ────────────────────────────────
 
-  private getExtensionForDisplay(file: any): string {
+  private getExtensionForDisplay(file: TFile): string {
     if (file.name.endsWith(".excalidraw.md")) return ".excalidraw.md";
     if (file.name.endsWith(".canvas.md")) return ".canvas.md";
     return "." + file.extension;
   }
 
-  private getFileIcon(file: any): string {
+  private getFileIcon(file: TFile): string {
     const ext = "." + file.extension;
     if (ext === ".docx") return "FileText";
     if (ext === ".xlsx") return "FileSpreadsheet";
@@ -1236,7 +1245,7 @@ export class VaultViewerView extends ItemView {
     return [];
   }
 
-  private onListFileClick(file: any): void {
+  private onListFileClick(file: TFile): void {
     const ext = "." + file.extension;
     if ([".docx", ".xlsx", ".pptx", ".sql"].includes(ext)) {
       if (this.plugin.openOfficeFile) {

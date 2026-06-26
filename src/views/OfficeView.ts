@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile } from "obsidian";
+import { ItemView, WorkspaceLeaf, TFile, FileSystemAdapter } from "obsidian";
 import { OfficeRenderer } from "../services/OfficeRenderer";
 import { setLucideIcon } from "../utils/lucide-icons";
 import { t } from "../i18n";
@@ -83,11 +83,12 @@ export class OfficeView extends ItemView {
 
   private async openExternally(): Promise<void> {
     const adapter = this.app.vault.adapter;
-    const basePath = adapter instanceof (window as any).DataAdapter ? (adapter as any).basePath : "";
+    const basePath = adapter instanceof FileSystemAdapter ? adapter.getBasePath() : "";
     const fullPath = `${basePath}/${this.file.path}`;
 
     try {
-      const electron = (window as Record<string, any>).require("electron");
+      const _window = window as unknown as { require: (mod: string) => { shell: { openPath(path: string): Promise<string> } } };
+      const electron = _window.require("electron");
       if (electron && electron.shell) {
         await electron.shell.openPath(fullPath);
         return;
