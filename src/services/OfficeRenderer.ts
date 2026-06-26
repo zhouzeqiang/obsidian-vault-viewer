@@ -94,8 +94,9 @@ export class OfficeRenderer {
   private async renderSql(content: string, filename: string, container: HTMLElement): Promise<string> {
     const titleMatch = filename.match(/^(.+)\.sql$/i);
     const title = titleMatch ? titleMatch[1] : filename;
-    const html = `<pre class="office-sql"><code>${this.escapeHtml(content)}</code></pre>`;
-    container.innerHTML = html;
+    container.empty();
+    const pre = container.createEl("pre", { cls: "office-sql" });
+    pre.createEl("code", { text: content });
     return title;
   }
 
