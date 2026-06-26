@@ -1,6 +1,6 @@
 # Vault Viewer - 增强型文件浏览器
 
-Vault Viewer 是一个 Obsidian 插件，提供直观的文件浏览器界面，包含目录树、文件列表，并支持直接在 Obsidian 中预览 Office 文档（Word、Excel、PowerPoint）。
+Vault Viewer 是一个 Obsidian 插件，提供直观的文件浏览器界面，包含目录树、文件列表，并支持直接在 Obsidian 中预览 Office 文档（Word、Excel、PowerPoint）。最大的特点是文档和文件分离，这样可以更专注于文档的编写，同时查找相关的文件也更轻松。相关的文件放置到一个文件夹下，点击文件夹，在下面文件区域可以直接展示该文件夹下所有文件。点击md文件，可以显示该md文件中已经引用的文件。同时支持在文件夹树上直接新增、删除文件和文件夹，支持拖拽文件到其他文件下。
 
 ## 功能特性
 
