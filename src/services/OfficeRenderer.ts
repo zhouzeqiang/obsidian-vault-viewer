@@ -359,7 +359,7 @@ export class OfficeRenderer {
   }
 
   private buildSqlHighlight(text: string, parent: HTMLElement): void {
-    const doc = parent.ownerDocument!;
+    const doc = parent.ownerDocument;
     const escaped = text
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
