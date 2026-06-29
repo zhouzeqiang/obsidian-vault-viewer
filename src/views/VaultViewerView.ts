@@ -226,13 +226,14 @@ export class VaultViewerView extends ItemView {
     collapseBtn.addEventListener("click", () => this.collapseAllFolders());
   }
 
-  private onNewFile(): void {
-    const folder = this.currentFolder || this.app.vault.getRoot();
+  private async createFileInFolder(folder: TFolder): Promise<void> {
     new InputModal(this.app, t("modal.newFile"), t("modal.fileName"), "未命名", async (name) => {
       const filePath = `${folder.path}/${name}.md`;
       try {
         await this.app.vault.create(filePath, "");
+        const savedExpanded = this.saveExpandedState();
         this.renderTree();
+        this.restoreExpandedState(savedExpanded);
         const file = this.app.vault.getAbstractFileByPath(filePath);
         if (file instanceof TFile) this.locateInTree(file);
         new Notice(t("notice.fileCreated", `${name}.md`));
@@ -243,19 +244,60 @@ export class VaultViewerView extends ItemView {
     }).open();
   }
 
-  private onNewFolder(): void {
-    const parent = this.currentFolder || this.app.vault.getRoot();
+  private async createFolderInFolder(folder: TFolder): Promise<void> {
     new InputModal(this.app, t("modal.newFolder"), t("modal.folderName"), "新建文件夹", async (name) => {
-      const folderPath = `${parent.path}/${name}`;
+      const folderPath = `${folder.path}/${name}`;
       try {
         await this.app.vault.createFolder(folderPath);
+        const savedExpanded = this.saveExpandedState();
         this.renderTree();
+        this.restoreExpandedState(savedExpanded);
+        const newFolder = this.app.vault.getAbstractFileByPath(folderPath);
+        if (newFolder instanceof TFolder) this.highlightParentAndFolder(newFolder);
         new Notice(t("notice.folderCreated", name));
       } catch (e) {
         new Notice(t("notice.createFailed", (e as Error).message));
         console.error("Vault Viewer: 新建文件夹失败", e);
       }
     }).open();
+  }
+
+  private highlightParentAndFolder(folder: TFolder): void {
+    const path = folder.path;
+    const parts = path.split("/");
+    const treeEl = this.treeEl;
+
+    for (let i = 1; i < parts.length; i++) {
+      const ancestorPath = parts.slice(0, i).join("/");
+      const folderRow = treeEl.querySelector(
+        `.vault-viewer-folder[data-path="${ancestorPath}"]`
+      ) as HTMLElement;
+      if (!folderRow) continue;
+      const childrenEl = folderRow.nextElementSibling as HTMLElement;
+      if (childrenEl?.hasClass?.("vault-viewer-children") && childrenEl.hasClass("hidden")) {
+        childrenEl.removeClass("hidden");
+        const toggle = folderRow.querySelector(".vault-viewer-toggle-icon") as HTMLElement;
+        if (toggle) { toggle.empty(); setLucideIcon(toggle, "ChevronDown"); }
+        const fIcon = folderRow.querySelector(".vault-viewer-folder-icon") as HTMLElement;
+        if (fIcon) { fIcon.empty(); setLucideIcon(fIcon, "FolderOpenDot"); }
+      }
+    }
+
+    const escapedPath = path.replace(/"/g, '\\"');
+    const targetRow = treeEl.querySelector(
+      `[data-path="${escapedPath}"]`
+    ) as HTMLElement;
+    if (targetRow) this.highlightRow(targetRow);
+  }
+
+  private onNewFile(): void {
+    const folder = this.currentFolder || this.app.vault.getRoot();
+    this.createFileInFolder(folder);
+  }
+
+  private onNewFolder(): void {
+    const parent = this.currentFolder || this.app.vault.getRoot();
+    this.createFolderInFolder(parent);
   }
 
   private expandAllFolders(): void {
@@ -1086,6 +1128,26 @@ export class VaultViewerView extends ItemView {
       void navigator.clipboard.writeText(item.path);
       new Notice(t("notice.pathCopied"));
     });
+
+    if (isFolder) {
+      const newFileBtn = menu.createEl("button", { cls: "vault-viewer-tree-context-btn" });
+      setLucideIcon(newFileBtn.createSpan(), "FilePlusCorner", 14);
+      newFileBtn.createSpan({ text: ` ${t("treeContext.newFile")}` });
+      newFileBtn.addEventListener("click", () => {
+        this.closeTreeContextMenu();
+        this.createFileInFolder(item as TFolder);
+      });
+
+      const newFolderBtn = menu.createEl("button", { cls: "vault-viewer-tree-context-btn" });
+      setLucideIcon(newFolderBtn.createSpan(), "FolderPlus", 14);
+      newFolderBtn.createSpan({ text: ` ${t("treeContext.newFolder")}` });
+      newFolderBtn.addEventListener("click", () => {
+        this.closeTreeContextMenu();
+        this.createFolderInFolder(item as TFolder);
+      });
+
+      menu.createDiv({ cls: "vault-viewer-context-separator" });
+    }
 
     menu.createDiv({ cls: "vault-viewer-context-separator" });
 

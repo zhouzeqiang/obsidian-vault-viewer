@@ -39,6 +39,8 @@ const en: Record<string, string | ((...args: any[]) => string)> = {
   "treeContext.openFolder": "Open containing folder",
   "treeContext.copyPath": "Copy path",
   "treeContext.delete": "Delete",
+  "treeContext.newFile": "New Markdown file",
+  "treeContext.newFolder": "New folder",
   "notice.fileCreated": (name: string) => `Created ${name}`,
   "notice.folderCreated": (name: string) => `Created folder ${name}`,
   "notice.fileDeleted": (name: string) => `Deleted ${name}`,

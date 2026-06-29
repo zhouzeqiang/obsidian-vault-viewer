@@ -39,6 +39,8 @@ const zhCN: Record<string, string | ((...args: any[]) => string)> = {
   "treeContext.openFolder": "打开所在文件夹",
   "treeContext.copyPath": "复制路径",
   "treeContext.delete": "删除",
+  "treeContext.newFile": "新建 Markdown 文件",
+  "treeContext.newFolder": "新建文件夹",
   "notice.fileCreated": (name: string) => `已创建 ${name}`,
   "notice.folderCreated": (name: string) => `已创建文件夹 ${name}`,
   "notice.fileDeleted": (name: string) => `已删除 ${name}`,
