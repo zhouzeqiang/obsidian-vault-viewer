@@ -3510,11 +3510,11 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
   }
   onNewFile() {
     const folder = this.currentFolder || this.app.vault.getRoot();
-    this.createFileInFolder(folder);
+    void this.createFileInFolder(folder);
   }
   onNewFolder() {
     const parent = this.currentFolder || this.app.vault.getRoot();
-    this.createFolderInFolder(parent);
+    void this.createFolderInFolder(parent);
   }
   expandAllFolders() {
     const treeEl = this.treeEl;
@@ -4279,14 +4279,16 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       newFileBtn.createSpan({ text: ` ${t("treeContext.newFile")}` });
       newFileBtn.addEventListener("click", () => {
         this.closeTreeContextMenu();
-        this.createFileInFolder(item);
+        if (item instanceof import_obsidian4.TFolder)
+          void this.createFileInFolder(item);
       });
       const newFolderBtn = menu.createEl("button", { cls: "vault-viewer-tree-context-btn" });
       setLucideIcon(newFolderBtn.createSpan(), "FolderPlus", 14);
       newFolderBtn.createSpan({ text: ` ${t("treeContext.newFolder")}` });
       newFolderBtn.addEventListener("click", () => {
         this.closeTreeContextMenu();
-        this.createFolderInFolder(item);
+        if (item instanceof import_obsidian4.TFolder)
+          void this.createFolderInFolder(item);
       });
       menu.createDiv({ cls: "vault-viewer-context-separator" });
     }
@@ -46446,12 +46448,12 @@ var OfficeRenderer = class {
     };
     prevBtn.addEventListener("click", () => {
       if (viewer.getCurrentSlideIndex() > 0) {
-        viewer.previousSlide(canvas).then(() => update());
+        void viewer.previousSlide(canvas).then(() => update());
       }
     });
     nextBtn.addEventListener("click", () => {
       if (viewer.getCurrentSlideIndex() < totalSlides - 1) {
-        viewer.nextSlide(canvas).then(() => update());
+        void viewer.nextSlide(canvas).then(() => update());
       }
     });
     canvasWrapper.addEventListener("keydown", (e) => {
@@ -46495,6 +46497,7 @@ var OfficeRenderer = class {
     return title;
   }
   buildSqlHighlight(text, parent) {
+    const doc = parent.ownerDocument;
     const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const combined = /(\b(?:SELECT|FROM|WHERE|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|DROP|ALTER|INDEX|VIEW|JOIN|LEFT|RIGHT|INNER|OUTER|CROSS|ON|AND|OR|NOT|IN|EXISTS|BETWEEN|LIKE|IS|NULL|AS|DISTINCT|ORDER|BY|GROUP|HAVING|LIMIT|OFFSET|UNION|ALL|CASE|WHEN|THEN|ELSE|END|BEGIN|COMMIT|ROLLBACK|TRANSACTION|GRANT|REVOKE|PRIMARY|KEY|FOREIGN|REFERENCES|CASCADE|UNIQUE|CHECK|DEFAULT|IF|ELSE|WHILE|DECLARE|SET|PRINT|EXEC|EXECUTE|RETURN|FUNCTION|PROCEDURE|TRIGGER|WITH|RECURSIVE|COUNT|SUM|AVG|MIN|MAX|CAST|CONVERT|COALESCE|NULLIF)\b)|('[^']*')|(\b\d+(?:\.\d+)?\b)|(--.*)|(\/\*[\s\S]*?\*\/)/gi;
     const lines = escaped.split("\n");
@@ -46508,7 +46511,7 @@ var OfficeRenderer = class {
       let match;
       while ((match = combined.exec(line)) !== null) {
         if (match.index > lastIndex) {
-          codeSpan.appendChild(document.createTextNode(line.substring(lastIndex, match.index)));
+          codeSpan.appendChild(doc.createTextNode(line.substring(lastIndex, match.index)));
         }
         let className;
         if (match[1])
@@ -46522,12 +46525,12 @@ var OfficeRenderer = class {
         if (className) {
           codeSpan.createSpan({ cls: className, text: match[0] });
         } else {
-          codeSpan.appendChild(document.createTextNode(match[0]));
+          codeSpan.appendChild(doc.createTextNode(match[0]));
         }
         lastIndex = match.index + match[0].length;
       }
       if (lastIndex < line.length) {
-        codeSpan.appendChild(document.createTextNode(line.substring(lastIndex)));
+        codeSpan.appendChild(doc.createTextNode(line.substring(lastIndex)));
       }
     }
   }
