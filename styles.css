@@ -361,7 +361,7 @@
   background: var(--background-secondary);
 }
 
-.office-view-content:has(.office-pptx) {
+.office-view-content.office-view-has-pptx {
   padding: 0;
 }
 

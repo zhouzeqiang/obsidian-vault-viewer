@@ -46246,6 +46246,7 @@ var OfficeRenderer = class {
   async render(file, bodyContainer) {
     const ext = file.extension.toLowerCase();
     bodyContainer.empty();
+    bodyContainer.classList.remove("office-view-has-pptx");
     switch (ext) {
       case "docx":
         return this.renderDocx(await this.vault.readBinary(file), file.name, bodyContainer);
@@ -46336,7 +46337,7 @@ var OfficeRenderer = class {
         }
       }
       if (data.rows.length > MAX_ROWS) {
-        const p = tableWrapper.createEl("p", { cls: "office-truncated", text: `\u8BE5\u8868\u5171 ${data.rows.length} \u884C\uFF0C\u4EC5\u663E\u793A\u524D ${MAX_ROWS} \u884C` });
+        tableWrapper.createEl("p", { cls: "office-truncated", text: `\u8BE5\u8868\u5171 ${data.rows.length} \u884C\uFF0C\u4EC5\u663E\u793A\u524D ${MAX_ROWS} \u884C` });
       }
     };
     const updateSheet = (idx) => {
@@ -46417,6 +46418,7 @@ var OfficeRenderer = class {
     return hidden;
   }
   async renderPptx(buffer, filename, container) {
+    container.classList.add("office-view-has-pptx");
     const wrapper = container.createDiv({ cls: "office-pptx" });
     const navBar = wrapper.createDiv({ cls: "pptx-nav" });
     const prevBtn = navBar.createEl("button", { cls: "office-view-btn", text: "\u25C0" });
@@ -46442,16 +46444,14 @@ var OfficeRenderer = class {
       canvas.style.height = h + "px";
       await viewer.render(canvas);
     };
-    prevBtn.addEventListener("click", async () => {
+    prevBtn.addEventListener("click", () => {
       if (viewer.getCurrentSlideIndex() > 0) {
-        await viewer.previousSlide(canvas);
-        update();
+        viewer.previousSlide(canvas).then(() => update());
       }
     });
-    nextBtn.addEventListener("click", async () => {
+    nextBtn.addEventListener("click", () => {
       if (viewer.getCurrentSlideIndex() < totalSlides - 1) {
-        await viewer.nextSlide(canvas);
-        update();
+        viewer.nextSlide(canvas).then(() => update());
       }
     });
     canvasWrapper.addEventListener("keydown", (e) => {
@@ -46465,7 +46465,9 @@ var OfficeRenderer = class {
       }
     });
     canvasWrapper.tabIndex = 0;
-    const ro = new ResizeObserver(() => renderSlide());
+    const ro = new ResizeObserver(() => {
+      void renderSlide();
+    });
     ro.observe(canvasWrapper);
     await renderSlide();
     return filename;
@@ -46489,21 +46491,45 @@ var OfficeRenderer = class {
     header.createSpan({ cls: "office-sql-lang", text: "sql" });
     header.createSpan({ cls: "office-sql-filename", text: title });
     const pre = wrapper.createEl("pre", { cls: "office-sql" });
-    const highlighted = this.highlightSql(content);
-    pre.innerHTML = highlighted;
+    this.buildSqlHighlight(content, pre);
     return title;
   }
-  highlightSql(text) {
+  buildSqlHighlight(text, parent) {
     const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const combined = /(\b(?:SELECT|FROM|WHERE|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|DROP|ALTER|INDEX|VIEW|JOIN|LEFT|RIGHT|INNER|OUTER|CROSS|ON|AND|OR|NOT|IN|EXISTS|BETWEEN|LIKE|IS|NULL|AS|DISTINCT|ORDER|BY|GROUP|HAVING|LIMIT|OFFSET|UNION|ALL|CASE|WHEN|THEN|ELSE|END|BEGIN|COMMIT|ROLLBACK|TRANSACTION|GRANT|REVOKE|PRIMARY|KEY|FOREIGN|REFERENCES|CASCADE|UNIQUE|CHECK|DEFAULT|IF|ELSE|WHILE|DECLARE|SET|PRINT|EXEC|EXECUTE|RETURN|FUNCTION|PROCEDURE|TRIGGER|WITH|RECURSIVE|COUNT|SUM|AVG|MIN|MAX|CAST|CONVERT|COALESCE|NULLIF)\b)|('[^']*')|(\b\d+(?:\.\d+)?\b)|(--.*)|(\/\*[\s\S]*?\*\/)/gi;
     const lines = escaped.split("\n");
-    return lines.map((line, i) => {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       const lineNum = i + 1;
-      const highlighted = line.replace(
-        /\b(SELECT|FROM|WHERE|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|DROP|ALTER|INDEX|VIEW|JOIN|LEFT|RIGHT|INNER|OUTER|CROSS|ON|AND|OR|NOT|IN|EXISTS|BETWEEN|LIKE|IS|NULL|AS|DISTINCT|ORDER|BY|GROUP|HAVING|LIMIT|OFFSET|UNION|ALL|CASE|WHEN|THEN|ELSE|END|BEGIN|COMMIT|ROLLBACK|TRANSACTION|GRANT|REVOKE|PRIMARY|KEY|FOREIGN|REFERENCES|CASCADE|UNIQUE|CHECK|DEFAULT|IF|ELSE|WHILE|DECLARE|SET|PRINT|EXEC|EXECUTE|RETURN|FUNCTION|PROCEDURE|TRIGGER|WITH|RECURSIVE|COUNT|SUM|AVG|MIN|MAX|CAST|CONVERT|COALESCE|NULLIF)\b/gi,
-        (m) => `<span class="sql-keyword">${m}</span>`
-      ).replace(/'[^']*'/g, (m) => `<span class="sql-string">${m}</span>`).replace(/\b(\d+(?:\.\d+)?)\b/g, (m) => `<span class="sql-number">${m}</span>`).replace(/(--.*)/g, (m) => `<span class="sql-comment">${m}</span>`).replace(/(\/\*[\s\S]*?\*\/)/g, (m) => `<span class="sql-comment">${m}</span>`);
-      return `<span class="sql-line"><span class="sql-line-num">${lineNum}</span><span class="sql-line-code">${highlighted}</span></span>`;
-    }).join("\n");
+      const lineSpan = parent.createSpan({ cls: "sql-line" });
+      lineSpan.createSpan({ cls: "sql-line-num", text: String(lineNum) });
+      const codeSpan = lineSpan.createSpan({ cls: "sql-line-code" });
+      let lastIndex = 0;
+      let match;
+      while ((match = combined.exec(line)) !== null) {
+        if (match.index > lastIndex) {
+          codeSpan.appendChild(document.createTextNode(line.substring(lastIndex, match.index)));
+        }
+        let className;
+        if (match[1])
+          className = "sql-keyword";
+        else if (match[2])
+          className = "sql-string";
+        else if (match[3])
+          className = "sql-number";
+        else if (match[4] || match[5])
+          className = "sql-comment";
+        if (className) {
+          codeSpan.createSpan({ cls: className, text: match[0] });
+        } else {
+          codeSpan.appendChild(document.createTextNode(match[0]));
+        }
+        lastIndex = match.index + match[0].length;
+      }
+      if (lastIndex < line.length) {
+        codeSpan.appendChild(document.createTextNode(line.substring(lastIndex)));
+      }
+    }
   }
   // ============== XLSX helpers ==============
   async parseXlsxStyles(zip) {
