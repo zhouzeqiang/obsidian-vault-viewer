@@ -294,11 +294,6 @@
   border-color: var(--interactive-accent);
 }
 
-.office-view-title {
-  font-weight: 600;
-  font-size: 0.9em;
-  margin-left: auto;
-}
 
 .office-view-status {
   text-align: center;
@@ -359,109 +354,68 @@
 }
 
 .office-pptx {
-  padding: 16px;
-  max-width: 100%;
-  margin: 0 auto;
-}
-
-.pptx-slide {
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 20px;
-  background: var(--background-secondary);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.pptx-slide-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--background-modifier-hover);
-}
-
-.pptx-slide-body {
-  position: relative;
-  width: 100%;
-  background: white;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.pptx-slide-number {
-  font-size: 0.75em;
-  color: var(--text-muted);
-  background: var(--background-modifier-hover);
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
-.pptx-slide-title {
-  font-size: 1.1em;
-  font-weight: 600;
-  margin: 0;
-}
-
-.pptx-text {
-  margin: 4px 0;
-  line-height: 1.6;
-  font-size: 0.95em;
-  padding-left: 4px;
-}
-
-.pptx-text.level-1 { padding-left: 12px; color: var(--text-muted); }
-.pptx-text.level-2 { padding-left: 24px; color: var(--text-muted); font-size: 0.9em; }
-
-.pptx-shape {
-  box-sizing: border-box;
-  padding: 4px 8px;
-  font-size: 0.9em;
-  overflow: hidden;
-  word-break: break-word;
-}
-
-.pptx-shape p {
-  margin: 0;
-  line-height: 1.4;
-}
-
-.pptx-empty {
-  color: var(--text-muted);
-  font-style: italic;
-  padding: 12px;
-  text-align: center;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
   background: var(--background-secondary);
+}
+
+.office-view-content:has(.office-pptx) {
+  padding: 0;
+}
+
+.pptx-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--background-primary);
+  border-bottom: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+.pptx-nav-label {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 80px;
+  text-align: center;
+}
+
+.pptx-canvas-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  overflow: auto;
+  outline: none;
+  min-height: 0;
+}
+
+.pptx-canvas {
+  display: block;
   border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 .office-table {
   border-collapse: collapse;
   width: 100%;
   margin: 10px 0;
-  font-size: 0.85em;
 }
 
 .office-table td, .office-table th {
-  border: 1px solid var(--background-modifier-border);
-  padding: 8px 12px;
+  padding: 2px 6px;
   text-align: left;
+  font-size: 0.85em;
 }
 
 .office-table th {
-  background: var(--background-modifier-hover);
   font-weight: 600;
   white-space: nowrap;
-}
-
-.office-table tr:nth-child(even) {
-  background: var(--background-primary-alt);
-}
-
-.office-table tr:hover {
-  background: var(--background-modifier-hover);
 }
 
 .office-xlsx h3 {
@@ -481,21 +435,80 @@
   margin: 4px 0;
 }
 
-.office-sql {
-  padding: 16px;
-  background: var(--background-secondary);
-  border-radius: 6px;
-  overflow-x: auto;
-  font-family: var(--font-monospace);
-  font-size: 0.85em;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+.office-sql-wrapper {
+  margin: 8px 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.office-sql code {
-  background: transparent;
-  padding: 0;
+.office-sql-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-size: 0.8em;
+}
+
+.office-sql-lang {
+  font-weight: 600;
+  color: var(--text-accent);
+  text-transform: uppercase;
+  font-size: 0.85em;
+}
+
+.office-sql-filename {
+  color: var(--text-muted);
+}
+
+.office-sql {
+  padding: 8px 0;
+  margin: 0;
+  background: var(--background-primary);
+  overflow-x: auto;
+  font-family: var(--font-monospace);
+  font-size: 0.82em;
+  line-height: 1.6;
+  white-space: pre;
+  word-wrap: normal;
+}
+
+.sql-line {
+  display: flex;
+  min-height: 1.6em;
+}
+
+.sql-line-num {
+  flex: 0 0 44px;
+  text-align: right;
+  padding-right: 12px;
+  color: var(--text-faint);
+  user-select: none;
+}
+
+.sql-line-code {
+  flex: 1;
+  white-space: pre;
+}
+
+.sql-keyword {
+  color: var(--color-blue);
+  font-weight: 600;
+}
+
+.sql-string {
+  color: var(--color-green);
+}
+
+.sql-number {
+  color: var(--color-orange);
+}
+
+.sql-comment {
+  color: var(--text-faint);
+  font-style: italic;
 }
 
 .vault-viewer-context-menu {
@@ -873,15 +886,4 @@
   user-select: none;
 }
 
-/* PPTX slide images */
-.pptx-slide-body img {
-  pointer-events: none;
-  user-select: none;
-}
 
-.pptx-slide-image {
-  max-width: 100%;
-  height: auto;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-}

@@ -1,6 +1,6 @@
 {
   "name": "vault-viewer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Obsidian plugin for enhanced file browsing and Office preview",
   "main": "main.js",
   "scripts": {
@@ -21,6 +21,7 @@
   "dependencies": {
     "docx-preview": "^0.3.7",
     "jszip": "^3.10.1",
-    "lucide-static": "^1.21.0"
+    "lucide-static": "^1.21.0",
+    "pptxviewjs": "^1.1.9"
   }
 }

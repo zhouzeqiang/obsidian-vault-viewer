@@ -51,11 +51,6 @@ export class OfficeView extends ItemView {
       void this.openExternally();
     });
 
-    actionBar.createSpan({
-      cls: "office-view-title",
-      text: this.file.name,
-    });
-
     const statusEl = container.createDiv({ cls: "office-view-status" });
     statusEl.setText(t("office.parsing"));
 
