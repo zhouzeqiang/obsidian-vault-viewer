@@ -39,6 +39,8 @@ const zhTW: Record<string, string | ((...args: any[]) => string)> = {
   "treeContext.openFolder": "開啟所在資料夾",
   "treeContext.copyPath": "複製路徑",
   "treeContext.delete": "刪除",
+  "treeContext.newFile": "新增 Markdown 檔案",
+  "treeContext.newFolder": "新增資料夾",
   "notice.fileCreated": (name: string) => `已建立 ${name}`,
   "notice.folderCreated": (name: string) => `已建立資料夾 ${name}`,
   "notice.fileDeleted": (name: string) => `已刪除 ${name}`,
