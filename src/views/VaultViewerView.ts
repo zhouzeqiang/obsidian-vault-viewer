@@ -292,12 +292,12 @@ export class VaultViewerView extends ItemView {
 
   private onNewFile(): void {
     const folder = this.currentFolder || this.app.vault.getRoot();
-    this.createFileInFolder(folder);
+    void this.createFileInFolder(folder);
   }
 
   private onNewFolder(): void {
     const parent = this.currentFolder || this.app.vault.getRoot();
-    this.createFolderInFolder(parent);
+    void this.createFolderInFolder(parent);
   }
 
   private expandAllFolders(): void {
@@ -1135,7 +1135,7 @@ export class VaultViewerView extends ItemView {
       newFileBtn.createSpan({ text: ` ${t("treeContext.newFile")}` });
       newFileBtn.addEventListener("click", () => {
         this.closeTreeContextMenu();
-        this.createFileInFolder(item as TFolder);
+        if (item instanceof TFolder) void this.createFileInFolder(item);
       });
 
       const newFolderBtn = menu.createEl("button", { cls: "vault-viewer-tree-context-btn" });
@@ -1143,7 +1143,7 @@ export class VaultViewerView extends ItemView {
       newFolderBtn.createSpan({ text: ` ${t("treeContext.newFolder")}` });
       newFolderBtn.addEventListener("click", () => {
         this.closeTreeContextMenu();
-        this.createFolderInFolder(item as TFolder);
+        if (item instanceof TFolder) void this.createFolderInFolder(item);
       });
 
       menu.createDiv({ cls: "vault-viewer-context-separator" });
