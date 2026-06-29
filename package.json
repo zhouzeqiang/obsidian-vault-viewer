@@ -19,7 +19,10 @@
     "typescript": "5.0.2"
   },
   "dependencies": {
+    "@univerjs/preset-sheets-core": "^0.6.10",
+    "@univerjs/presets": "^0.6.10",
     "docx-preview": "^0.3.7",
+    "esbuild-plugin-inline-css": "^0.0.1",
     "jszip": "^3.10.1",
     "lucide-static": "^1.21.0",
     "pptxviewjs": "^1.1.9"
