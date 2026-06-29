@@ -2794,6 +2794,8 @@ var zhCN = {
   "treeContext.openFolder": "\u6253\u5F00\u6240\u5728\u6587\u4EF6\u5939",
   "treeContext.copyPath": "\u590D\u5236\u8DEF\u5F84",
   "treeContext.delete": "\u5220\u9664",
+  "treeContext.newFile": "\u65B0\u5EFA Markdown \u6587\u4EF6",
+  "treeContext.newFolder": "\u65B0\u5EFA\u6587\u4EF6\u5939",
   "notice.fileCreated": (name) => `\u5DF2\u521B\u5EFA ${name}`,
   "notice.folderCreated": (name) => `\u5DF2\u521B\u5EFA\u6587\u4EF6\u5939 ${name}`,
   "notice.fileDeleted": (name) => `\u5DF2\u5220\u9664 ${name}`,
@@ -2863,6 +2865,8 @@ var zhTW = {
   "treeContext.openFolder": "\u958B\u555F\u6240\u5728\u8CC7\u6599\u593E",
   "treeContext.copyPath": "\u8907\u88FD\u8DEF\u5F91",
   "treeContext.delete": "\u522A\u9664",
+  "treeContext.newFile": "\u65B0\u589E Markdown \u6A94\u6848",
+  "treeContext.newFolder": "\u65B0\u589E\u8CC7\u6599\u593E",
   "notice.fileCreated": (name) => `\u5DF2\u5EFA\u7ACB ${name}`,
   "notice.folderCreated": (name) => `\u5DF2\u5EFA\u7ACB\u8CC7\u6599\u593E ${name}`,
   "notice.fileDeleted": (name) => `\u5DF2\u522A\u9664 ${name}`,
@@ -2932,6 +2936,8 @@ var en = {
   "treeContext.openFolder": "Open containing folder",
   "treeContext.copyPath": "Copy path",
   "treeContext.delete": "Delete",
+  "treeContext.newFile": "New Markdown file",
+  "treeContext.newFolder": "New folder",
   "notice.fileCreated": (name) => `Created ${name}`,
   "notice.folderCreated": (name) => `Created folder ${name}`,
   "notice.fileDeleted": (name) => `Deleted ${name}`,
@@ -3432,13 +3438,14 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     setLucideIcon(collapseBtn, "ChevronsDownUp");
     collapseBtn.addEventListener("click", () => this.collapseAllFolders());
   }
-  onNewFile() {
-    const folder = this.currentFolder || this.app.vault.getRoot();
+  async createFileInFolder(folder) {
     new InputModal(this.app, t("modal.newFile"), t("modal.fileName"), "\u672A\u547D\u540D", async (name) => {
       const filePath = `${folder.path}/${name}.md`;
       try {
         await this.app.vault.create(filePath, "");
+        const savedExpanded = this.saveExpandedState();
         this.renderTree();
+        this.restoreExpandedState(savedExpanded);
         const file = this.app.vault.getAbstractFileByPath(filePath);
         if (file instanceof import_obsidian4.TFile)
           this.locateInTree(file);
@@ -3449,19 +3456,65 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       }
     }).open();
   }
-  onNewFolder() {
-    const parent = this.currentFolder || this.app.vault.getRoot();
+  async createFolderInFolder(folder) {
     new InputModal(this.app, t("modal.newFolder"), t("modal.folderName"), "\u65B0\u5EFA\u6587\u4EF6\u5939", async (name) => {
-      const folderPath = `${parent.path}/${name}`;
+      const folderPath = `${folder.path}/${name}`;
       try {
         await this.app.vault.createFolder(folderPath);
+        const savedExpanded = this.saveExpandedState();
         this.renderTree();
+        this.restoreExpandedState(savedExpanded);
+        const newFolder = this.app.vault.getAbstractFileByPath(folderPath);
+        if (newFolder instanceof import_obsidian4.TFolder)
+          this.highlightParentAndFolder(newFolder);
         new import_obsidian4.Notice(t("notice.folderCreated", name));
       } catch (e) {
         new import_obsidian4.Notice(t("notice.createFailed", e.message));
         console.error("Vault Viewer: \u65B0\u5EFA\u6587\u4EF6\u5939\u5931\u8D25", e);
       }
     }).open();
+  }
+  highlightParentAndFolder(folder) {
+    var _a;
+    const path2 = folder.path;
+    const parts = path2.split("/");
+    const treeEl = this.treeEl;
+    for (let i = 1; i < parts.length; i++) {
+      const ancestorPath = parts.slice(0, i).join("/");
+      const folderRow = treeEl.querySelector(
+        `.vault-viewer-folder[data-path="${ancestorPath}"]`
+      );
+      if (!folderRow)
+        continue;
+      const childrenEl = folderRow.nextElementSibling;
+      if (((_a = childrenEl == null ? void 0 : childrenEl.hasClass) == null ? void 0 : _a.call(childrenEl, "vault-viewer-children")) && childrenEl.hasClass("hidden")) {
+        childrenEl.removeClass("hidden");
+        const toggle = folderRow.querySelector(".vault-viewer-toggle-icon");
+        if (toggle) {
+          toggle.empty();
+          setLucideIcon(toggle, "ChevronDown");
+        }
+        const fIcon = folderRow.querySelector(".vault-viewer-folder-icon");
+        if (fIcon) {
+          fIcon.empty();
+          setLucideIcon(fIcon, "FolderOpenDot");
+        }
+      }
+    }
+    const escapedPath = path2.replace(/"/g, '\\"');
+    const targetRow = treeEl.querySelector(
+      `[data-path="${escapedPath}"]`
+    );
+    if (targetRow)
+      this.highlightRow(targetRow);
+  }
+  onNewFile() {
+    const folder = this.currentFolder || this.app.vault.getRoot();
+    this.createFileInFolder(folder);
+  }
+  onNewFolder() {
+    const parent = this.currentFolder || this.app.vault.getRoot();
+    this.createFolderInFolder(parent);
   }
   expandAllFolders() {
     const treeEl = this.treeEl;
@@ -4220,6 +4273,23 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       void navigator.clipboard.writeText(item.path);
       new import_obsidian4.Notice(t("notice.pathCopied"));
     });
+    if (isFolder) {
+      const newFileBtn = menu.createEl("button", { cls: "vault-viewer-tree-context-btn" });
+      setLucideIcon(newFileBtn.createSpan(), "FilePlusCorner", 14);
+      newFileBtn.createSpan({ text: ` ${t("treeContext.newFile")}` });
+      newFileBtn.addEventListener("click", () => {
+        this.closeTreeContextMenu();
+        this.createFileInFolder(item);
+      });
+      const newFolderBtn = menu.createEl("button", { cls: "vault-viewer-tree-context-btn" });
+      setLucideIcon(newFolderBtn.createSpan(), "FolderPlus", 14);
+      newFolderBtn.createSpan({ text: ` ${t("treeContext.newFolder")}` });
+      newFolderBtn.addEventListener("click", () => {
+        this.closeTreeContextMenu();
+        this.createFolderInFolder(item);
+      });
+      menu.createDiv({ cls: "vault-viewer-context-separator" });
+    }
     menu.createDiv({ cls: "vault-viewer-context-separator" });
     const deleteBtn = menu.createEl("button", { cls: "vault-viewer-tree-context-btn" });
     setLucideIcon(deleteBtn.createSpan(), "Trash2", 14);
