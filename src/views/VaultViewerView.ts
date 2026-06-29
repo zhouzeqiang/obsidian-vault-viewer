@@ -1129,6 +1129,26 @@ export class VaultViewerView extends ItemView {
       new Notice(t("notice.pathCopied"));
     });
 
+    if (isFolder) {
+      const newFileBtn = menu.createEl("button", { cls: "vault-viewer-tree-context-btn" });
+      setLucideIcon(newFileBtn.createSpan(), "FilePlusCorner", 14);
+      newFileBtn.createSpan({ text: ` ${t("treeContext.newFile")}` });
+      newFileBtn.addEventListener("click", () => {
+        this.closeTreeContextMenu();
+        this.createFileInFolder(item as TFolder);
+      });
+
+      const newFolderBtn = menu.createEl("button", { cls: "vault-viewer-tree-context-btn" });
+      setLucideIcon(newFolderBtn.createSpan(), "FolderPlus", 14);
+      newFolderBtn.createSpan({ text: ` ${t("treeContext.newFolder")}` });
+      newFolderBtn.addEventListener("click", () => {
+        this.closeTreeContextMenu();
+        this.createFolderInFolder(item as TFolder);
+      });
+
+      menu.createDiv({ cls: "vault-viewer-context-separator" });
+    }
+
     menu.createDiv({ cls: "vault-viewer-context-separator" });
 
     const deleteBtn = menu.createEl("button", { cls: "vault-viewer-tree-context-btn" });
