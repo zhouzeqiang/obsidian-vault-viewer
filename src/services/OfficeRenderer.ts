@@ -309,13 +309,13 @@ export class OfficeRenderer {
 
     prevBtn.addEventListener("click", () => {
       if (viewer.getCurrentSlideIndex() > 0) {
-        viewer.previousSlide(canvas).then(() => update());
+        void viewer.previousSlide(canvas).then(() => update());
       }
     });
 
     nextBtn.addEventListener("click", () => {
       if (viewer.getCurrentSlideIndex() < totalSlides - 1) {
-        viewer.nextSlide(canvas).then(() => update());
+        void viewer.nextSlide(canvas).then(() => update());
       }
     });
 
@@ -359,6 +359,7 @@ export class OfficeRenderer {
   }
 
   private buildSqlHighlight(text: string, parent: HTMLElement): void {
+    const doc = parent.ownerDocument!;
     const escaped = text
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -379,7 +380,7 @@ export class OfficeRenderer {
 
       while ((match = combined.exec(line)) !== null) {
         if (match.index > lastIndex) {
-          codeSpan.appendChild(document.createTextNode(line.substring(lastIndex, match.index)));
+          codeSpan.appendChild(doc.createTextNode(line.substring(lastIndex, match.index)));
         }
 
         let className: string | undefined;
@@ -391,14 +392,14 @@ export class OfficeRenderer {
         if (className) {
           codeSpan.createSpan({ cls: className, text: match[0] });
         } else {
-          codeSpan.appendChild(document.createTextNode(match[0]));
+          codeSpan.appendChild(doc.createTextNode(match[0]));
         }
 
         lastIndex = match.index + match[0].length;
       }
 
       if (lastIndex < line.length) {
-        codeSpan.appendChild(document.createTextNode(line.substring(lastIndex)));
+        codeSpan.appendChild(doc.createTextNode(line.substring(lastIndex)));
       }
     }
   }
