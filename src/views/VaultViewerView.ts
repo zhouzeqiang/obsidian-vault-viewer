@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder, TAbstractFile, FileSystemAdapter, MarkdownView } from "obsidian";
+﻿import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder, TAbstractFile, FileSystemAdapter, MarkdownView } from "obsidian";
 import VaultViewerPlugin from "../main";
 import { setLucideIcon } from "../utils/lucide-icons";
 import { InputModal } from "../ui/InputModal";
@@ -66,6 +66,22 @@ export class VaultViewerView extends ItemView {
     this.resizerEl = container.createDiv({ cls: "vault-viewer-resizer" });
 
     this.setupResizer();
+    // Restore saved tree/list split ratio
+    const savedSplit = this.plugin.settings.treeSplit;
+    if (savedSplit !== 50) {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          const treeToolbarH = this.treeToolbarEl?.offsetHeight || 0;
+          const avail = this.contentEl.offsetHeight - treeToolbarH;
+          const treeH = Math.round(avail * savedSplit / 100);
+          const listArea = this.contentEl.querySelector('.vault-viewer-list-area');
+          if (treeH > 40 && listArea) {
+            this.treeEl.style.setProperty('height', treeH + 'px');
+            this.treeEl.addClass('vault-viewer-tree-fixed');
+          }
+        }, 0);
+      });
+    }
 
     const listArea = container.createDiv({ cls: "vault-viewer-list-area" });
 
@@ -149,6 +165,13 @@ export class VaultViewerView extends ItemView {
         activeDocument.body.removeClass("vault-viewer-resizing");
         activeDocument.removeEventListener("mousemove", onMouseMove);
         activeDocument.removeEventListener("mouseup", onMouseUp);
+        // Save split ratio to settings
+        const containerHeight = this.contentEl.offsetHeight;
+        const actionBarHeight = this.treeToolbarEl.offsetHeight;
+        const treeHeight = this.treeEl.offsetHeight;
+        const pct = Math.round((treeHeight / (containerHeight - actionBarHeight)) * 100);
+        this.plugin.settings.treeSplit = Math.max(10, Math.min(90, pct));
+        void this.plugin.saveSettings();
       };
 
       activeDocument.addEventListener("mousemove", onMouseMove);
@@ -755,20 +778,36 @@ export class VaultViewerView extends ItemView {
       return;
     }
 
+    // Build table with header
+    const tableWrapper = this.listEl.createDiv({ cls: "vault-viewer-table-wrapper" });
+    const table = tableWrapper.createEl("table", { cls: "vault-viewer-table" });
+
+    // Header row with <th>
+    const thead = table.createEl("thead");
+    const headerRow = thead.createEl("tr", { cls: "vault-viewer-table-header" });
+    const nameTh = headerRow.createEl("th", { cls: "vault-viewer-table-th vault-viewer-col-name" });
+    nameTh.setText(t("list.name") || "Name");
+    const timeTh = headerRow.createEl("th", { cls: "vault-viewer-table-th vault-viewer-col-time" });
+    timeTh.setText(t("list.modified") || "Modified");
+
+    // Column resize handles
+    this.setupColResize(nameTh.createDiv({ cls: "vault-viewer-col-resizer" }), nameTh);
+    this.setupColResize(timeTh.createDiv({ cls: "vault-viewer-col-resizer" }), timeTh);
+
+    // Body rows with <td>
+    const tbody = table.createEl("tbody");
     for (const file of visible) {
-      const row = this.listEl.createDiv({ cls: "vault-viewer-list-row" });
+      const row = tbody.createEl("tr", { cls: "vault-viewer-list-row" });
       row.dataset.path = file.path;
       if (file.path === this.selectedListPath) row.addClass("vault-viewer-highlighted");
 
-      const iconSpan = row.createSpan({ cls: "vault-viewer-list-icon" });
+      const nameTd = row.createEl("td", { cls: "vault-viewer-list-name" });
+      const iconSpan = nameTd.createSpan({ cls: "vault-viewer-list-icon" });
       setLucideIcon(iconSpan, this.getFileIcon(file));
-      row.createSpan({
-        cls: "vault-viewer-list-name",
-        text: file.name,
-      });
-      row.createSpan({ cls: "vault-viewer-list-time" }).setText(
-        this.formatTime(file.stat.mtime)
-      );
+      nameTd.createSpan({ text: file.name });
+
+      const timeTd = row.createEl("td", { cls: "vault-viewer-list-time" });
+      timeTd.setText(this.formatTime(file.stat.mtime));
 
       row.addEventListener("click", () => {
         this.selectedListPath = file.path;
@@ -807,43 +846,62 @@ export class VaultViewerView extends ItemView {
 
     if (visible.length === 0) {
       this.listEl.createEl("p", {
-        text: "此文件没有引用其他文件",
+        text: t("empty.noReferences"),
         cls: "vault-viewer-empty",
       });
       return;
     }
 
+    // Build table with header
+    const tableWrapper = this.listEl.createDiv({ cls: "vault-viewer-table-wrapper" });
+    const table = tableWrapper.createEl("table", { cls: "vault-viewer-table" });
+
+    // Header row with <th>
+    const thead = table.createEl("thead");
+    const headerRow = thead.createEl("tr", { cls: "vault-viewer-table-header" });
+    const nameTh = headerRow.createEl("th", { cls: "vault-viewer-table-th vault-viewer-col-name" });
+    nameTh.setText(t("list.name") || "Name");
+    const badgeTh = headerRow.createEl("th", { cls: "vault-viewer-table-th vault-viewer-col-badge" });
+    badgeTh.setText(t("list.type") || "Type");
+    const locateTh = headerRow.createEl("th", { cls: "vault-viewer-table-th vault-viewer-col-locate" });
+    locateTh.setText("");
+
+    // Column resize handles
+    this.setupColResize(nameTh.createDiv({ cls: "vault-viewer-col-resizer" }), nameTh);
+    this.setupColResize(badgeTh.createDiv({ cls: "vault-viewer-col-resizer" }), badgeTh);
+    this.setupColResize(locateTh.createDiv({ cls: "vault-viewer-col-resizer" }), locateTh);
+
+    // Body rows with <td>
+    const tbody = table.createEl("tbody");
     for (const link of visible) {
       if (!link.file) {
-        const row = this.listEl.createDiv({ cls: "vault-viewer-list-row" });
-        const iconSpan = row.createSpan({ cls: "vault-viewer-list-icon" });
+        const row = tbody.createEl("tr", { cls: "vault-viewer-list-row" });
+        const td = row.createEl("td", { cls: "vault-viewer-list-name unresolved", attr: { colspan: "3" } });
+        const iconSpan = td.createSpan({ cls: "vault-viewer-list-icon" });
         setLucideIcon(iconSpan, "File");
-        row.createSpan({
-          cls: "vault-viewer-list-name unresolved",
-          text: link.original,
-        });
+        td.createSpan({ text: link.original });
         continue;
       }
 
-      const row = this.listEl.createDiv({ cls: "vault-viewer-list-row" });
+      const row = tbody.createEl("tr", { cls: "vault-viewer-list-row" });
       row.dataset.path = link.file.path;
 
-      const iconSpan = row.createSpan({ cls: "vault-viewer-list-icon" });
+      const nameTd = row.createEl("td", { cls: "vault-viewer-list-name" });
+      const iconSpan = nameTd.createSpan({ cls: "vault-viewer-list-icon" });
       if (link.linkType === "embed") {
         setLucideIcon(iconSpan, "Image");
       } else {
         setLucideIcon(iconSpan, this.getFileIcon(link.file));
       }
-      row.createSpan({
-        cls: "vault-viewer-list-name",
-        text: link.file.name,
-      });
+      nameTd.createSpan({ text: link.file.name });
 
+      const badgeTd = row.createEl("td", { cls: "vault-viewer-list-badge-cell" });
       if (link.linkType === "embed") {
-        row.createSpan({ cls: "vault-viewer-badge", text: t("badge.embed") });
+        badgeTd.createSpan({ cls: "vault-viewer-badge", text: t("badge.embed") });
       }
 
-      const locBtn = row.createEl("button", {
+      const locateTd = row.createEl("td", { cls: "vault-viewer-list-locate-cell" });
+      const locBtn = locateTd.createEl("button", {
         cls: "vault-viewer-locate-btn",
         title: t("list.locateInTree"),
       });
@@ -856,6 +914,34 @@ export class VaultViewerView extends ItemView {
       row.addEventListener("click", () => this.onReferenceClick(link));
       row.addEventListener("contextmenu", (e) => this.showContextMenu(e, link.file!));
     }
+  }
+  private setupColResize(handle: HTMLElement, th: HTMLElement): void {
+    let startX = 0;
+    let startWidth = 0;
+
+    const onMouseDown = (e: MouseEvent) => {
+      e.preventDefault();
+      startX = e.clientX;
+      startWidth = th.offsetWidth;
+
+      activeDocument.addEventListener("mousemove", onMouseMove);
+      activeDocument.addEventListener("mouseup", onMouseUp);
+      activeDocument.body.addClass("vault-viewer-resizing");
+    };
+
+    const onMouseMove = (ev: MouseEvent) => {
+      const delta = ev.clientX - startX;
+      const newWidth = Math.max(60, startWidth + delta);
+      th.style.setProperty("width", `${newWidth}px`);
+    };
+
+    const onMouseUp = () => {
+      activeDocument.removeEventListener("mousemove", onMouseMove);
+      activeDocument.removeEventListener("mouseup", onMouseUp);
+      activeDocument.body.removeClass("vault-viewer-resizing");
+    };
+
+    handle.addEventListener("mousedown", onMouseDown);
   }
 
   private onReferenceClick(link: ResolvedLink): void {

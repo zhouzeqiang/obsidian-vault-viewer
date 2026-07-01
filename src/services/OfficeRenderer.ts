@@ -74,6 +74,7 @@ interface XlsxColWidth {
   min: number;
   max: number;
   width: number;
+  hidden: boolean;
 }
 
 export class OfficeRenderer {
@@ -117,12 +118,11 @@ export class OfficeRenderer {
     const MAX_ROWS = 1000;
     const wrapper = container.createDiv({ cls: "office-pptx" });
 
-    const navBar = wrapper.createDiv({ cls: "pptx-nav" });
-    const prevBtn = navBar.createEl("button", { cls: "office-view-btn", text: "◀" });
-    const sheetLabel = navBar.createSpan({ cls: "pptx-nav-label", text: sheetNames[0] || "" });
-    const nextBtn = navBar.createEl("button", { cls: "office-view-btn", text: "▶" });
-
     const tableWrapper = wrapper.createDiv({ cls: "pptx-canvas-wrapper", attr: { style: "display:block; overflow:auto; padding:0;" } });
+
+    // Bottom bar with sheet tabs (left-aligned)
+    const bottomBar = wrapper.createDiv({ cls: "pptx-bottom-bar" });
+    const sheetTabs = bottomBar.createDiv({ cls: "pptx-sheet-tabs" });
     let currentSheetIdx = 0;
 
     const sheetData = await Promise.all(sheetNames.map(async (name) => {
@@ -140,12 +140,14 @@ export class OfficeRenderer {
       tableWrapper.empty();
       const data = sheetData[idx];
       if (!data || data.rows.length === 0) {
-        tableWrapper.createEl("p", { cls: "office-view-status", text: "空表" });
+        tableWrapper.createEl("p", { cls: "office-view-status", text: "\u7a7a\u8868" });
         return;
       }
 
       const rows = data.rows.length > MAX_ROWS ? data.rows.slice(0, MAX_ROWS) : data.rows;
-      const maxCols = Math.max(rows.reduce((a, r) => Math.max(a, r.length), 0), ...data.colWidths.map(c => c.max + 1), 1);
+      const maxDataCols = rows.reduce((a, r) => Math.max(a, r.length), 0);
+      const maxColWidthDef = data.colWidths.length > 0 ? Math.max(...data.colWidths.map(c => c.max)) : 0;
+      const maxCols = Math.max(maxDataCols, maxColWidthDef, 1);
       const mergeHidden = this.buildMergeHiddenSet(data.merges);
 
       const table = tableWrapper.createEl("table", { cls: "office-table", attr: { style: "margin:0;border-collapse:collapse;" } });
@@ -155,25 +157,88 @@ export class OfficeRenderer {
         for (let c = 0; c < maxCols; c++) {
           const w = this.getColumnWidth(data.colWidths, c);
           if (w) {
-            colgroup.createEl("col", { attr: { style: `width:${Math.round(w * 7)}px` } });
+            colgroup.createEl("col", { attr: { style: "width:" + Math.round(w * 7) + "px" } });
           } else {
             colgroup.createEl("col");
           }
         }
       }
 
-      for (let r = 0; r < rows.length; r++) {
-        const row = rows[r];
-        const tr = table.createEl("tr");
+      // Header row as <th>
+      if (rows.length > 0) {
+        const thead = table.createEl("thead");
+        const headerRow = rows[0];
+        const tr = thead.createEl("tr");
+        let visualCol = 0;
         for (let c = 0; c < maxCols; c++) {
-          if (mergeHidden.has(`${r},${c}`)) continue;
+          if (mergeHidden.has("0," + c)) continue;
+          const cell = headerRow[c];
+          const val = cell ? this.escapeHtml(cell.value) : "";
+          const th = tr.createEl("th", { text: val, attr: { "data-col": c.toString() } });
+
+          // background-color disabled per requirements
+          // if (cell && cell.style && cell.style["background-color"]) {
+          //   th.style.setProperty("background-color", cell.style["background-color"]);
+          // }
+
+          // Column resize handle
+          if (c < maxCols - 1) {
+            const resizer = th.createDiv({ cls: "office-col-resizer", attr: { style: "right:-2.5px;" } });
+            resizer.addEventListener("mousedown", (e: MouseEvent) => {
+              e.preventDefault();
+              const startX = e.clientX;
+              const startWidth = th.offsetWidth;
+              const onMouseMove = (ev: MouseEvent) => {
+                const diff = ev.clientX - startX;
+                const newWidth = Math.max(20, startWidth + diff);
+                th.style.width = newWidth + "px";
+                const allRows = table.querySelectorAll("tr");
+                const colIdx = c;
+                allRows.forEach((row) => {
+                  const cells = Array.from(row.querySelectorAll("td[data-col], th[data-col]"));
+                  for (const cell of cells) {
+                    if (cell.getAttr("data-col") === String(colIdx)) {
+                      (cell as HTMLElement).style.width = newWidth + "px";
+                    }
+                  }
+                });
+              };
+              const onMouseUp = () => {
+                document.removeEventListener("mousemove", onMouseMove);
+                document.removeEventListener("mouseup", onMouseUp);
+              };
+              document.addEventListener("mousemove", onMouseMove);
+              document.addEventListener("mouseup", onMouseUp);
+            });
+          }
+
+          const merge = data.merges.find(m => m.startCol === c && m.startRow === 0);
+          if (merge) {
+            const colspan = merge.endCol - merge.startCol + 1;
+            const rowspan = merge.endRow - merge.startRow + 1;
+            if (colspan > 1) th.setAttr("colspan", colspan);
+            if (rowspan > 1) th.setAttr("rowspan", rowspan);
+          }
+          visualCol++;
+        }
+      }
+
+      // Data rows
+      const tbody = table.createEl("tbody");
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        const tr = tbody.createEl("tr");
+        for (let c = 0; c < maxCols; c++) {
+          if (mergeHidden.has(r + "," + c)) continue;
 
           const cell = row[c];
           const val = cell ? this.escapeHtml(cell.value) : "";
-          const td = tr.createEl("td", { text: val });
+          const td = tr.createEl("td", { text: val, attr: { "data-col": c.toString() } });
 
-          if (cell?.style) {
+          // Apply styles but skip color, font-size, and font-weight (bold reserved for headers)
+          if (cell && cell.style) {
             for (const [prop, value] of Object.entries(cell.style)) {
+              if (prop === "color" || prop === "font-size" || prop === "font-weight") continue;
               td.style.setProperty(prop, value);
             }
           }
@@ -189,22 +254,24 @@ export class OfficeRenderer {
       }
 
       if (data.rows.length > MAX_ROWS) {
-        tableWrapper.createEl("p", { cls: "office-truncated", text: `该表共 ${data.rows.length} 行，仅显示前 ${MAX_ROWS} 行` });
+        tableWrapper.createEl("p", { cls: "office-truncated", text: "\u8be5\u8868\u5171" + data.rows.length + " \u884c\uff0c\u4ec5\u663e\u793a\u524d " + MAX_ROWS + " \u884c" });
       }
+
+      // Update active tab
+      sheetTabs.querySelectorAll(".pptx-sheet-tab").forEach((tab) => tab.removeClass("active"));
+      const activeTab = sheetTabs.querySelector(".pptx-sheet-tab[data-idx=\"" + idx + "\"]");
+      if (activeTab) activeTab.addClass("active");
     };
 
     const updateSheet = (idx: number) => {
       currentSheetIdx = idx;
-      sheetLabel.setText(sheetNames[idx] || "");
       renderSheet(idx);
     };
 
-    prevBtn.addEventListener("click", () => {
-      if (currentSheetIdx > 0) updateSheet(currentSheetIdx - 1);
-    });
-
-    nextBtn.addEventListener("click", () => {
-      if (currentSheetIdx < sheetNames.length - 1) updateSheet(currentSheetIdx + 1);
+    // Build sheet tabs
+    sheetNames.forEach((name, i) => {
+      const tab = sheetTabs.createEl("button", { cls: "pptx-sheet-tab" + (i === 0 ? " active" : ""), text: name, attr: { "data-idx": i.toString() } });
+      tab.addEventListener("click", () => { updateSheet(i); });
     });
 
     updateSheet(0);
@@ -220,8 +287,12 @@ export class OfficeRenderer {
       const min = parseInt((attrs.match(/min="(\d+)"/) || [])[1]);
       const max = parseInt((attrs.match(/max="(\d+)"/) || [])[1]);
       const width = parseFloat((attrs.match(/width="([^"]+)"/) || [])[1]);
+      const hiddenMatch = attrs.match(/hidden\s*=\s*"([^"]+)"/);
+      const hidden = hiddenMatch ? (hiddenMatch[1] === "1" || hiddenMatch[1] === "true") : false;
+      // Skip hidden columns at parse time
+      if (hidden) continue;
       if (min && max && !isNaN(width)) {
-        cols.push({ min, max, width });
+        cols.push({ min, max, width, hidden: false });
       }
     }
     return cols;
@@ -232,6 +303,13 @@ export class OfficeRenderer {
       if (colIndex + 1 >= cw.min && colIndex + 1 <= cw.max) return cw.width;
     }
     return 0;
+  }
+
+  private isColHidden(colWidths: XlsxColWidth[], colIndex: number): boolean {
+    for (const cw of colWidths) {
+      if (colIndex + 1 >= cw.min && colIndex + 1 <= cw.max) return cw.hidden;
+    }
+    return false;
   }
 
   private parseXlsxMergeCells(sheetXml: string): XlsxMergeCell[] {
@@ -559,26 +637,53 @@ export class OfficeRenderer {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
+  // Convert Excel column letter(s) to 0-based index (A=0, B=1, ..., Z=25, AA=26, ...)
+  private colLetterToIndex(letter: string): number {
+    let result = 0;
+    for (let i = 0; i < letter.length; i++) {
+      result = result * 26 + (letter.charCodeAt(i) - 64);
+    }
+    return result - 1;
+  }
+
   private parseXlsxSheet(
     xml: string,
     sharedStrings: string[],
     styles: XlsxStyles
   ): XlsxCellData[][] {
-    const rows: XlsxCellData[][] = [];
+    const rowsMap: Map<number, XlsxCellData[]> = new Map();
     const rowRegex = /<row[^>]*>([\s\S]*?)<\/row>/gi;
     let rowMatch;
 
     while ((rowMatch = rowRegex.exec(xml)) !== null) {
-      const rowXml = rowMatch[1];
-      const cells: XlsxCellData[] = [];
-      const cellRegex = /<c[^>]*>([\s\S]*?)<\/c>/gi;
-      let cellMatch;
+      const rowXml = rowMatch[0]; // Use full match to parse row r attribute
+      const rowRMatch = rowXml.match(/<row[^>]*r="(\d+)"/);
+      const rowIdx = rowRMatch ? parseInt(rowRMatch[1]) - 1 : rowsMap.size; // 0-based row index
 
-      while ((cellMatch = cellRegex.exec(rowXml)) !== null) {
+      if (!rowsMap.has(rowIdx)) {
+        rowsMap.set(rowIdx, []);
+      }
+      const cells = rowsMap.get(rowIdx)!;
+
+      const cellRegex = /<c[^>]*\/?>[\s\S]*?(?:<\/c>|(?=<c|$))/gi;
+      let cellMatch;
+      const rowInnerXml = rowMatch[1];
+
+      while ((cellMatch = cellRegex.exec(rowInnerXml)) !== null) {
         const cellXml = cellMatch[0];
+        const rMatch = cellXml.match(/<c[^>]*r="([A-Za-z]+)(\d+)"/);
         const tMatch = cellXml.match(/<c[^>]*t="([^"]+)"/);
         const sMatch = cellXml.match(/<c[^>]*s="(\d+)"/);
         const vMatch = cellXml.match(/<v[^>]*>([^<]*)<\/v>/);
+
+        // Parse column index from cell reference (e.g. "C" -> 2)
+        let colIdx = cells.length; // fallback: sequential
+        if (rMatch) {
+          colIdx = this.colLetterToIndex(rMatch[1]);
+        } else {
+          // No r attribute: place at next sequential position
+          colIdx = cells.length;
+        }
 
         const type = tMatch ? tMatch[1] : "n";
         const styleIdx = sMatch ? parseInt(sMatch[1]) : 0;
@@ -596,10 +701,31 @@ export class OfficeRenderer {
         }
 
         const styleAttrs = this.buildXlsxCellStyle(styleIdx, styles);
-        cells.push({ value, style: styleAttrs });
-      }
 
-      rows.push(cells);
+        // Place cell at exact column index, filling gaps with empty cells
+        while (cells.length <= colIdx) {
+          cells.push({ value: "", style: {} });
+        }
+        cells[colIdx] = { value, style: styleAttrs };
+      }
+    }
+
+    // Convert map to array, sorted by row index
+    const maxRow = Math.max(...rowsMap.keys(), rowsMap.size - 1);
+    const rows: XlsxCellData[][] = [];
+    for (let i = 0; i <= maxRow; i++) {
+      rows.push(rowsMap.get(i) || []);
+    }
+
+    // Align all rows to the same number of columns
+    let maxCols = 0;
+    for (const row of rows) {
+      if (row.length > maxCols) maxCols = row.length;
+    }
+    for (const row of rows) {
+      while (row.length < maxCols) {
+        row.push({ value: "", style: {} });
+      }
     }
 
     return rows;
@@ -629,8 +755,15 @@ export class OfficeRenderer {
   }
 
   private isDateNumFmt(numFmtId: number, formatCode: string): boolean {
-    if (formatCode && /[ymdhs]/i.test(formatCode)) return true;
-    return [14, 15, 16, 17, 18, 19, 20, 21, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 45, 46, 47].includes(numFmtId);
+    // Check built-in date format IDs (Excel standard)
+    if ([14, 15, 16, 17, 18, 19, 20, 21, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 45, 46, 47].includes(numFmtId)) return true;
+    // Check custom format code for date/time patterns (must contain y AND m/d, or h:m pattern)
+    if (formatCode) {
+      // Must have explicit date markers: yyyy, yy, mm, dd, hh, etc.
+      if (/[yY]/.test(formatCode) && (/[mM]/.test(formatCode) || /[dD]/.test(formatCode))) return true;
+      if (/[hH]:[mM]/.test(formatCode)) return true;
+    }
+    return false;
   }
 
   private excelSerialToDate(serial: number): string {
@@ -647,7 +780,8 @@ export class OfficeRenderer {
     const fmt = custom ? custom.formatCode : "";
 
     if (this.isDateNumFmt(numFmtId, fmt)) {
-      if (num > 1 && num < 100000) return this.excelSerialToDate(num);
+      // Only convert to date if number is a reasonable Excel date serial (1/1/1900 = 1,  > 30000 = ~2082)
+      if (num >= 1000 && num < 100000) return this.excelSerialToDate(num);
     }
 
     if (fmt.includes("%")) return (num * 100).toFixed(1) + "%";
@@ -667,28 +801,21 @@ export class OfficeRenderer {
         if (font.italic) result["font-style"] = "italic";
         if (font.underline) result["text-decoration"] = "underline";
         if (font.strikethrough) result["text-decoration"] = (result["text-decoration"] ? result["text-decoration"] + " " : "") + "line-through";
-        if (font.size) result["font-size"] = `${font.size}pt`;
-        if (font.color) result["color"] = `#${font.color}`;
+        // if (font.size) result["font-size"] = `${font.size}pt`;  // disabled
+        // if (font.color) result["color"] = `#${font.color}`;  // disabled
       }
     }
 
     if (xf.fillId != null && xf.fillId > 1) {
       const fill = styles.fills?.[xf.fillId];
       if (fill?.fgColor) {
-        result["background-color"] = `#${fill.fgColor}`;
+        // background-color disabled per requirements
+        // result["background-color"] = `#${fill.fgColor}`;
       }
     }
 
-    if (xf.borderId != null) {
-      const border = styles.borders?.[xf.borderId];
-      if (border) {
-        const mapStyle = (s?: string) => s ? this.mapBorderStyle(s) : "solid";
-        if (border.top) result["border-top"] = `1px ${mapStyle(border.top)}`;
-        if (border.bottom) result["border-bottom"] = `1px ${mapStyle(border.bottom)}`;
-        if (border.left) result["border-left"] = `1px ${mapStyle(border.left)}`;
-        if (border.right) result["border-right"] = `1px ${mapStyle(border.right)}`;
-      }
-    }
+    // Border styling disabled - CSS default border handles all cells uniformly
+    // XLSX cell borders are not applied to avoid overriding CSS defaults
 
     if (xf.applyAlignment && xf.alignment) {
       const al = xf.alignment;

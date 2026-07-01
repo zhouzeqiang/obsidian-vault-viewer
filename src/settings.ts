@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+﻿import { App, PluginSettingTab, Setting } from "obsidian";
 import VaultViewerPlugin from "./main";
 import { t, setLang } from "./i18n";
 import { setIconTheme } from "./utils/lucide-icons";
@@ -11,6 +11,7 @@ export interface VaultViewerSettings {
   treeSortEnabled: boolean;
   theme: "default" | "fresh";
   lang: "zh-CN" | "zh-TW" | "en";
+  treeSplit: number;
 }
 
 export const DEFAULT_SETTINGS: VaultViewerSettings = {
@@ -21,6 +22,7 @@ export const DEFAULT_SETTINGS: VaultViewerSettings = {
   treeSortEnabled: true,
   theme: "default",
   lang: "zh-CN",
+  treeSplit: 50,
 };
 
 export class VaultViewerSettingTab extends PluginSettingTab {

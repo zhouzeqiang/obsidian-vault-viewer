@@ -3094,7 +3094,8 @@ var DEFAULT_SETTINGS = {
   treeExtensions: [".md", ".canvas", ".excalidraw.md"],
   treeSortEnabled: true,
   theme: "default",
-  lang: "zh-CN"
+  lang: "zh-CN",
+  treeSplit: 50
 };
 var VaultViewerSettingTab = class extends import_obsidian.PluginSettingTab {
   constructor(app, plugin) {
@@ -3305,6 +3306,22 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     this.treeEl = container.createDiv({ cls: "vault-viewer-tree" });
     this.resizerEl = container.createDiv({ cls: "vault-viewer-resizer" });
     this.setupResizer();
+    const savedSplit = this.plugin.settings.treeSplit;
+    if (savedSplit !== 50) {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          var _a;
+          const treeToolbarH = ((_a = this.treeToolbarEl) == null ? void 0 : _a.offsetHeight) || 0;
+          const avail = this.contentEl.offsetHeight - treeToolbarH;
+          const treeH = Math.round(avail * savedSplit / 100);
+          const listArea2 = this.contentEl.querySelector(".vault-viewer-list-area");
+          if (treeH > 40 && listArea2) {
+            this.treeEl.style.setProperty("height", treeH + "px");
+            this.treeEl.addClass("vault-viewer-tree-fixed");
+          }
+        }, 0);
+      });
+    }
     const listArea = container.createDiv({ cls: "vault-viewer-list-area" });
     this.toolbarEl = listArea.createDiv({ cls: "vault-viewer-toolbar-row" });
     this.modeIndicatorEl = this.toolbarEl.createDiv({ cls: "vault-viewer-mode" });
@@ -3371,6 +3388,12 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
         activeDocument.body.removeClass("vault-viewer-resizing");
         activeDocument.removeEventListener("mousemove", onMouseMove);
         activeDocument.removeEventListener("mouseup", onMouseUp);
+        const containerHeight = this.contentEl.offsetHeight;
+        const actionBarHeight = this.treeToolbarEl.offsetHeight;
+        const treeHeight = this.treeEl.offsetHeight;
+        const pct = Math.round(treeHeight / (containerHeight - actionBarHeight) * 100);
+        this.plugin.settings.treeSplit = Math.max(10, Math.min(90, pct));
+        void this.plugin.saveSettings();
       };
       activeDocument.addEventListener("mousemove", onMouseMove);
       activeDocument.addEventListener("mouseup", onMouseUp);
@@ -3917,20 +3940,28 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       });
       return;
     }
+    const tableWrapper = this.listEl.createDiv({ cls: "vault-viewer-table-wrapper" });
+    const table = tableWrapper.createEl("table", { cls: "vault-viewer-table" });
+    const thead = table.createEl("thead");
+    const headerRow = thead.createEl("tr", { cls: "vault-viewer-table-header" });
+    const nameTh = headerRow.createEl("th", { cls: "vault-viewer-table-th vault-viewer-col-name" });
+    nameTh.setText(t("list.name") || "Name");
+    const timeTh = headerRow.createEl("th", { cls: "vault-viewer-table-th vault-viewer-col-time" });
+    timeTh.setText(t("list.modified") || "Modified");
+    this.setupColResize(nameTh.createDiv({ cls: "vault-viewer-col-resizer" }), nameTh);
+    this.setupColResize(timeTh.createDiv({ cls: "vault-viewer-col-resizer" }), timeTh);
+    const tbody = table.createEl("tbody");
     for (const file of visible) {
-      const row = this.listEl.createDiv({ cls: "vault-viewer-list-row" });
+      const row = tbody.createEl("tr", { cls: "vault-viewer-list-row" });
       row.dataset.path = file.path;
       if (file.path === this.selectedListPath)
         row.addClass("vault-viewer-highlighted");
-      const iconSpan = row.createSpan({ cls: "vault-viewer-list-icon" });
+      const nameTd = row.createEl("td", { cls: "vault-viewer-list-name" });
+      const iconSpan = nameTd.createSpan({ cls: "vault-viewer-list-icon" });
       setLucideIcon(iconSpan, this.getFileIcon(file));
-      row.createSpan({
-        cls: "vault-viewer-list-name",
-        text: file.name
-      });
-      row.createSpan({ cls: "vault-viewer-list-time" }).setText(
-        this.formatTime(file.stat.mtime)
-      );
+      nameTd.createSpan({ text: file.name });
+      const timeTd = row.createEl("td", { cls: "vault-viewer-list-time" });
+      timeTd.setText(this.formatTime(file.stat.mtime));
       row.addEventListener("click", () => {
         this.selectedListPath = file.path;
         this.highlightRow(row);
@@ -3959,38 +3990,50 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     });
     if (visible.length === 0) {
       this.listEl.createEl("p", {
-        text: "\u6B64\u6587\u4EF6\u6CA1\u6709\u5F15\u7528\u5176\u4ED6\u6587\u4EF6",
+        text: t("empty.noReferences"),
         cls: "vault-viewer-empty"
       });
       return;
     }
+    const tableWrapper = this.listEl.createDiv({ cls: "vault-viewer-table-wrapper" });
+    const table = tableWrapper.createEl("table", { cls: "vault-viewer-table" });
+    const thead = table.createEl("thead");
+    const headerRow = thead.createEl("tr", { cls: "vault-viewer-table-header" });
+    const nameTh = headerRow.createEl("th", { cls: "vault-viewer-table-th vault-viewer-col-name" });
+    nameTh.setText(t("list.name") || "Name");
+    const badgeTh = headerRow.createEl("th", { cls: "vault-viewer-table-th vault-viewer-col-badge" });
+    badgeTh.setText(t("list.type") || "Type");
+    const locateTh = headerRow.createEl("th", { cls: "vault-viewer-table-th vault-viewer-col-locate" });
+    locateTh.setText("");
+    this.setupColResize(nameTh.createDiv({ cls: "vault-viewer-col-resizer" }), nameTh);
+    this.setupColResize(badgeTh.createDiv({ cls: "vault-viewer-col-resizer" }), badgeTh);
+    this.setupColResize(locateTh.createDiv({ cls: "vault-viewer-col-resizer" }), locateTh);
+    const tbody = table.createEl("tbody");
     for (const link of visible) {
       if (!link.file) {
-        const row2 = this.listEl.createDiv({ cls: "vault-viewer-list-row" });
-        const iconSpan2 = row2.createSpan({ cls: "vault-viewer-list-icon" });
+        const row2 = tbody.createEl("tr", { cls: "vault-viewer-list-row" });
+        const td = row2.createEl("td", { cls: "vault-viewer-list-name unresolved", attr: { colspan: "3" } });
+        const iconSpan2 = td.createSpan({ cls: "vault-viewer-list-icon" });
         setLucideIcon(iconSpan2, "File");
-        row2.createSpan({
-          cls: "vault-viewer-list-name unresolved",
-          text: link.original
-        });
+        td.createSpan({ text: link.original });
         continue;
       }
-      const row = this.listEl.createDiv({ cls: "vault-viewer-list-row" });
+      const row = tbody.createEl("tr", { cls: "vault-viewer-list-row" });
       row.dataset.path = link.file.path;
-      const iconSpan = row.createSpan({ cls: "vault-viewer-list-icon" });
+      const nameTd = row.createEl("td", { cls: "vault-viewer-list-name" });
+      const iconSpan = nameTd.createSpan({ cls: "vault-viewer-list-icon" });
       if (link.linkType === "embed") {
         setLucideIcon(iconSpan, "Image");
       } else {
         setLucideIcon(iconSpan, this.getFileIcon(link.file));
       }
-      row.createSpan({
-        cls: "vault-viewer-list-name",
-        text: link.file.name
-      });
+      nameTd.createSpan({ text: link.file.name });
+      const badgeTd = row.createEl("td", { cls: "vault-viewer-list-badge-cell" });
       if (link.linkType === "embed") {
-        row.createSpan({ cls: "vault-viewer-badge", text: t("badge.embed") });
+        badgeTd.createSpan({ cls: "vault-viewer-badge", text: t("badge.embed") });
       }
-      const locBtn = row.createEl("button", {
+      const locateTd = row.createEl("td", { cls: "vault-viewer-list-locate-cell" });
+      const locBtn = locateTd.createEl("button", {
         cls: "vault-viewer-locate-btn",
         title: t("list.locateInTree")
       });
@@ -4002,6 +4045,29 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       row.addEventListener("click", () => this.onReferenceClick(link));
       row.addEventListener("contextmenu", (e) => this.showContextMenu(e, link.file));
     }
+  }
+  setupColResize(handle, th) {
+    let startX = 0;
+    let startWidth = 0;
+    const onMouseDown = (e) => {
+      e.preventDefault();
+      startX = e.clientX;
+      startWidth = th.offsetWidth;
+      activeDocument.addEventListener("mousemove", onMouseMove);
+      activeDocument.addEventListener("mouseup", onMouseUp);
+      activeDocument.body.addClass("vault-viewer-resizing");
+    };
+    const onMouseMove = (ev) => {
+      const delta = ev.clientX - startX;
+      const newWidth = Math.max(60, startWidth + delta);
+      th.style.setProperty("width", `${newWidth}px`);
+    };
+    const onMouseUp = () => {
+      activeDocument.removeEventListener("mousemove", onMouseMove);
+      activeDocument.removeEventListener("mouseup", onMouseUp);
+      activeDocument.body.removeClass("vault-viewer-resizing");
+    };
+    handle.addEventListener("mousedown", onMouseDown);
   }
   onReferenceClick(link) {
     if (!link.file)
@@ -46274,11 +46340,9 @@ var OfficeRenderer = class {
     const sheetNames = await this.getSheetNames(zip);
     const MAX_ROWS = 1e3;
     const wrapper = container.createDiv({ cls: "office-pptx" });
-    const navBar = wrapper.createDiv({ cls: "pptx-nav" });
-    const prevBtn = navBar.createEl("button", { cls: "office-view-btn", text: "\u25C0" });
-    const sheetLabel = navBar.createSpan({ cls: "pptx-nav-label", text: sheetNames[0] || "" });
-    const nextBtn = navBar.createEl("button", { cls: "office-view-btn", text: "\u25B6" });
     const tableWrapper = wrapper.createDiv({ cls: "pptx-canvas-wrapper", attr: { style: "display:block; overflow:auto; padding:0;" } });
+    const bottomBar = wrapper.createDiv({ cls: "pptx-bottom-bar" });
+    const sheetTabs = bottomBar.createDiv({ cls: "pptx-sheet-tabs" });
     let currentSheetIdx = 0;
     const sheetData = await Promise.all(sheetNames.map(async (name) => {
       const sheetFile = await this.findSheetFile(zip, name);
@@ -46299,7 +46363,9 @@ var OfficeRenderer = class {
         return;
       }
       const rows = data.rows.length > MAX_ROWS ? data.rows.slice(0, MAX_ROWS) : data.rows;
-      const maxCols = Math.max(rows.reduce((a, r) => Math.max(a, r.length), 0), ...data.colWidths.map((c) => c.max + 1), 1);
+      const maxDataCols = rows.reduce((a, r) => Math.max(a, r.length), 0);
+      const maxColWidthDef = data.colWidths.length > 0 ? Math.max(...data.colWidths.map((c) => c.max)) : 0;
+      const maxCols = Math.max(maxDataCols, maxColWidthDef, 1);
       const mergeHidden = this.buildMergeHiddenSet(data.merges);
       const table = tableWrapper.createEl("table", { cls: "office-table", attr: { style: "margin:0;border-collapse:collapse;" } });
       if (data.colWidths.length > 0) {
@@ -46307,23 +46373,78 @@ var OfficeRenderer = class {
         for (let c = 0; c < maxCols; c++) {
           const w = this.getColumnWidth(data.colWidths, c);
           if (w) {
-            colgroup.createEl("col", { attr: { style: `width:${Math.round(w * 7)}px` } });
+            colgroup.createEl("col", { attr: { style: "width:" + Math.round(w * 7) + "px" } });
           } else {
             colgroup.createEl("col");
           }
         }
       }
-      for (let r = 0; r < rows.length; r++) {
-        const row = rows[r];
-        const tr = table.createEl("tr");
+      if (rows.length > 0) {
+        const thead = table.createEl("thead");
+        const headerRow = rows[0];
+        const tr = thead.createEl("tr");
+        let visualCol = 0;
         for (let c = 0; c < maxCols; c++) {
-          if (mergeHidden.has(`${r},${c}`))
+          if (mergeHidden.has("0," + c))
+            continue;
+          const cell = headerRow[c];
+          const val = cell ? this.escapeHtml(cell.value) : "";
+          const th = tr.createEl("th", { text: val, attr: { "data-col": c.toString() } });
+          if (c < maxCols - 1) {
+            const resizer = th.createDiv({ cls: "office-col-resizer", attr: { style: "right:-2.5px;" } });
+            resizer.addEventListener("mousedown", (e) => {
+              e.preventDefault();
+              const startX = e.clientX;
+              const startWidth = th.offsetWidth;
+              const onMouseMove = (ev) => {
+                const diff = ev.clientX - startX;
+                const newWidth = Math.max(20, startWidth + diff);
+                th.style.width = newWidth + "px";
+                const allRows = table.querySelectorAll("tr");
+                const colIdx = c;
+                allRows.forEach((row) => {
+                  const cells = Array.from(row.querySelectorAll("td[data-col], th[data-col]"));
+                  for (const cell2 of cells) {
+                    if (cell2.getAttr("data-col") === String(colIdx)) {
+                      cell2.style.width = newWidth + "px";
+                    }
+                  }
+                });
+              };
+              const onMouseUp = () => {
+                document.removeEventListener("mousemove", onMouseMove);
+                document.removeEventListener("mouseup", onMouseUp);
+              };
+              document.addEventListener("mousemove", onMouseMove);
+              document.addEventListener("mouseup", onMouseUp);
+            });
+          }
+          const merge = data.merges.find((m) => m.startCol === c && m.startRow === 0);
+          if (merge) {
+            const colspan = merge.endCol - merge.startCol + 1;
+            const rowspan = merge.endRow - merge.startRow + 1;
+            if (colspan > 1)
+              th.setAttr("colspan", colspan);
+            if (rowspan > 1)
+              th.setAttr("rowspan", rowspan);
+          }
+          visualCol++;
+        }
+      }
+      const tbody = table.createEl("tbody");
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        const tr = tbody.createEl("tr");
+        for (let c = 0; c < maxCols; c++) {
+          if (mergeHidden.has(r + "," + c))
             continue;
           const cell = row[c];
           const val = cell ? this.escapeHtml(cell.value) : "";
-          const td = tr.createEl("td", { text: val });
-          if (cell == null ? void 0 : cell.style) {
+          const td = tr.createEl("td", { text: val, attr: { "data-col": c.toString() } });
+          if (cell && cell.style) {
             for (const [prop, value] of Object.entries(cell.style)) {
+              if (prop === "color" || prop === "font-size" || prop === "font-weight")
+                continue;
               td.style.setProperty(prop, value);
             }
           }
@@ -46339,21 +46460,22 @@ var OfficeRenderer = class {
         }
       }
       if (data.rows.length > MAX_ROWS) {
-        tableWrapper.createEl("p", { cls: "office-truncated", text: `\u8BE5\u8868\u5171 ${data.rows.length} \u884C\uFF0C\u4EC5\u663E\u793A\u524D ${MAX_ROWS} \u884C` });
+        tableWrapper.createEl("p", { cls: "office-truncated", text: "\u8BE5\u8868\u5171" + data.rows.length + " \u884C\uFF0C\u4EC5\u663E\u793A\u524D " + MAX_ROWS + " \u884C" });
       }
+      sheetTabs.querySelectorAll(".pptx-sheet-tab").forEach((tab) => tab.removeClass("active"));
+      const activeTab = sheetTabs.querySelector('.pptx-sheet-tab[data-idx="' + idx + '"]');
+      if (activeTab)
+        activeTab.addClass("active");
     };
     const updateSheet = (idx) => {
       currentSheetIdx = idx;
-      sheetLabel.setText(sheetNames[idx] || "");
       renderSheet(idx);
     };
-    prevBtn.addEventListener("click", () => {
-      if (currentSheetIdx > 0)
-        updateSheet(currentSheetIdx - 1);
-    });
-    nextBtn.addEventListener("click", () => {
-      if (currentSheetIdx < sheetNames.length - 1)
-        updateSheet(currentSheetIdx + 1);
+    sheetNames.forEach((name, i) => {
+      const tab = sheetTabs.createEl("button", { cls: "pptx-sheet-tab" + (i === 0 ? " active" : ""), text: name, attr: { "data-idx": i.toString() } });
+      tab.addEventListener("click", () => {
+        updateSheet(i);
+      });
     });
     updateSheet(0);
     return filename;
@@ -46367,8 +46489,12 @@ var OfficeRenderer = class {
       const min = parseInt((attrs.match(/min="(\d+)"/) || [])[1]);
       const max = parseInt((attrs.match(/max="(\d+)"/) || [])[1]);
       const width = parseFloat((attrs.match(/width="([^"]+)"/) || [])[1]);
+      const hiddenMatch = attrs.match(/hidden\s*=\s*"([^"]+)"/);
+      const hidden = hiddenMatch ? hiddenMatch[1] === "1" || hiddenMatch[1] === "true" : false;
+      if (hidden)
+        continue;
       if (min && max && !isNaN(width)) {
-        cols.push({ min, max, width });
+        cols.push({ min, max, width, hidden: false });
       }
     }
     return cols;
@@ -46379,6 +46505,13 @@ var OfficeRenderer = class {
         return cw.width;
     }
     return 0;
+  }
+  isColHidden(colWidths, colIndex) {
+    for (const cw of colWidths) {
+      if (colIndex + 1 >= cw.min && colIndex + 1 <= cw.max)
+        return cw.hidden;
+    }
+    return false;
   }
   parseXlsxMergeCells(sheetXml) {
     const merges = [];
@@ -46697,21 +46830,42 @@ var OfficeRenderer = class {
   escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
+  // Convert Excel column letter(s) to 0-based index (A=0, B=1, ..., Z=25, AA=26, ...)
+  colLetterToIndex(letter) {
+    let result = 0;
+    for (let i = 0; i < letter.length; i++) {
+      result = result * 26 + (letter.charCodeAt(i) - 64);
+    }
+    return result - 1;
+  }
   parseXlsxSheet(xml, sharedStrings, styles) {
     var _a, _b;
-    const rows = [];
+    const rowsMap = /* @__PURE__ */ new Map();
     const rowRegex = /<row[^>]*>([\s\S]*?)<\/row>/gi;
     let rowMatch;
     while ((rowMatch = rowRegex.exec(xml)) !== null) {
-      const rowXml = rowMatch[1];
-      const cells = [];
-      const cellRegex = /<c[^>]*>([\s\S]*?)<\/c>/gi;
+      const rowXml = rowMatch[0];
+      const rowRMatch = rowXml.match(/<row[^>]*r="(\d+)"/);
+      const rowIdx = rowRMatch ? parseInt(rowRMatch[1]) - 1 : rowsMap.size;
+      if (!rowsMap.has(rowIdx)) {
+        rowsMap.set(rowIdx, []);
+      }
+      const cells = rowsMap.get(rowIdx);
+      const cellRegex = /<c[^>]*\/?>[\s\S]*?(?:<\/c>|(?=<c|$))/gi;
       let cellMatch;
-      while ((cellMatch = cellRegex.exec(rowXml)) !== null) {
+      const rowInnerXml = rowMatch[1];
+      while ((cellMatch = cellRegex.exec(rowInnerXml)) !== null) {
         const cellXml = cellMatch[0];
+        const rMatch = cellXml.match(/<c[^>]*r="([A-Za-z]+)(\d+)"/);
         const tMatch = cellXml.match(/<c[^>]*t="([^"]+)"/);
         const sMatch = cellXml.match(/<c[^>]*s="(\d+)"/);
         const vMatch = cellXml.match(/<v[^>]*>([^<]*)<\/v>/);
+        let colIdx = cells.length;
+        if (rMatch) {
+          colIdx = this.colLetterToIndex(rMatch[1]);
+        } else {
+          colIdx = cells.length;
+        }
         const type = tMatch ? tMatch[1] : "n";
         const styleIdx = sMatch ? parseInt(sMatch[1]) : 0;
         const rawValue = vMatch ? vMatch[1] : "";
@@ -46726,9 +46880,26 @@ var OfficeRenderer = class {
           value = rawValue;
         }
         const styleAttrs = this.buildXlsxCellStyle(styleIdx, styles);
-        cells.push({ value, style: styleAttrs });
+        while (cells.length <= colIdx) {
+          cells.push({ value: "", style: {} });
+        }
+        cells[colIdx] = { value, style: styleAttrs };
       }
-      rows.push(cells);
+    }
+    const maxRow = Math.max(...rowsMap.keys(), rowsMap.size - 1);
+    const rows = [];
+    for (let i = 0; i <= maxRow; i++) {
+      rows.push(rowsMap.get(i) || []);
+    }
+    let maxCols = 0;
+    for (const row of rows) {
+      if (row.length > maxCols)
+        maxCols = row.length;
+    }
+    for (const row of rows) {
+      while (row.length < maxCols) {
+        row.push({ value: "", style: {} });
+      }
     }
     return rows;
   }
@@ -46803,9 +46974,15 @@ var OfficeRenderer = class {
     return palette[index];
   }
   isDateNumFmt(numFmtId, formatCode) {
-    if (formatCode && /[ymdhs]/i.test(formatCode))
+    if ([14, 15, 16, 17, 18, 19, 20, 21, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 45, 46, 47].includes(numFmtId))
       return true;
-    return [14, 15, 16, 17, 18, 19, 20, 21, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 45, 46, 47].includes(numFmtId);
+    if (formatCode) {
+      if (/[yY]/.test(formatCode) && (/[mM]/.test(formatCode) || /[dD]/.test(formatCode)))
+        return true;
+      if (/[hH]:[mM]/.test(formatCode))
+        return true;
+    }
+    return false;
   }
   excelSerialToDate(serial) {
     const date = new Date((serial - 25569) * 86400 * 1e3);
@@ -46819,7 +46996,7 @@ var OfficeRenderer = class {
     const custom = numFmts.find((n) => n.numFmtId === numFmtId);
     const fmt = custom ? custom.formatCode : "";
     if (this.isDateNumFmt(numFmtId, fmt)) {
-      if (num > 1 && num < 1e5)
+      if (num >= 1e3 && num < 1e5)
         return this.excelSerialToDate(num);
     }
     if (fmt.includes("%"))
@@ -46827,7 +47004,7 @@ var OfficeRenderer = class {
     return rawValue;
   }
   buildXlsxCellStyle(styleIdx, styles) {
-    var _a, _b, _c, _d;
+    var _a, _b, _c;
     const result = {};
     const xf = (_a = styles.cellXfs) == null ? void 0 : _a[styleIdx];
     if (!xf)
@@ -46843,30 +47020,11 @@ var OfficeRenderer = class {
           result["text-decoration"] = "underline";
         if (font.strikethrough)
           result["text-decoration"] = (result["text-decoration"] ? result["text-decoration"] + " " : "") + "line-through";
-        if (font.size)
-          result["font-size"] = `${font.size}pt`;
-        if (font.color)
-          result["color"] = `#${font.color}`;
       }
     }
     if (xf.fillId != null && xf.fillId > 1) {
       const fill = (_c = styles.fills) == null ? void 0 : _c[xf.fillId];
       if (fill == null ? void 0 : fill.fgColor) {
-        result["background-color"] = `#${fill.fgColor}`;
-      }
-    }
-    if (xf.borderId != null) {
-      const border = (_d = styles.borders) == null ? void 0 : _d[xf.borderId];
-      if (border) {
-        const mapStyle = (s) => s ? this.mapBorderStyle(s) : "solid";
-        if (border.top)
-          result["border-top"] = `1px ${mapStyle(border.top)}`;
-        if (border.bottom)
-          result["border-bottom"] = `1px ${mapStyle(border.bottom)}`;
-        if (border.left)
-          result["border-left"] = `1px ${mapStyle(border.left)}`;
-        if (border.right)
-          result["border-right"] = `1px ${mapStyle(border.right)}`;
       }
     }
     if (xf.applyAlignment && xf.alignment) {

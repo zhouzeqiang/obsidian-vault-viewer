@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, FileSystemAdapter } from "obsidian";
+﻿import { ItemView, WorkspaceLeaf, TFile, FileSystemAdapter } from "obsidian";
 import { OfficeRenderer } from "../services/OfficeRenderer";
 import { setLucideIcon } from "../utils/lucide-icons";
 import { t } from "../i18n";
@@ -96,6 +96,8 @@ export class OfficeView extends ItemView {
   }
 
   async onClose() {
+    // this.renderer.disposeUniver(); // TODO: implement disposeUniver in OfficeRenderer
     this.contentEl.empty();
   }
 }
+

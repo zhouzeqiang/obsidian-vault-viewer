@@ -330,23 +330,6 @@
 .office-docx p { margin: 0.5em 0; }
 .office-docx img { max-width: 100%; }
 
-.office-table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 10px 0;
-}
-
-.office-table td, .office-table th {
-  border: 1px solid var(--background-modifier-border);
-  padding: 6px 10px;
-  font-size: 0.85em;
-}
-
-.office-table th {
-  background: var(--background-modifier-hover);
-  font-weight: 600;
-}
-
 .office-xlsx h3 {
   font-size: 1.1em;
   margin: 16px 0 8px;
@@ -386,7 +369,7 @@
 
 .pptx-canvas-wrapper {
   flex: 1;
-  display: flex;
+  display: flex; flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 0;
@@ -403,27 +386,9 @@
 
 .office-table {
   border-collapse: collapse;
-  width: 100%;
-  margin: 10px 0;
-}
-
-.office-table td, .office-table th {
-  padding: 2px 6px;
-  text-align: left;
-  font-size: 0.85em;
-}
-
-.office-table th {
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.office-xlsx h3 {
-  font-size: 1.1em;
-  margin: 20px 0 10px;
-  color: var(--text-accent);
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--text-accent);
+  min-width: max-content;
+  width: auto;
+  margin: 0;
 }
 
 .office-truncated {
@@ -885,5 +850,349 @@
   cursor: row-resize;
   user-select: none;
 }
+/* Univer xlsx 容器 */
+.univer-xlsx-container {
+  width: 100%;
+  height: calc(100% - var(--office-action-bar-height, 40px));
+  overflow: hidden;
+}
+
+/* 当 office-view-content 包含 Univer 容器时，移除默认内边距和滚动 */
+.office-view-content:has(.univer-xlsx-container) {
+  padding: 0;
+  overflow: hidden;
+}
+/* Excel sheet tab bar - Office style */
+.xlsx-sheet-tab-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  background: var(--background-primary);
+  border-top: 1px solid var(--background-modifier-border);
+  overflow: hidden;
+  position: relative;
+}
+
+.xlsx-sheet-tab-scroll {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  padding: 0;
+  min-height: 32px;
+  align-items: stretch;
+}
+
+.xlsx-sheet-tab-scroll::-webkit-scrollbar {
+  height: 2px;
+}
+
+.xlsx-sheet-tab {
+  flex: 0 0 auto;
+  padding: 4px 16px;
+  font-size: 0.78em;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s, color 0.15s;
+  position: relative;
+}
+
+.xlsx-sheet-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.xlsx-sheet-tab-active {
+  color: var(--text-accent);
+  background: var(--background-primary);
+  font-weight: 600;
+}
+
+.xlsx-sheet-tab-active::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--text-accent);
+}
 
 
+/* XLSX table: allow horizontal overflow with scroll */
+/* Column resize overlay for XLSX tables */
+.office-resize-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+
+/* Show resize cursor on table cells near column borders */
+.office-table td,
+.office-table th {
+  position: relative;
+}
+
+/* The small handle per column header - keep for visual separation */
+.office-col-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.office-col-resizer:hover,
+.office-col-resizer:active {
+  background: var(--interactive-accent) !important;
+  opacity: 0.4;
+}
+/* ===== Vault Viewer Table Layout (Mode A & B) ===== */
+
+.vault-viewer-table-wrapper {
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+}
+
+.vault-viewer-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 400px;
+  table-layout: fixed;
+}
+
+.vault-viewer-table th,
+.vault-viewer-table td {
+  padding: 3px 8px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vault-viewer-table-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.vault-viewer-table-th {
+  font-weight: 600;
+  font-size: 0.8em;
+  color: var(--vv-text-muted, var(--text-muted));
+  background: var(--vv-bg, var(--background-primary));
+  border-bottom: 2px solid var(--vv-border, var(--background-modifier-border));
+  position: relative;
+  user-select: none;
+}
+
+.vault-viewer-col-name {
+  width: auto;
+}
+
+.vault-viewer-col-time {
+  width: 140px;
+}
+
+.vault-viewer-col-badge {
+  width: 80px;
+}
+
+.vault-viewer-col-locate {
+  width: 40px;
+}
+
+.vault-viewer-list-row {
+  display: table-row;
+  cursor: pointer;
+  border-radius: 0;
+  transition: background 0.1s;
+  color: var(--vv-text, var(--text-normal));
+}
+
+.vault-viewer-list-row:hover {
+  background: var(--vv-row-hover, var(--background-modifier-hover));
+}
+
+.vault-viewer-list-row.vault-viewer-highlighted {
+  background: var(--vv-selected-bg, var(--vv-accent, var(--interactive-accent)));
+  color: var(--vv-selected-text, var(--text-on-accent));
+  transition: background 0.3s;
+}
+
+.vault-viewer-list-icon {
+  margin-right: 6px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  vertical-align: middle;
+}
+
+.vault-viewer-list-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.vault-viewer-list-name {
+  font-size: 0.8em;
+}
+
+.vault-viewer-list-name.unresolved {
+  color: var(--text-error);
+  font-style: italic;
+}
+
+.vault-viewer-list-time {
+  font-size: 0.75em;
+  color: var(--vv-text-muted, var(--text-muted));
+}
+
+.vault-viewer-list-badge-cell {
+  font-size: 0.75em;
+}
+
+.vault-viewer-list-locate-cell {
+  text-align: center;
+}
+
+/* Column resize handles */
+.vault-viewer-col-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.vault-viewer-table-th:last-child .vault-viewer-col-resizer {
+  display: none;
+}
+
+.vault-viewer-col-resizer:hover,
+.vault-viewer-col-resizer:active {
+  background: var(--interactive-accent) !important;
+  opacity: 0.3;
+}
+
+/* Ensure table cells have relative positioning for resizer */
+.vault-viewer-table-th {
+  position: relative;
+}
+
+/* ===== XLSX Sheet Tabs at bottom-left ===== */
+
+.pptx-bottom-bar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  background: var(--background-primary);
+  border-top: 1px solid var(--background-modifier-border);
+  padding: 2px 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-height: 28px;
+}
+
+.pptx-sheet-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.pptx-sheet-tab {
+  background: none;
+  border: none;
+  border-right: 1px solid var(--background-modifier-border);
+  padding: 4px 12px;
+  font-size: 0.78em;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+  min-width: 40px;
+  text-align: center;
+}
+
+.pptx-sheet-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.pptx-sheet-tab.active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-weight: 600;
+}
+
+/* Remove old nav bar top positioning */
+.office-pptx > .pptx-nav {
+  display: none;
+}
+
+/* XLSX table wrapper takes flex space */
+.office-pptx > .pptx-canvas-wrapper {
+  flex: 1;
+  display: block !important;
+  overflow: auto !important;
+  padding: 0;
+  text-align: left !important;
+}
+
+/* Table cells default border */
+.office-table td,
+.office-table th {
+  padding: 2px 6px;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.4;
+  max-width: 400px;
+  word-break: break-word;
+  white-space: pre-wrap;
+  overflow: hidden;
+  font-family: inherit;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.office-table th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Column resize handle on th */
+.office-table th .office-col-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.office-table th .office-col-resizer:hover,
+.office-table th .office-col-resizer:active {
+  background: var(--interactive-accent) !important;
+  opacity: 0.4;
+}
+
+/* Ensure th is positioned for resizer */
+.office-table th {
+  position: relative;
+}
