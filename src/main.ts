@@ -20,7 +20,6 @@ export default class VaultViewerPlugin extends Plugin {
   fileService: FileService;
   linkService: LinkService;
   officeRenderer: OfficeRenderer;
-  private pendingOfficeFile: TFile | null = null;
 
   async onload() {
     await this.loadSettings();
@@ -35,11 +34,7 @@ export default class VaultViewerPlugin extends Plugin {
 
     this.registerView(
       VIEW_TYPE_OFFICE,
-      (leaf) => {
-        const file = this.pendingOfficeFile;
-        this.pendingOfficeFile = null;
-        return new OfficeView(leaf, file!, this.officeRenderer);
-      }
+      (leaf) => new OfficeView(leaf, this.officeRenderer)
     );
 
     this.registerView(
@@ -94,16 +89,29 @@ export default class VaultViewerPlugin extends Plugin {
   }
 
   async openOfficeFile(file: TFile): Promise<void> {
-    this.pendingOfficeFile = file;
-    const leaf = this.app.workspace.getLeaf(true);
+    const { workspace } = this.app;
+
+    // Check if the file is already open in an existing OfficeView tab
+    const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE_OFFICE);
+    for (const leaf of existingLeaves) {
+      const view = leaf.view;
+      if (view instanceof OfficeView && view.file?.path === file.path) {
+        workspace.setActiveLeaf(leaf);
+        return;
+      }
+    }
+
+    // Not already open — create a new tab
+    const leaf = workspace.getLeaf(true);
     if (!leaf) return;
 
     await leaf.setViewState({
       type: VIEW_TYPE_OFFICE,
       active: true,
+      state: { filePath: file.path },
     });
 
-    this.app.workspace.setActiveLeaf(leaf);
+    workspace.setActiveLeaf(leaf);
   }
 
   onunload() {

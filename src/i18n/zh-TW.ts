@@ -63,6 +63,10 @@ const zhTW: Record<string, string | ((...args: any[]) => string)> = {
   "office.parseError": "無法解析此文件，可能格式不相容",
   "office.openInEditor": "在外部編輯器中開啟",
   "empty.noFiles": "此目錄下無其他類型檔案",
+  "empty.noReferences": "未找到引用",
+  "list.name": "名稱",
+  "list.type": "類型",
+  "list.modified": "修改時間",
   "list.locateInTree": "在目錄樹中定位",
   "badge.embed": "嵌入",
 };

@@ -63,6 +63,10 @@ const en: Record<string, string | ((...args: any[]) => string)> = {
   "office.parseError": "Could not parse this document. The format may be incompatible.",
   "office.openInEditor": "Open in external editor",
   "empty.noFiles": "No files in this directory",
+  "empty.noReferences": "No references found",
+  "list.name": "Name",
+  "list.type": "Type",
+  "list.modified": "Modified",
   "list.locateInTree": "Locate in file tree",
   "badge.embed": "Embed",
 };

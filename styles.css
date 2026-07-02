@@ -55,14 +55,23 @@
 }
 
 .vault-viewer-resizer {
-  height: 5px;
+  height: 18px;
   cursor: row-resize;
   background: var(--vv-border, var(--background-modifier-hover));
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.4;
 }
 
 .vault-viewer-resizer:hover {
-  background: var(--vv-accent, var(--interactive-accent));
+  background: var(--vv-border, var(--background-modifier-hover));
+  opacity: 0.8;
+}
+
+.vault-viewer-resizer-icon {
+  pointer-events: none;
 }
 
 .vault-viewer-tree-row {
@@ -73,6 +82,7 @@
   align-items: center;
   white-space: nowrap;
   font-size: 0.85em;
+  line-height: 1.4;
   transition: background 0.1s;
 }
 
@@ -660,7 +670,7 @@
   align-items: center;
   white-space: nowrap;
   font-size: 0.85em;
-  line-height: 1;
+  line-height: 1.4;
   transition: background 0.1s;
   gap: 4px;
   color: var(--vv-text, var(--text-normal));
@@ -946,17 +956,31 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 4px;
+  width: 10px;
   cursor: col-resize;
   z-index: 10;
   background: transparent;
   pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.office-col-resizer-icon {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.office-col-resizer:hover .office-col-resizer-icon,
+.office-col-resizer:active .office-col-resizer-icon {
+  opacity: 0.5;
 }
 
 .office-col-resizer:hover,
 .office-col-resizer:active {
   background: var(--interactive-accent) !important;
-  opacity: 0.4;
+  opacity: 0.15;
 }
 /* ===== Vault Viewer Table Layout (Mode A & B) ===== */
 

@@ -2818,6 +2818,10 @@ var zhCN = {
   "office.parseError": "\u65E0\u6CD5\u89E3\u6790\u6B64\u6587\u6863\uFF0C\u53EF\u80FD\u683C\u5F0F\u4E0D\u517C\u5BB9",
   "office.openInEditor": "\u5728\u5916\u90E8\u7F16\u8F91\u5668\u4E2D\u6253\u5F00",
   "empty.noFiles": "\u6B64\u76EE\u5F55\u4E0B\u65E0\u5176\u4ED6\u7C7B\u578B\u6587\u4EF6",
+  "empty.noReferences": "\u672A\u627E\u5230\u5F15\u7528",
+  "list.name": "\u540D\u79F0",
+  "list.type": "\u7C7B\u578B",
+  "list.modified": "\u4FEE\u6539\u65F6\u95F4",
   "list.locateInTree": "\u5728\u76EE\u5F55\u6811\u4E2D\u5B9A\u4F4D",
   "badge.embed": "\u5D4C\u5165"
 };
@@ -2889,6 +2893,10 @@ var zhTW = {
   "office.parseError": "\u7121\u6CD5\u89E3\u6790\u6B64\u6587\u4EF6\uFF0C\u53EF\u80FD\u683C\u5F0F\u4E0D\u76F8\u5BB9",
   "office.openInEditor": "\u5728\u5916\u90E8\u7DE8\u8F2F\u5668\u4E2D\u958B\u555F",
   "empty.noFiles": "\u6B64\u76EE\u9304\u4E0B\u7121\u5176\u4ED6\u985E\u578B\u6A94\u6848",
+  "empty.noReferences": "\u672A\u627E\u5230\u5F15\u7528",
+  "list.name": "\u540D\u7A31",
+  "list.type": "\u985E\u578B",
+  "list.modified": "\u4FEE\u6539\u6642\u9593",
   "list.locateInTree": "\u5728\u76EE\u9304\u6A39\u4E2D\u5B9A\u4F4D",
   "badge.embed": "\u5D4C\u5165"
 };
@@ -2960,6 +2968,10 @@ var en = {
   "office.parseError": "Could not parse this document. The format may be incompatible.",
   "office.openInEditor": "Open in external editor",
   "empty.noFiles": "No files in this directory",
+  "empty.noReferences": "No references found",
+  "list.name": "Name",
+  "list.type": "Type",
+  "list.modified": "Modified",
   "list.locateInTree": "Locate in file tree",
   "badge.embed": "Embed"
 };
@@ -3294,7 +3306,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     return "Vault Viewer";
   }
   getIcon() {
-    return "files";
+    return "notebook-text";
   }
   async onOpen() {
     const container = this.contentEl;
@@ -3305,6 +3317,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     this.buildTreeToolbar();
     this.treeEl = container.createDiv({ cls: "vault-viewer-tree" });
     this.resizerEl = container.createDiv({ cls: "vault-viewer-resizer" });
+    setLucideIcon(this.resizerEl.createSpan({ cls: "vault-viewer-resizer-icon" }), "ChevronsUpDown", 14);
     this.setupResizer();
     const savedSplit = this.plugin.settings.treeSplit;
     if (savedSplit !== 50) {
@@ -3984,7 +3997,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     const hidden = this.plugin.settings.hiddenExtensions;
     const visible = filtered.filter((l) => {
       if (!l.file)
-        return true;
+        return false;
       const ext = this.getExtensionForDisplay(l.file);
       return !hidden.includes(ext);
     });
@@ -4010,14 +4023,8 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     this.setupColResize(locateTh.createDiv({ cls: "vault-viewer-col-resizer" }), locateTh);
     const tbody = table.createEl("tbody");
     for (const link of visible) {
-      if (!link.file) {
-        const row2 = tbody.createEl("tr", { cls: "vault-viewer-list-row" });
-        const td = row2.createEl("td", { cls: "vault-viewer-list-name unresolved", attr: { colspan: "3" } });
-        const iconSpan2 = td.createSpan({ cls: "vault-viewer-list-icon" });
-        setLucideIcon(iconSpan2, "File");
-        td.createSpan({ text: link.original });
+      if (!link.file)
         continue;
-      }
       const row = tbody.createEl("tr", { cls: "vault-viewer-list-row" });
       row.dataset.path = link.file.path;
       const nameTd = row.createEl("td", { cls: "vault-viewer-list-name" });
@@ -4520,31 +4527,77 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
 var import_obsidian5 = require("obsidian");
 var VIEW_TYPE_OFFICE = "vault-viewer-office";
 var OfficeView = class extends import_obsidian5.ItemView {
-  constructor(leaf, file, renderer) {
+  constructor(leaf, renderer) {
     super(leaf);
-    this.file = file;
+    this.file = null;
     this.renderer = renderer;
   }
   getViewType() {
     return VIEW_TYPE_OFFICE;
   }
   getDisplayText() {
-    return this.file.name;
+    var _a, _b;
+    return (_b = (_a = this.file) == null ? void 0 : _a.name) != null ? _b : "Office";
   }
   getIcon() {
     return "document";
   }
+  getState() {
+    var _a, _b;
+    return { filePath: (_b = (_a = this.file) == null ? void 0 : _a.path) != null ? _b : "" };
+  }
+  async setState(state, result) {
+    await super.setState(state, result);
+    const filePath = state.filePath;
+    if (filePath) {
+      const file = this.app.vault.getAbstractFileByPath(filePath);
+      if (file instanceof import_obsidian5.TFile) {
+        this.file = file;
+        if (this.contentEl.hasClass("office-view-container")) {
+          void this.renderContent();
+        }
+      }
+    }
+  }
   async onOpen() {
+    var _a;
+    if (!this.file) {
+      const viewState = this.leaf.getViewState();
+      const filePath = (_a = viewState == null ? void 0 : viewState.state) == null ? void 0 : _a.filePath;
+      if (filePath) {
+        const file = this.app.vault.getAbstractFileByPath(filePath);
+        if (file instanceof import_obsidian5.TFile) {
+          this.file = file;
+        }
+      }
+    }
+    this.renderContent();
+  }
+  async renderContent() {
     const container = this.contentEl;
     container.empty();
     container.addClass("office-view-container");
+    if (!this.file) {
+      container.createEl("p", {
+        text: t("office.parseError"),
+        cls: "office-view-error"
+      });
+      const closeBtn = container.createEl("button", {
+        cls: "office-view-btn",
+        text: t("office.back")
+      });
+      closeBtn.addEventListener("click", () => {
+        this.leaf.detach();
+      });
+      return;
+    }
     const actionBar = container.createDiv({ cls: "office-view-actions" });
     const backBtn = actionBar.createEl("button", {
       cls: "office-view-btn",
       text: `\u2190 ${t("office.back")}`
     });
     backBtn.addEventListener("click", () => {
-      this.app.workspace.detachLeavesOfType(VIEW_TYPE_OFFICE);
+      this.leaf.detach();
     });
     const openExternalBtn = actionBar.createEl("button", {
       cls: "office-view-btn external"
@@ -4577,6 +4630,8 @@ var OfficeView = class extends import_obsidian5.ItemView {
     }
   }
   async openExternally() {
+    if (!this.file)
+      return;
     const adapter = this.app.vault.adapter;
     const basePath = adapter instanceof import_obsidian5.FileSystemAdapter ? adapter.getBasePath() : "";
     const fullPath = `${basePath}/${this.file.path}`;
@@ -46392,6 +46447,7 @@ var OfficeRenderer = class {
           const th = tr.createEl("th", { text: val, attr: { "data-col": c.toString() } });
           if (c < maxCols - 1) {
             const resizer = th.createDiv({ cls: "office-col-resizer", attr: { style: "right:-2.5px;" } });
+            setLucideIcon(resizer.createSpan({ cls: "office-col-resizer-icon" }), "ChevronsUpDown", 10);
             resizer.addEventListener("mousedown", (e) => {
               e.preventDefault();
               const startX = e.clientX;
@@ -47197,10 +47253,6 @@ var LinkService = class {
 
 // src/main.ts
 var VaultViewerPlugin = class extends import_obsidian6.Plugin {
-  constructor() {
-    super(...arguments);
-    this.pendingOfficeFile = null;
-  }
   async onload() {
     await this.loadSettings();
     setIconTheme(this.settings.theme);
@@ -47211,11 +47263,7 @@ var VaultViewerPlugin = class extends import_obsidian6.Plugin {
     this.addSettingTab(new VaultViewerSettingTab(this.app, this));
     this.registerView(
       VIEW_TYPE_OFFICE,
-      (leaf) => {
-        const file = this.pendingOfficeFile;
-        this.pendingOfficeFile = null;
-        return new OfficeView(leaf, file, this.officeRenderer);
-      }
+      (leaf) => new OfficeView(leaf, this.officeRenderer)
     );
     this.registerView(
       VIEW_TYPE_VAULT_VIEWER,
@@ -47261,15 +47309,25 @@ var VaultViewerPlugin = class extends import_obsidian6.Plugin {
     workspace.setActiveLeaf(leaf);
   }
   async openOfficeFile(file) {
-    this.pendingOfficeFile = file;
-    const leaf = this.app.workspace.getLeaf(true);
+    var _a;
+    const { workspace } = this.app;
+    const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE_OFFICE);
+    for (const leaf2 of existingLeaves) {
+      const view = leaf2.view;
+      if (view instanceof OfficeView && ((_a = view.file) == null ? void 0 : _a.path) === file.path) {
+        workspace.setActiveLeaf(leaf2);
+        return;
+      }
+    }
+    const leaf = workspace.getLeaf(true);
     if (!leaf)
       return;
     await leaf.setViewState({
       type: VIEW_TYPE_OFFICE,
-      active: true
+      active: true,
+      state: { filePath: file.path }
     });
-    this.app.workspace.setActiveLeaf(leaf);
+    workspace.setActiveLeaf(leaf);
   }
   onunload() {
   }

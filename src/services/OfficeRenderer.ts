@@ -2,6 +2,7 @@ import { TFile, Vault } from "obsidian";
 import * as docx from "docx-preview";
 import JSZip from "jszip";
 import { PPTXViewer } from "pptxviewjs";
+import { setLucideIcon } from "../utils/lucide-icons";
 
 interface XlsxFont {
   bold?: boolean;
@@ -184,6 +185,7 @@ export class OfficeRenderer {
           // Column resize handle
           if (c < maxCols - 1) {
             const resizer = th.createDiv({ cls: "office-col-resizer", attr: { style: "right:-2.5px;" } });
+            setLucideIcon(resizer.createSpan({ cls: "office-col-resizer-icon" }), "ChevronsUpDown", 10);
             resizer.addEventListener("mousedown", (e: MouseEvent) => {
               e.preventDefault();
               const startX = e.clientX;

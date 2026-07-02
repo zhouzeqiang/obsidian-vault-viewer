@@ -51,7 +51,7 @@ export class VaultViewerView extends ItemView {
   }
 
   getIcon(): string {
-    return "files";
+    return "notebook-text";
   }
 
   async onOpen() {
@@ -64,6 +64,7 @@ export class VaultViewerView extends ItemView {
     this.buildTreeToolbar();
     this.treeEl = container.createDiv({ cls: "vault-viewer-tree" });
     this.resizerEl = container.createDiv({ cls: "vault-viewer-resizer" });
+    setLucideIcon(this.resizerEl.createSpan({ cls: "vault-viewer-resizer-icon" }), "ChevronsUpDown", 14);
 
     this.setupResizer();
     // Restore saved tree/list split ratio
@@ -839,7 +840,7 @@ export class VaultViewerView extends ItemView {
 
     const hidden = this.plugin.settings.hiddenExtensions;
     const visible = filtered.filter((l) => {
-      if (!l.file) return true;
+      if (!l.file) return false;
       const ext = this.getExtensionForDisplay(l.file);
       return !hidden.includes(ext);
     });
@@ -874,15 +875,7 @@ export class VaultViewerView extends ItemView {
     // Body rows with <td>
     const tbody = table.createEl("tbody");
     for (const link of visible) {
-      if (!link.file) {
-        const row = tbody.createEl("tr", { cls: "vault-viewer-list-row" });
-        const td = row.createEl("td", { cls: "vault-viewer-list-name unresolved", attr: { colspan: "3" } });
-        const iconSpan = td.createSpan({ cls: "vault-viewer-list-icon" });
-        setLucideIcon(iconSpan, "File");
-        td.createSpan({ text: link.original });
-        continue;
-      }
-
+      if (!link.file) continue;
       const row = tbody.createEl("tr", { cls: "vault-viewer-list-row" });
       row.dataset.path = link.file.path;
 

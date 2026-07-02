@@ -63,6 +63,10 @@ const zhCN: Record<string, string | ((...args: any[]) => string)> = {
   "office.parseError": "无法解析此文档，可能格式不兼容",
   "office.openInEditor": "在外部编辑器中打开",
   "empty.noFiles": "此目录下无其他类型文件",
+  "empty.noReferences": "未找到引用",
+  "list.name": "名称",
+  "list.type": "类型",
+  "list.modified": "修改时间",
   "list.locateInTree": "在目录树中定位",
   "badge.embed": "嵌入",
 };
