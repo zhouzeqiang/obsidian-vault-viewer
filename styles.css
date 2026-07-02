@@ -868,7 +868,7 @@
 }
 
 /* 当 office-view-content 包含 Univer 容器时，移除默认内边距和滚动 */
-.office-view-content:has(.univer-xlsx-container) {
+.office-view-content.has-univer-xlsx {
   padding: 0;
   overflow: hidden;
 }
@@ -979,7 +979,7 @@
 
 .office-col-resizer:hover,
 .office-col-resizer:active {
-  background: var(--interactive-accent) !important;
+  background: var(--interactive-accent);
   opacity: 0.15;
 }
 /* ===== Vault Viewer Table Layout (Mode A & B) ===== */
@@ -1110,7 +1110,7 @@
 
 .vault-viewer-col-resizer:hover,
 .vault-viewer-col-resizer:active {
-  background: var(--interactive-accent) !important;
+  background: var(--interactive-accent);
   opacity: 0.3;
 }
 
@@ -1172,10 +1172,10 @@
 /* XLSX table wrapper takes flex space */
 .office-pptx > .pptx-canvas-wrapper {
   flex: 1;
-  display: block !important;
-  overflow: auto !important;
+  display: block;
+  overflow: auto;
   padding: 0;
-  text-align: left !important;
+  text-align: left;
 }
 
 /* Table cells default border */
@@ -1212,7 +1212,7 @@
 
 .office-table th .office-col-resizer:hover,
 .office-table th .office-col-resizer:active {
-  background: var(--interactive-accent) !important;
+  background: var(--interactive-accent);
   opacity: 0.4;
 }
 

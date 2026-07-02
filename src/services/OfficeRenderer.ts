@@ -119,7 +119,7 @@ export class OfficeRenderer {
     const MAX_ROWS = 1000;
     const wrapper = container.createDiv({ cls: "office-pptx" });
 
-    const tableWrapper = wrapper.createDiv({ cls: "pptx-canvas-wrapper", attr: { style: "display:block; overflow:auto; padding:0;" } });
+    const tableWrapper = wrapper.createDiv({ cls: "pptx-canvas-wrapper" });
 
     // Bottom bar with sheet tabs (left-aligned)
     const bottomBar = wrapper.createDiv({ cls: "pptx-bottom-bar" });
