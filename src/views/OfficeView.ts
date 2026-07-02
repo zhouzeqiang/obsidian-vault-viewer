@@ -60,7 +60,7 @@ export class OfficeView extends ItemView {
       }
     }
 
-    this.renderContent();
+    void this.renderContent();
   }
 
   private async renderContent(): Promise<void> {

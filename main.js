@@ -2986,8 +2986,8 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     this.setupResizer();
     const savedSplit = this.plugin.settings.treeSplit;
     if (savedSplit !== 50) {
-      requestAnimationFrame(() => {
-        setTimeout(() => {
+      window.requestAnimationFrame(() => {
+        window.setTimeout(() => {
           var _a;
           const treeToolbarH = ((_a = this.treeToolbarEl) == null ? void 0 : _a.offsetHeight) || 0;
           const avail = this.contentEl.offsetHeight - treeToolbarH;
@@ -4179,7 +4179,7 @@ var OfficeView = class extends import_obsidian5.ItemView {
         }
       }
     }
-    this.renderContent();
+    void this.renderContent();
   }
   async renderContent() {
     const container = this.contentEl;
@@ -46018,11 +46018,11 @@ var OfficeRenderer = class {
                 });
               };
               const onMouseUp = () => {
-                document.removeEventListener("mousemove", onMouseMove);
-                document.removeEventListener("mouseup", onMouseUp);
+                activeDocument.removeEventListener("mousemove", onMouseMove);
+                activeDocument.removeEventListener("mouseup", onMouseUp);
               };
-              document.addEventListener("mousemove", onMouseMove);
-              document.addEventListener("mouseup", onMouseUp);
+              activeDocument.addEventListener("mousemove", onMouseMove);
+              activeDocument.addEventListener("mouseup", onMouseUp);
             });
           }
           const merge = data.merges.find((m) => m.startCol === c && m.startRow === 0);

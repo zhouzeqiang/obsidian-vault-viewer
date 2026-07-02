@@ -70,8 +70,8 @@ export class VaultViewerView extends ItemView {
     // Restore saved tree/list split ratio
     const savedSplit = this.plugin.settings.treeSplit;
     if (savedSplit !== 50) {
-      requestAnimationFrame(() => {
-        setTimeout(() => {
+      window.requestAnimationFrame(() => {
+        window.setTimeout(() => {
           const treeToolbarH = this.treeToolbarEl?.offsetHeight || 0;
           const avail = this.contentEl.offsetHeight - treeToolbarH;
           const treeH = Math.round(avail * savedSplit / 100);
