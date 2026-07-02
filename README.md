@@ -6,35 +6,34 @@ Vault Viewer 是一个 Obsidian 插件，提供直观的文件浏览器界面，
 
 ### 📂 文件目录树
 
-- 可展开/收缩的文件夹层级树
-- 支持拖拽移动文件和文件夹
-- 右键菜单：复制路径、打开所在文件夹、删除
-- 一键展开/收缩全部节点
-- 在树中定位当前活动笔记
+- 可展开/收缩的文件夹层级树，显示仓库名称作为根节点
+- 支持拖拽移动文件和文件夹到目标目录
 - 文件夹统计信息（Markdown 文件数 / 其他文件数）
+- 一键展开/收缩全部节点
+- 在树中定位当前活动笔记，自动展开并高亮
+- 树工具栏：新建文件、新建文件夹、文件夹排序开关、展开/收缩全部
+- 树右键菜单：打开所在文件夹、复制路径、新建文件/文件夹（仅文件夹）、删除
 
 ### 📋 文件列表
 
-- 显示当前目录下的所有非 Markdown 文件
-- **排序**：按名称、修改时间、创建时间、文件大小排序
-- **搜索**：按文件名过滤
+- **目录模式**：显示当前目录下的所有非 Markdown 文件，以表格形式展示（文件名 + 修改时间）
+- **引用模式**：点击 Markdown 文件后切换，显示该笔记的所有正向链接和嵌入文件，嵌入链接显示"嵌入"徽标，并提供"在树中定位"按钮
+- **排序**：按名称、修改时间、创建时间、文件大小排序，支持升序/降序切换
+- **搜索**：按文件名实时过滤
 - **扩展名过滤**：点击标签切换文件类型的显示/隐藏
-- 支持 Office 文件预览和图片/其他文件的打开
+- **列宽调整**：拖拽表头边框调整列宽
+- 文件右键菜单：打开所在文件夹、复制路径、复制文件名、在外部打开
 
 ### 📄 Office 文档预览
 
 支持无需外部应用即可预览以下格式：
 
 - **DOCX** — 使用 `docx-preview` 库渲染格式化文本
-- **XLSX** — 以 HTML 表格形式展示（含样式、字体、背景色），每表最多 1000 行
-- **PPTX** — 渲染每张幻灯片中的文本内容（含位置、字号、颜色、粗斜体等格式）
+- **XLSX** — 以 HTML 表格形式展示（含样式、字体、背景色、合并单元格），支持多 Sheet 切换，每表最多 1000 行，列宽可拖拽调整
+- **PPTX** — 使用 `pptxviewjs` 库在 Canvas 上渲染幻灯片，支持上/下页导航和键盘左右箭头操作，自适应容器大小
 - **SQL** — 代码高亮显示
 
-预览界面提供"在外部打开"按钮，可调用系统默认应用打开文档。
-
-### 🔗 引用模式
-
-点击任意 Markdown 文件，文件列表将切换至"引用模式"，显示该笔记的所有正向链接和嵌入文件。点击引用可跳转，嵌入链接会显示"嵌入"徽标。
+预览界面提供"返回"和"在外部打开"按钮，可调用系统默认应用打开文档。解析失败时会显示错误提示并提供外部编辑器打开选项。
 
 ### 🎨 主题系统
 
@@ -47,13 +46,19 @@ Vault Viewer 是一个 Obsidian 插件，提供直观的文件浏览器界面，
 - 繁體中文
 - English
 
+### 📐 可调整面板
+
+- 拖拽树与文件列表之间的分隔条调整面板比例
+- 面板比例自动保存到设置，重启后恢复
+
 ### ⚙️ 详细设置
 
-- 主题切换
-- 界面语言切换
-- 默认排序字段
-- 隐藏文件扩展名
-- 树形文件类型（显示在树中的扩展名）
+- 主题切换（Default / Fresh）
+- 界面语言切换（简体中文 / 繁體中文 / English）
+- 默认排序字段（名称 / 修改时间 / 创建时间 / 大小）
+- 排序顺序（升序 / 降序）
+- 隐藏文件扩展名（每行一个扩展名）
+- 树形文件类型（显示在树中的扩展名，默认 .md、.canvas、.excalidraw.md）
 - 文件夹排序开关
 
 ## 安装方法
@@ -76,21 +81,33 @@ Vault Viewer 是一个 Obsidian 插件，提供直观的文件浏览器界面，
 
 ### 文件树操作
 
-- **点击文件夹** — 展开/收缩子目录
-- **点击文件** — 打开文件（Markdown 切换到引用模式，Office 文件打开预览）
+- **点击文件夹** — 展开/收缩子目录，下方文件列表切换到该目录
+- **点击 Markdown 文件** — 在 Obsidian 中打开，文件列表切换到引用模式
+- **点击树中的其他文件** — 在 Obsidian 中打开
 - **拖拽** — 将文件或文件夹拖到目标文件夹上移动
-- **右键** — 打开上下文菜单
+- **右键文件夹** — 打开所在文件夹、复制路径、新建文件/文件夹、删除
+- **右键文件** — 打开所在文件夹、复制路径、删除
+- **工具栏** — 新建文件、新建文件夹、文件夹排序开关、展开/收缩全部
 
-### 文件列表工具栏
+### 文件列表操作
 
+- **目录模式** — 点击文件夹后显示该目录下的非 Markdown 文件
+- **引用模式** — 点击 Markdown 文件后显示其所有正向链接和嵌入文件
 - **搜索图标** — 显示/隐藏搜索框，按文件名实时过滤
 - **排序图标** — 选择排序字段和顺序
+- **升降序按钮** — 切换升序/降序
 - **眼睛图标** — 显示/隐藏文件树面板
 - **扩展名标签** — 点击切换该类型文件的可见性
+- **列宽调整** — 拖拽表头边框调整列宽
+- **右键文件** — 打开所在文件夹、复制路径、复制文件名、在外部打开
 
 ### Office 预览面板
 
-- 自动解析文档内容
+- 点击文件列表中的 Office 文件自动打开预览
+- **DOCX** — 渲染格式化文本内容
+- **XLSX** — 表格展示，底部 Sheet 标签切换，列宽可拖拽调整
+- **PPTX** — Canvas 渲染幻灯片，支持翻页导航和键盘左右箭头操作
+- **SQL** — 语法高亮代码视图
 - 操作栏包含"返回"和"在外部打开"按钮
 - 解析失败时会显示错误提示并提供外部编辑器打开选项
 
@@ -101,6 +118,7 @@ Vault Viewer 是一个 Obsidian 插件，提供直观的文件浏览器界面，
 - **主题** — 选择 Default 或 Fresh
 - **语言** — 简体中文 / 繁體中文 / English
 - **默认排序字段** — 名称、修改时间、创建时间、大小
+- **排序顺序** — 升序、降序
 - **隐藏文件类型** — 每行一个扩展名，默认隐藏的文件类型
 - **树形文件类型** — 显示在目录树中的扩展名（默认 .md、.canvas、.excalidraw.md）
 - **文件夹排序** — 是否按字母顺序排序文件夹
@@ -128,111 +146,150 @@ npm test       # 运行测试
 
 MIT
 
-
-
-
-
 ------
-
-
 
 # Vault Viewer
 
-An Obsidian plugin that provides an intuitive file browser with a folder tree, file list, and inline preview for Office documents (Word, Excel, PowerPoint) directly inside Obsidian.
+Vault Viewer is an Obsidian plugin that provides an intuitive file browser interface with a directory tree, file list, and built-in Office document preview (Word, Excel, PowerPoint). Its key feature is the separation of documents and files — so you can focus on writing while easily finding related files. Place related files in a folder, click the folder, and the file area below displays all files in that folder. Click an md file to show the files referenced in that note. You can also create, delete files and folders directly in the folder tree, and drag files to other folders.
 
 ## Features
 
-- **File Tree** — Browse your vault with an expandable folder/file tree; supports drag-and-drop to move items
-- **File List** — View files in the current directory with sorting (name, date modified, date created, size) and search
-- **Office Preview** — Render `.docx`, `.xlsx`, `.pptx`, and `.sql` files as readable HTML within Obsidian
-- **Reference Mode** — Click a Markdown file to see all its forward links and embeds; click a reference to navigate
-- **Locate in Tree** — Automatically highlights the active note's location in the folder tree
-- **Filter by Extension** — Toggle file extension visibility with clickable filter tags
-- **Right-click Context Menu** — Copy path, copy name, open containing folder, open externally
-- **Tree Context Menu** — Copy path, open containing folder, delete files/folders (with confirmation)
-- **Create Files/Folders** — New Markdown files and folders from the tree toolbar
-- **Collapse/Expand All** — One-click expand/collapse of the entire tree
-- **Themes** — Default dark/light compatible theme and a "Fresh" green-toned theme
-- **Internationalization** — English, Simplified Chinese, Traditional Chinese
-- **Resizable Panel** — Drag the divider between tree and file list to resize
+### 📂 File Directory Tree
+
+- Expandable/collapsible folder hierarchy with vault name as root node
+- Drag-and-drop to move files and folders to target directories
+- Folder statistics (Markdown file count / other file count)
+- One-click expand/collapse all nodes
+- Locate the active note in the tree with auto-expand and highlight
+- Tree toolbar: new file, new folder, folder sort toggle, expand/collapse all
+- Tree context menu: reveal in folder, copy path, new file/folder (folders only), delete
+
+### 📋 File List
+
+- **Directory mode**: Displays all non-Markdown files in the current directory in a table (filename + modified time)
+- **Reference mode**: Switches when clicking a Markdown file, showing all forward links and embedded files of that note; embedded links display an "Embed" badge and a "Locate in tree" button
+- **Sorting**: Sort by name, modified time, created time, or file size; toggle ascending/descending
+- **Search**: Real-time filtering by filename
+- **Extension filter**: Click tags to toggle visibility of file types
+- **Column resize**: Drag column header borders to adjust width
+- File context menu: reveal in folder, copy path, copy filename, open externally
+
+### 📄 Office Document Preview
+
+Preview the following formats without external applications:
+
+- **DOCX** — Renders formatted text using the `docx-preview` library
+- **XLSX** — Displays as HTML table (with styles, fonts, background colors, merged cells), supports multi-sheet switching, up to 1000 rows per sheet, resizable column widths
+- **PPTX** — Renders slides on Canvas using the `pptxviewjs` library, supports prev/next navigation and keyboard arrow keys, auto-fits container size
+- **SQL** — Syntax-highlighted code display
+
+The preview provides "Back" and "Open externally" buttons to open documents with the system default application. On parse failure, an error message is shown with an option to open in an external editor.
+
+### 🎨 Theme System
+
+- **Default** — Adapts to Obsidian dark/light theme
+- **Fresh** — Fresh green theme
+
+### 🌐 Internationalization
+
+- Simplified Chinese
+- Traditional Chinese
+- English
+
+### 📐 Resizable Panels
+
+- Drag the divider between tree and file list to adjust panel ratio
+- Panel ratio is automatically saved to settings and restored on restart
+
+### ⚙️ Detailed Settings
+
+- Theme switch (Default / Fresh)
+- Language switch (Simplified Chinese / Traditional Chinese / English)
+- Default sort field (Name / Modified time / Created time / Size)
+- Sort order (Ascending / Descending)
+- Hidden file extensions (one per line)
+- Tree file types (extensions shown in the tree, default: .md, .canvas, .excalidraw.md)
+- Folder sort toggle
 
 ## Installation
 
-### From Obsidian Community Plugins (future)
+### Via Community Plugins (pending listing)
 
-1. Open Settings → Community Plugins
+1. Open Settings → Community plugins
 2. Search for "Vault Viewer"
 3. Install and enable
 
-### Manual / BRAT
+### Manual Install / BRAT
 
-1. Download `main.js`, `styles.css`, and `manifest.json` from the latest release
+1. Download `main.js`, `styles.css`, `manifest.json` from the latest Release
 2. Place them in `<vault>/.obsidian/plugins/vault-viewer/`
-3. Reload Obsidian and enable the plugin in Community Plugins settings
+3. Restart Obsidian and enable in Community plugins settings
 
 ## Usage
 
-The plugin automatically opens the Vault Viewer panel on the left sidebar when Obsidian starts.
+The Vault Viewer panel opens automatically in the left sidebar on startup.
 
-### File Tree
+### File Tree Operations
 
-- Click a folder to expand/collapse it
-- Click a file to open it
-- Drag files and folders to move them between directories
-- Right-click for the context menu (copy path, open in folder, delete)
+- **Click a folder** — Expand/collapse subdirectories; file list below switches to that directory
+- **Click a Markdown file** — Opens in Obsidian; file list switches to reference mode
+- **Click other files in the tree** — Opens in Obsidian
+- **Drag** — Move a file or folder to a target folder
+- **Right-click a folder** — Reveal in folder, copy path, new file/folder, delete
+- **Right-click a file** — Reveal in folder, copy path, delete
+- **Toolbar** — New file, new folder, folder sort toggle, expand/collapse all
 
-### File List (lower panel)
+### File List Operations
 
-Shows all non-Markdown files in the currently selected directory. Use the toolbar to:
+- **Directory mode** — Shows non-Markdown files in the current directory after clicking a folder
+- **Reference mode** — Shows all forward links and embedded files after clicking a Markdown file
+- **Search icon** — Show/hide search box; real-time filtering by filename
+- **Sort icon** — Select sort field and order
+- **Ascending/Descending button** — Toggle sort direction
+- **Eye icon** — Show/hide the file tree panel
+- **Extension tags** — Click to toggle visibility of that file type
+- **Column resize** — Drag column header borders to adjust width
+- **Right-click a file** — Reveal in folder, copy path, copy filename, open externally
 
-- **Search** — Filter files by name
-- **Sort** — Sort by name, modified time, created time, or size; toggle ascending/descending
-- **Tree Toggle** — Eye icon shows/hides the tree panel
-- **Filter Tags** — Click a file extension tag to hide/show that type
+### Office Preview Panel
 
-### Office Preview
-
-Double-click any `.docx`, `.xlsx`, `.pptx`, or `.sql` file to open it in a dedicated preview pane with formatted content:
-
-- **DOCX** — Rendered via `docx-preview` library
-- **XLSX** — Tables rendered with sheet names and cell formatting (up to 1000 rows per sheet)
-- **PPTX** — Slides with positioned text and formatting
+- Click an Office file in the file list to open the preview automatically
+- **DOCX** — Renders formatted text content
+- **XLSX** — Table display with sheet tabs at the bottom; resizable column widths
+- **PPTX** — Canvas-rendered slides with prev/next navigation and keyboard arrow keys
 - **SQL** — Syntax-highlighted code view
-
-Use the "Open externally" button to open the file in its native application.
-
-### Reference Mode
-
-Click any Markdown file in the tree to switch the file list to "references" mode, showing all files linked or embedded from that note. Click a reference to navigate. The badge indicates embed links.
+- Action bar includes "Back" and "Open externally" buttons
+- On parse failure, an error message is shown with an option to open in an external editor
 
 ### Settings
 
-Access via Settings → Vault Viewer:
+Go to Settings → Vault Viewer:
 
-- **Theme** — Default or Fresh
-- **Language** — 简体中文, 繁體中文, English
-- **Default Sort** — Name, modified time, created time, size
-- **Hidden Extensions** — File types to hide by default
-- **Tree Extensions** — File types shown in the tree (default: `.md`, `.canvas`, `.excalidraw.md`)
-- **Sort Folders** — Toggle alphabetical folder sorting in the tree
+- **Theme** — Choose Default or Fresh
+- **Language** — Simplified Chinese / Traditional Chinese / English
+- **Default sort field** — Name, Modified time, Created time, Size
+- **Sort order** — Ascending, Descending
+- **Hidden file types** — One extension per line; file types hidden by default
+- **Tree file types** — Extensions shown in the directory tree (default: .md, .canvas, .excalidraw.md)
+- **Folder sort** — Whether to sort folders alphabetically
 
 ## Commands
 
-- **Open Vault Viewer** — Opens the Vault Viewer panel
+- **Open Vault Viewer** — Open the Vault Viewer panel
 
 ## Compatibility
 
-- **Desktop only** (relies on Electron shell for external file operations)
-- Requires Obsidian v1.5.0+
-- Supports `.docx`, `.xlsx`, `.pptx`, and `.sql` preview (no external services needed)
+- **Desktop only** (depends on Electron shell for external file operations)
+- Requires Obsidian v1.5.0 or above
+- Supports `.docx`, `.xlsx`, `.pptx`, `.sql` format preview without external services
 
 ## Development
 
-```
+```bash
 npm install
-npm run dev    # watch mode
-npm run build  # production build
-npm test       # run tests
+npm run dev    # Development mode (watch for changes)
+npm run build  # Production build
+npm test       # Run tests
 ```
 
 ## License

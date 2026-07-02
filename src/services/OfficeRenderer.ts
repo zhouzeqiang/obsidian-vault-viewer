@@ -124,7 +124,7 @@ export class OfficeRenderer {
     // Bottom bar with sheet tabs (left-aligned)
     const bottomBar = wrapper.createDiv({ cls: "pptx-bottom-bar" });
     const sheetTabs = bottomBar.createDiv({ cls: "pptx-sheet-tabs" });
-    let currentSheetIdx = 0;
+
 
     const sheetData = await Promise.all(sheetNames.map(async (name) => {
       const sheetFile = await this.findSheetFile(zip, name);
@@ -170,7 +170,7 @@ export class OfficeRenderer {
         const thead = table.createEl("thead");
         const headerRow = rows[0];
         const tr = thead.createEl("tr");
-        let visualCol = 0;
+
         for (let c = 0; c < maxCols; c++) {
           if (mergeHidden.has("0," + c)) continue;
           const cell = headerRow[c];
@@ -221,7 +221,7 @@ export class OfficeRenderer {
             if (colspan > 1) th.setAttr("colspan", colspan);
             if (rowspan > 1) th.setAttr("rowspan", rowspan);
           }
-          visualCol++;
+
         }
       }
 
@@ -266,7 +266,7 @@ export class OfficeRenderer {
     };
 
     const updateSheet = (idx: number) => {
-      currentSheetIdx = idx;
+
       renderSheet(idx);
     };
 

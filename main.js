@@ -45950,7 +45950,6 @@ var OfficeRenderer = class {
     const tableWrapper = wrapper.createDiv({ cls: "pptx-canvas-wrapper" });
     const bottomBar = wrapper.createDiv({ cls: "pptx-bottom-bar" });
     const sheetTabs = bottomBar.createDiv({ cls: "pptx-sheet-tabs" });
-    let currentSheetIdx = 0;
     const sheetData = await Promise.all(sheetNames.map(async (name) => {
       const sheetFile = await this.findSheetFile(zip, name);
       if (!sheetFile) return { merges: [], colWidths: [], rows: [] };
@@ -45989,7 +45988,6 @@ var OfficeRenderer = class {
         const thead = table.createEl("thead");
         const headerRow = rows[0];
         const tr = thead.createEl("tr");
-        let visualCol = 0;
         for (let c = 0; c < maxCols; c++) {
           if (mergeHidden.has("0," + c)) continue;
           const cell = headerRow[c];
@@ -46032,7 +46030,6 @@ var OfficeRenderer = class {
             if (colspan > 1) th.setAttr("colspan", colspan);
             if (rowspan > 1) th.setAttr("rowspan", rowspan);
           }
-          visualCol++;
         }
       }
       const tbody = table.createEl("tbody");
@@ -46067,7 +46064,6 @@ var OfficeRenderer = class {
       if (activeTab) activeTab.addClass("active");
     };
     const updateSheet = (idx) => {
-      currentSheetIdx = idx;
       renderSheet(idx);
     };
     sheetNames.forEach((name, i) => {
