@@ -2494,7 +2494,11 @@ var zhCN = {
   "list.type": "\u7C7B\u578B",
   "list.modified": "\u4FEE\u6539\u65F6\u95F4",
   "list.locateInTree": "\u5728\u76EE\u5F55\u6811\u4E2D\u5B9A\u4F4D",
-  "badge.embed": "\u5D4C\u5165"
+  "badge.embed": "\u5D4C\u5165",
+  "listContext.pasteFile": "\u7C98\u8D34\u6587\u4EF6",
+  "notice.filePasted": (name) => `\u5DF2\u7C98\u8D34\u6587\u4EF6: ${name}`,
+  "notice.pasteFailed": "\u7C98\u8D34\u6587\u4EF6\u5931\u8D25",
+  "notice.noFileInClipboard": "\u526A\u8D34\u677F\u4E2D\u6CA1\u6709\u6587\u4EF6"
 };
 var zh_CN_default = zhCN;
 
@@ -2569,7 +2573,11 @@ var zhTW = {
   "list.type": "\u985E\u578B",
   "list.modified": "\u4FEE\u6539\u6642\u9593",
   "list.locateInTree": "\u5728\u76EE\u9304\u6A39\u4E2D\u5B9A\u4F4D",
-  "badge.embed": "\u5D4C\u5165"
+  "badge.embed": "\u5D4C\u5165",
+  "listContext.pasteFile": "\u8CBC\u4E0A\u6A94\u6848",
+  "notice.filePasted": (name) => `\u5DF2\u8CBC\u4E0A\u6A94\u6848: ${name}`,
+  "notice.pasteFailed": "\u8CBC\u4E0A\u6A94\u6848\u5931\u6557",
+  "notice.noFileInClipboard": "\u526A\u8CBC\u7C3F\u4E2D\u6C92\u6709\u6A94\u6848"
 };
 var zh_TW_default = zhTW;
 
@@ -2644,7 +2652,11 @@ var en = {
   "list.type": "Type",
   "list.modified": "Modified",
   "list.locateInTree": "Locate in file tree",
-  "badge.embed": "Embed"
+  "badge.embed": "Embed",
+  "listContext.pasteFile": "Paste file",
+  "notice.filePasted": (name) => `File pasted: ${name}`,
+  "notice.pasteFailed": "Failed to paste file",
+  "notice.noFileInClipboard": "No file found in clipboard"
 };
 var en_default = en;
 
@@ -2941,6 +2953,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
     this.contextMenuEl = null;
+    this.listAreaContextMenuEl = null;
     this.currentMode = "directory";
     this.currentFolder = null;
     this.currentFile = null;
@@ -2965,6 +2978,13 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
         this.contextMenuEl = null;
       }
       activeDocument.removeEventListener("click", this.closeContextMenu);
+    };
+    this.closeListAreaContextMenu = () => {
+      if (this.listAreaContextMenuEl) {
+        this.listAreaContextMenuEl.remove();
+        this.listAreaContextMenuEl = null;
+      }
+      activeDocument.removeEventListener("click", this.closeListAreaContextMenu);
     };
     this.plugin = plugin;
   }
@@ -3021,6 +3041,11 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     });
     this.listContentEl = listArea.createDiv({ cls: "vault-viewer-list-content" });
     this.listEl = this.listContentEl.createDiv({ cls: "vault-viewer-list" });
+    this.listContentEl.addEventListener("contextmenu", (e) => {
+      const target = e.target;
+      if (target.closest(".vault-viewer-list-row")) return;
+      this.showListAreaContextMenu(e);
+    });
     this.renderTree();
     this.renderFileListModeA("/");
     this.updateDynamicToolbar();
@@ -3900,6 +3925,104 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     }
     this.contextMenuEl = menu;
     window.setTimeout(() => activeDocument.addEventListener("click", this.closeContextMenu), 0);
+  }
+  // ─── List Area Context Menu (Paste File) ──────────
+  getClipboardFilePath() {
+    try {
+      const _window = window;
+      const { clipboard } = _window.require("electron");
+      if (navigator.platform.startsWith("Win")) {
+        const buf = clipboard.readBuffer("FileNameW");
+        if (buf && buf.length > 0) {
+          const raw = buf.toString("utf16le").replace(/\0+$/, "");
+          if (raw) return raw;
+        }
+      }
+      if (navigator.platform.startsWith("Mac")) {
+        const buf = clipboard.readBuffer("NSFilenamesPboardType");
+        if (buf && buf.length > 0) {
+          const xml = buf.toString("utf-8");
+          const match = xml.match(/<string>([^<]+)<\/string>/);
+          if (match && match[1]) return match[1];
+        }
+      }
+      const fileUrl = clipboard.read("public.file-url");
+      if (fileUrl && fileUrl.startsWith("file://")) {
+        let filePath = fileUrl.replace("file:///", "");
+        if (!filePath.match(/^[A-Za-z]:/)) {
+          filePath = "/" + filePath;
+        }
+        return decodeURIComponent(filePath);
+      }
+    } catch (e) {
+      return null;
+    }
+    return null;
+  }
+  showListAreaContextMenu(e) {
+    e.preventDefault();
+    this.closeListAreaContextMenu();
+    this.closeContextMenu();
+    if (!this.currentFolder) return;
+    const filePath = this.getClipboardFilePath();
+    const hasFile = filePath !== null;
+    const menu = this.contentEl.createDiv({ cls: "vault-viewer-context-menu" });
+    menu.style.setProperty("left", `${e.clientX}px`);
+    menu.style.setProperty("top", `${e.clientY}px`);
+    const items = [
+      { icon: "ClipboardPaste", text: t("listContext.pasteFile"), disabled: !hasFile, action: () => this.pasteFileFromClipboard() }
+    ];
+    for (const item of items) {
+      const row = menu.createDiv({ cls: "vault-viewer-context-item" });
+      if (item.disabled) row.addClass("is-disabled");
+      if (item.icon) {
+        const iconSpan = row.createSpan();
+        setLucideIcon(iconSpan, item.icon, 14);
+      }
+      row.createSpan({ text: item.text });
+      if (!item.disabled) {
+        row.addEventListener("click", () => {
+          item.action();
+          this.closeListAreaContextMenu();
+        });
+      }
+    }
+    this.listAreaContextMenuEl = menu;
+    window.setTimeout(() => activeDocument.addEventListener("click", this.closeListAreaContextMenu), 0);
+  }
+  async pasteFileFromClipboard() {
+    const filePath = this.getClipboardFilePath();
+    if (!filePath) {
+      new import_obsidian4.Notice(t("notice.noFileInClipboard"));
+      return;
+    }
+    if (!this.currentFolder) {
+      new import_obsidian4.Notice(t("notice.pasteFailed"));
+      return;
+    }
+    try {
+      const fs = require("fs");
+      const path2 = require("path");
+      const buffer = await fs.promises.readFile(filePath);
+      const fileName = path2.basename(filePath);
+      let targetPath = this.currentFolder.path + "/" + fileName;
+      let finalName = fileName;
+      let counter = 1;
+      while (this.app.vault.getAbstractFileByPath(targetPath)) {
+        const ext = path2.extname(fileName);
+        const base = path2.basename(fileName, ext);
+        finalName = `${base}-${counter}${ext}`;
+        targetPath = this.currentFolder.path + "/" + finalName;
+        counter++;
+      }
+      await this.app.vault.createBinary(targetPath, new Uint8Array(buffer));
+      this.refreshFileList();
+      this.renderTree();
+      new import_obsidian4.Notice(t("notice.filePasted").replace("{name}", finalName));
+    } catch (err) {
+      console.error("Paste file failed:", err);
+      new import_obsidian4.Notice(t("notice.pasteFailed"));
+    }
   }
   saveExpandedState() {
     var _a;

@@ -69,6 +69,10 @@ const en: Record<string, string | ((...args: any[]) => string)> = {
   "list.modified": "Modified",
   "list.locateInTree": "Locate in file tree",
   "badge.embed": "Embed",
+  "listContext.pasteFile": "Paste file",
+  "notice.filePasted": (name: string) => `File pasted: ${name}`,
+  "notice.pasteFailed": "Failed to paste file",
+  "notice.noFileInClipboard": "No file found in clipboard",
 };
 
 export default en;

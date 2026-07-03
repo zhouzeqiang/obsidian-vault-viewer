@@ -69,6 +69,10 @@ const zhCN: Record<string, string | ((...args: any[]) => string)> = {
   "list.modified": "修改时间",
   "list.locateInTree": "在目录树中定位",
   "badge.embed": "嵌入",
+  "listContext.pasteFile": "粘贴文件",
+  "notice.filePasted": (name: string) => `已粘贴文件: ${name}`,
+  "notice.pasteFailed": "粘贴文件失败",
+  "notice.noFileInClipboard": "剪贴板中没有文件",
 };
 
 export default zhCN;

@@ -69,6 +69,10 @@ const zhTW: Record<string, string | ((...args: any[]) => string)> = {
   "list.modified": "修改時間",
   "list.locateInTree": "在目錄樹中定位",
   "badge.embed": "嵌入",
+  "listContext.pasteFile": "貼上檔案",
+  "notice.filePasted": (name: string) => `已貼上檔案: ${name}`,
+  "notice.pasteFailed": "貼上檔案失敗",
+  "notice.noFileInClipboard": "剪貼簿中沒有檔案",
 };
 
 export default zhTW;

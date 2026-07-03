@@ -20,6 +20,7 @@ export class VaultViewerView extends ItemView {
   listContentEl: HTMLElement;
   listEl: HTMLElement;
   contextMenuEl: HTMLElement | null = null;
+  listAreaContextMenuEl: HTMLElement | null = null;
   currentMode: "directory" | "references" = "directory";
   currentFolder: TFolder | null = null;
   currentFile: TFile | null = null;
@@ -105,6 +106,12 @@ export class VaultViewerView extends ItemView {
 
     this.listContentEl = listArea.createDiv({ cls: "vault-viewer-list-content" });
     this.listEl = this.listContentEl.createDiv({ cls: "vault-viewer-list" });
+
+    this.listContentEl.addEventListener("contextmenu", (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest(".vault-viewer-list-row")) return;
+      this.showListAreaContextMenu(e);
+    });
 
     this.renderTree();
     this.renderFileListModeA("/");
@@ -1137,6 +1144,142 @@ export class VaultViewerView extends ItemView {
     }
     activeDocument.removeEventListener("click", this.closeContextMenu);
   };
+
+  // ─── List Area Context Menu (Paste File) ──────────
+
+  private getClipboardFilePath(): string | null {
+    try {
+      interface ElectronClipboardAPI {
+        clipboard: {
+          read: (format: string) => string;
+          readBuffer: (format: string) => Buffer;
+        };
+      }
+      const _window = window as unknown as { require: (mod: string) => ElectronClipboardAPI };
+      const { clipboard } = _window.require("electron");
+
+      // Windows: read FileNameW (UTF-16LE null-terminated path)
+      if (navigator.platform.startsWith("Win")) {
+        const buf = clipboard.readBuffer("FileNameW");
+        if (buf && buf.length > 0) {
+          const raw = buf.toString("utf16le").replace(/\0+$/, "");
+          if (raw) return raw;
+        }
+      }
+
+      // macOS: read NSFilenamesPboardType (XML plist with file paths)
+      if (navigator.platform.startsWith("Mac")) {
+        const buf = clipboard.readBuffer("NSFilenamesPboardType");
+        if (buf && buf.length > 0) {
+          const xml = buf.toString("utf-8");
+          const match = xml.match(/<string>([^<]+)<\/string>/);
+          if (match && match[1]) return match[1];
+        }
+      }
+
+      // Fallback: try public.file-url (may work on some Linux desktops)
+      const fileUrl = clipboard.read("public.file-url");
+      if (fileUrl && fileUrl.startsWith("file://")) {
+        let filePath = fileUrl.replace("file:///", "");
+        if (!filePath.match(/^[A-Za-z]:/)) {
+          filePath = "/" + filePath;
+        }
+        return decodeURIComponent(filePath);
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
+  private showListAreaContextMenu(e: MouseEvent): void {
+    e.preventDefault();
+    this.closeListAreaContextMenu();
+    this.closeContextMenu();
+
+    if (!this.currentFolder) return;
+
+    const filePath = this.getClipboardFilePath();
+    const hasFile = filePath !== null;
+
+    const menu = this.contentEl.createDiv({ cls: "vault-viewer-context-menu" });
+    menu.style.setProperty("left", `${e.clientX}px`);
+    menu.style.setProperty("top", `${e.clientY}px`);
+
+    const items = [
+      { icon: "ClipboardPaste", text: t("listContext.pasteFile"), disabled: !hasFile, action: () => this.pasteFileFromClipboard() },
+    ];
+
+    for (const item of items) {
+      const row = menu.createDiv({ cls: "vault-viewer-context-item" });
+      if (item.disabled) row.addClass("is-disabled");
+      if (item.icon) {
+        const iconSpan = row.createSpan();
+        setLucideIcon(iconSpan, item.icon, 14);
+      }
+      row.createSpan({ text: item.text });
+      if (!item.disabled) {
+        row.addEventListener("click", () => {
+          item.action();
+          this.closeListAreaContextMenu();
+        });
+      }
+    }
+
+    this.listAreaContextMenuEl = menu;
+    window.setTimeout(() => activeDocument.addEventListener("click", this.closeListAreaContextMenu), 0);
+  }
+
+  private closeListAreaContextMenu = (): void => {
+    if (this.listAreaContextMenuEl) {
+      this.listAreaContextMenuEl.remove();
+      this.listAreaContextMenuEl = null;
+    }
+    activeDocument.removeEventListener("click", this.closeListAreaContextMenu);
+  };
+
+  private async pasteFileFromClipboard(): Promise<void> {
+    const filePath = this.getClipboardFilePath();
+    if (!filePath) {
+      new Notice(t("notice.noFileInClipboard"));
+      return;
+    }
+
+    if (!this.currentFolder) {
+      new Notice(t("notice.pasteFailed"));
+      return;
+    }
+
+    try {
+      const fs = require("fs") as { promises: { readFile: (p: string) => Promise<Buffer> } };
+      const path = require("path") as { basename: (p: string, ext?: string) => string; extname: (p: string) => string };
+
+      const buffer = await fs.promises.readFile(filePath);
+      const fileName = path.basename(filePath);
+
+      let targetPath = this.currentFolder.path + "/" + fileName;
+      let finalName = fileName;
+      let counter = 1;
+
+      while (this.app.vault.getAbstractFileByPath(targetPath)) {
+        const ext = path.extname(fileName);
+        const base = path.basename(fileName, ext);
+        finalName = `${base}-${counter}${ext}`;
+        targetPath = this.currentFolder.path + "/" + finalName;
+        counter++;
+      }
+
+      await this.app.vault.createBinary(targetPath, new Uint8Array(buffer));
+
+      this.refreshFileList();
+      this.renderTree();
+
+      new Notice(t("notice.filePasted").replace("{name}", finalName));
+    } catch (err) {
+      console.error("Paste file failed:", err);
+      new Notice(t("notice.pasteFailed"));
+    }
+  }
 
   private saveExpandedState(): Set<string> {
     const paths = new Set<string>();

@@ -610,6 +610,11 @@
   background: var(--vv-row-hover, var(--background-modifier-hover));
 }
 
+.vault-viewer-context-item.is-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 .vault-viewer-context-separator {
   height: 1px;
   background: var(--vv-border, var(--background-modifier-border));
