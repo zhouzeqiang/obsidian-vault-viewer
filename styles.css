@@ -87,7 +87,13 @@
 }
 
 .vault-viewer-tree-row:hover {
-  background: var(--vv-row-hover, var(--background-modifier-hover));
+  color: var(--vv-accent, var(--interactive-accent));
+}
+
+.vault-viewer-tree-row:hover .vault-viewer-file-icon svg,
+.vault-viewer-tree-row:hover .vault-viewer-folder-icon svg,
+.vault-viewer-tree-row:hover .vault-viewer-tree-name {
+  color: var(--vv-accent, var(--interactive-accent));
 }
 
 .vault-viewer-toggle-icon {
@@ -163,7 +169,7 @@
   border-radius: 3px;
   cursor: pointer;
   font-size: 0.8em;
-  background: var(--vv-selected-bg, var(--vv-accent, var(--interactive-accent)));
+  background: var(--vv-accent, var(--interactive-accent));
   color: var(--vv-selected-text, var(--text-on-accent));
 }
 
@@ -198,7 +204,12 @@
 }
 
 .vault-viewer-list-row:hover {
-  background: var(--vv-row-hover, var(--background-modifier-hover));
+  color: var(--vv-accent, var(--interactive-accent));
+}
+
+.vault-viewer-list-row:hover .vault-viewer-list-icon svg,
+.vault-viewer-list-row:hover .vault-viewer-list-name {
+  color: var(--vv-accent, var(--interactive-accent));
 }
 
 .vault-viewer-list-icon {
@@ -258,10 +269,26 @@
   font-style: italic;
 }
 
-.vault-viewer-tree-row.vault-viewer-highlighted,
+.vault-viewer-tree-row.vault-viewer-highlighted {
+  background: var(--vv-selected-bg, rgba(0, 0, 0, 0.04));
+  position: relative;
+  transition: background 0.3s;
+}
+
+.vault-viewer-tree-row.vault-viewer-highlighted::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--vv-accent, var(--interactive-accent));
+  border-radius: 1px;
+}
+
 .vault-viewer-list-row.vault-viewer-highlighted {
-  background: var(--vv-selected-bg, var(--vv-accent, var(--interactive-accent)));
-  color: var(--vv-selected-text, var(--text-on-accent));
+  background: var(--vv-selected-bg, rgba(0, 0, 0, 0.04));
+  border-left: 2px solid var(--vv-accent, var(--interactive-accent));
   transition: background 0.3s;
 }
 
@@ -818,6 +845,20 @@
   text-overflow: ellipsis;
 }
 
+/* Apple-style folder name typography */
+.vault-viewer-folder .vault-viewer-tree-name {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  color: var(--vv-text, var(--text-normal));
+}
+
+/* File name: lighter weight for visual contrast */
+.vault-viewer-tree-row:not(.vault-viewer-folder) .vault-viewer-tree-name {
+  font-weight: 400;
+  color: var(--vv-text-muted, var(--text-muted));
+}
+
 .vault-viewer-tree-count {
   margin-left: auto;
   font-size: 0.7em;
@@ -917,7 +958,7 @@
   --vv-text: #14532d;
   --vv-text-muted: #65a30d;
   --vv-row-hover: #d1fae5;
-  --vv-selected-bg: #86efac;
+  --vv-selected-bg: rgba(22, 163, 74, 0.08);
   --vv-selected-text: #14532d;
 }
 .vault-viewer-container.theme-fresh .vault-viewer-tree-row {
@@ -933,6 +974,11 @@
 .vault-viewer-container.theme-fresh .vault-viewer-sort-btn svg,
 .vault-viewer-container.theme-fresh .vault-viewer-order-btn svg {
   color: var(--vv-accent);
+}
+
+/* Dark mode overrides */
+.vault-viewer-container.theme-dark {
+  --vv-selected-bg: rgba(255, 255, 255, 0.06);
 }
 
 /* List collapsed (window shade) */
@@ -1152,12 +1198,17 @@
 }
 
 .vault-viewer-list-row:hover {
-  background: var(--vv-row-hover, var(--background-modifier-hover));
+  color: var(--vv-accent, var(--interactive-accent));
+}
+
+.vault-viewer-list-row:hover .vault-viewer-list-icon svg,
+.vault-viewer-list-row:hover .vault-viewer-list-name {
+  color: var(--vv-accent, var(--interactive-accent));
 }
 
 .vault-viewer-list-row.vault-viewer-highlighted {
-  background: var(--vv-selected-bg, var(--vv-accent, var(--interactive-accent)));
-  color: var(--vv-selected-text, var(--text-on-accent));
+  background: var(--vv-selected-bg, rgba(0, 0, 0, 0.04));
+  border-left: 2px solid var(--vv-accent, var(--interactive-accent));
   transition: background 0.3s;
 }
 

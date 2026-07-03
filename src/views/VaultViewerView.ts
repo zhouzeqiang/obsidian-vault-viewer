@@ -1,6 +1,6 @@
 ﻿import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder, TAbstractFile, FileSystemAdapter, MarkdownView } from "obsidian";
 import VaultViewerPlugin from "../main";
-import { setLucideIcon } from "../utils/lucide-icons";
+import { setLucideIcon, setLucideIconFilled } from "../utils/lucide-icons";
 import { InputModal } from "../ui/InputModal";
 import { ConfirmModal } from "../ui/ConfirmModal";
 import { t } from "../i18n";
@@ -588,6 +588,7 @@ export class VaultViewerView extends ItemView {
       setLucideIcon(toggle, "ChevronRight");
       const folderIcon = row.createSpan({ cls: "vault-viewer-folder-icon" });
       setLucideIcon(folderIcon, "Folder");
+      row.dataset.iconName = "Folder";
       row.createSpan({ cls: "vault-viewer-tree-name", text: subfolder.name });
       const folderMdCount = subfolder.children
         ? subfolder.children.filter((c): c is TFile => c instanceof TFile && c.extension === "md").length
@@ -608,7 +609,9 @@ export class VaultViewerView extends ItemView {
         toggle.empty();
         setLucideIcon(toggle, isHidden ? "ChevronDown" : "ChevronRight");
         folderIcon.empty();
-        setLucideIcon(folderIcon, isHidden ? "FolderOpenDot" : "Folder");
+        const newFolderIcon = isHidden ? "FolderOpenDot" : "Folder";
+        setLucideIcon(folderIcon, newFolderIcon);
+        row.dataset.iconName = newFolderIcon;
         this.highlightRow(row);
         this.onFolderClick(subfolder);
       });
@@ -649,7 +652,9 @@ export class VaultViewerView extends ItemView {
       row.dataset.path = file.path;
 
       const fileIcon = row.createSpan({ cls: "vault-viewer-file-icon" });
-      setLucideIcon(fileIcon, "File");
+      const iconName = this.getFileIcon(file);
+      setLucideIcon(fileIcon, iconName);
+      row.dataset.iconName = iconName;
       row.createSpan({ cls: "vault-viewer-tree-name", text: file.name });
 
       row.addEventListener("click", (e) => {
@@ -671,12 +676,48 @@ export class VaultViewerView extends ItemView {
   private highlightRow(el: HTMLElement | null): void {
     if (this.selectedEl) {
       this.selectedEl.removeClass("vault-viewer-highlighted");
+      this.restoreOutlineIcon(this.selectedEl);
     }
     this.selectedEl = el;
     if (el) {
       el.addClass("vault-viewer-highlighted");
+      this.applyFilledIcon(el);
       el.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
+  }
+
+  /** Map an outline icon name to its filled counterpart */
+  private getFilledIconName(iconName: string): string {
+    const fillMap: Record<string, string> = {
+      "File": "FileFill",
+      "Folder": "FolderFill",
+      "FolderOpenDot": "FolderOpenDotFill",
+      "FileText": "FileTextFill",
+      "LayoutDashboard": "LayoutDashboard",
+      "PenLine": "PenLine",
+    };
+    return fillMap[iconName] ?? iconName;
+  }
+
+  /** Switch the icon inside a row to its filled variant */
+  private applyFilledIcon(row: HTMLElement): void {
+    const iconName = row.dataset.iconName;
+    if (!iconName) return;
+    const filledName = this.getFilledIconName(iconName);
+    const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon") as HTMLElement | null;
+    if (!iconEl) return;
+    iconEl.empty();
+    setLucideIconFilled(iconEl, filledName, 16);
+  }
+
+  /** Switch the icon inside a row back to its outline variant */
+  private restoreOutlineIcon(row: HTMLElement): void {
+    const iconName = row.dataset.iconName;
+    if (!iconName) return;
+    const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon") as HTMLElement | null;
+    if (!iconEl) return;
+    iconEl.empty();
+    setLucideIcon(iconEl, iconName, 16);
   }
 
   private onFolderClick(folder: TFolder): void {
@@ -811,7 +852,9 @@ export class VaultViewerView extends ItemView {
 
       const nameTd = row.createEl("td", { cls: "vault-viewer-list-name" });
       const iconSpan = nameTd.createSpan({ cls: "vault-viewer-list-icon" });
-      setLucideIcon(iconSpan, this.getFileIcon(file));
+      const iconName = this.getFileIcon(file);
+      setLucideIcon(iconSpan, iconName);
+      row.dataset.iconName = iconName;
       nameTd.createSpan({ text: file.name });
 
       const timeTd = row.createEl("td", { cls: "vault-viewer-list-time" });
@@ -888,11 +931,15 @@ export class VaultViewerView extends ItemView {
 
       const nameTd = row.createEl("td", { cls: "vault-viewer-list-name" });
       const iconSpan = nameTd.createSpan({ cls: "vault-viewer-list-icon" });
+      let iconName: string;
       if (link.linkType === "embed") {
+        iconName = "Image";
         setLucideIcon(iconSpan, "Image");
       } else {
-        setLucideIcon(iconSpan, this.getFileIcon(link.file));
+        iconName = this.getFileIcon(link.file);
+        setLucideIcon(iconSpan, iconName);
       }
+      row.dataset.iconName = iconName;
       nameTd.createSpan({ text: link.file.name });
 
       const badgeTd = row.createEl("td", { cls: "vault-viewer-list-badge-cell" });
@@ -1459,7 +1506,13 @@ export class VaultViewerView extends ItemView {
   }
 
   private getFileIcon(file: TFile): string {
+    // Handle compound extensions first
+    if (file.name.endsWith(".excalidraw.md")) return "PenLine";
+    if (file.name.endsWith(".canvas.md")) return "LayoutDashboard";
+
     const ext = "." + file.extension;
+    if (ext === ".md") return "FileText";
+    if (ext === ".canvas") return "LayoutDashboard";
     if (ext === ".docx") return "FileText";
     if (ext === ".xlsx") return "FileSpreadsheet";
     if (ext === ".pptx") return "Presentation";

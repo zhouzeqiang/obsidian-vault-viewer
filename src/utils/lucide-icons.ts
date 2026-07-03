@@ -66,6 +66,18 @@ const iconSets: Record<string, ThemeIconSet> = {
       '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M15 3v18"/><path d="m9 15-3-3 3-3"/>',
     PanelRight:
       '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M15 3v18"/>',
+    FileFill:
+      '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" fill="currentColor"/><path d="M14 2v5a1 1 0 0 0 1 1h5" fill="none" stroke="currentColor"/>',
+    FolderFill:
+      '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" fill="currentColor"/>',
+    FileTextFill:
+      '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" fill="currentColor"/><path d="M14 2v5a1 1 0 0 0 1 1h5" fill="none" stroke="currentColor"/><path d="M10 9H8" stroke="currentColor" stroke-opacity="0.5"/><path d="M16 13H8" stroke="currentColor" stroke-opacity="0.5"/><path d="M16 17H8" stroke="currentColor" stroke-opacity="0.5"/>',
+    FolderOpenDotFill:
+      '<path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2" fill="currentColor"/><circle cx="14" cy="15" r="1"/>',
+    LayoutDashboard:
+      '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    PenLine:
+      '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',
   },
 
   fresh: {
@@ -133,6 +145,18 @@ const iconSets: Record<string, ThemeIconSet> = {
       '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M15 3v18"/><path d="m9 15-3-3 3-3"/>',
     PanelRight:
       '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M15 3v18"/>',
+    FileFill:
+      '<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" fill="currentColor"/><polyline points="13 2 13 9 20 9"/>',
+    FolderFill:
+      '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" fill="currentColor"/>',
+    FileTextFill:
+      '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="currentColor"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>',
+    FolderOpenDotFill:
+      '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" fill="currentColor"/>',
+    LayoutDashboard:
+      '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    PenLine:
+      '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',
   },
 };
 
@@ -165,6 +189,36 @@ export function setLucideIcon(el: HTMLElement, name: string, size: number = 16):
   svg.setAttribute("height", String(size));
   svg.setAttribute("viewBox", "0 0 24 24");
   svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.setAttribute("class", "vv-icon");
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<svg xmlns="${svgNS}">${iconPath}</svg>`, "image/svg+xml");
+  const parsedSvg = doc.querySelector("svg");
+  if (parsedSvg) {
+    for (const child of Array.from(parsedSvg.childNodes)) {
+      svg.appendChild(child.cloneNode(true));
+    }
+  }
+
+  el.appendChild(svg);
+}
+
+export function setLucideIconFilled(el: HTMLElement, name: string, size: number = 16): void {
+  el.empty();
+  const themePaths = iconSets[currentTheme] || iconSets.default;
+  const iconPath = themePaths[name];
+  if (!iconPath) return;
+
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = activeDocument.createElementNS(svgNS, "svg");
+  svg.setAttribute("width", String(size));
+  svg.setAttribute("height", String(size));
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "currentColor");
   svg.setAttribute("stroke", "currentColor");
   svg.setAttribute("stroke-width", "2");
   svg.setAttribute("stroke-linecap", "round");
