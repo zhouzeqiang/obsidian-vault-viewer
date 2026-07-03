@@ -358,57 +358,294 @@ export class OfficeRenderer {
     container.classList.add("office-view-has-pptx");
     const wrapper = container.createDiv({ cls: "office-pptx" });
 
-    const navBar = wrapper.createDiv({ cls: "pptx-nav" });
-    const prevBtn = navBar.createEl("button", { cls: "office-view-btn", text: "◀" });
-    const slideLabel = navBar.createSpan({ cls: "pptx-nav-label", text: "1 / ?" });
-    const nextBtn = navBar.createEl("button", { cls: "office-view-btn", text: "▶" });
-
-    const canvasWrapper = wrapper.createDiv({ cls: "pptx-canvas-wrapper" });
-    const canvas = canvasWrapper.createEl("canvas", { cls: "pptx-canvas" });
-
-    const viewer = new PPTXViewer({ canvas, backgroundColor: "#ffffff" });
+    // --- Load presentation ---
+    const viewer = new PPTXViewer({ backgroundColor: "#ffffff" });
     await viewer.loadFile(buffer);
-
     const totalSlides = viewer.getSlideCount();
-    const update = () => {
-      slideLabel.setText(`${viewer.getCurrentSlideIndex() + 1} / ${totalSlides}`);
-    };
-    update();
 
-    const renderSlide = async () => {
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvasWrapper.getBoundingClientRect();
-      const w = Math.max(Math.round(rect.width * 0.95), 200);
-      const h = Math.max(Math.round(rect.height * 0.95), 100);
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      canvas.style.width = w + "px";
-      canvas.style.height = h + "px";
-      await viewer.render(canvas);
+    // --- Toolbar ---
+    const toolbar = wrapper.createDiv({ cls: "pptx-toolbar" });
+    const toggleBtn = toolbar.createEl("button", { cls: "pptx-toggle-btn" });
+    setLucideIcon(toggleBtn, "PanelRightClose", 18);
+
+    // --- Body (scroll area + thumbnails) ---
+    const body = wrapper.createDiv({ cls: "pptx-body" });
+    const scrollArea = body.createDiv({ cls: "pptx-scroll-area" });
+    scrollArea.tabIndex = 0;
+    const thumbnails = body.createDiv({ cls: "pptx-thumbnails" });
+
+    // --- Status bar ---
+    const statusBar = wrapper.createDiv({ cls: "pptx-status-bar", text: `1 / ${totalSlides}` });
+
+    // --- Slide aspect ratio (use first slide to determine) ---
+    const SLIDE_WIDTH = 960;
+    const SLIDE_HEIGHT = 540;
+    const aspectRatio = SLIDE_HEIGHT / SLIDE_WIDTH;
+
+    // --- Create slide items and thumbnail items ---
+    const slideItems: HTMLElement[] = [];
+    const thumbItems: HTMLElement[] = [];
+    const mainCanvases: HTMLCanvasElement[] = [];
+    const thumbCanvases: HTMLCanvasElement[] = [];
+    const mainRendered = new Set<number>();
+    const thumbRendered = new Set<number>();
+    let currentSlide = 0;
+
+    for (let i = 0; i < totalSlides; i++) {
+      // Main slide item
+      const slideItem = scrollArea.createDiv({ cls: "pptx-slide-item" });
+      const mainCanvas = slideItem.createEl("canvas", { cls: "pptx-slide-canvas" });
+      slideItem.createSpan({ cls: "pptx-slide-number", text: `${i + 1}` });
+      slideItems.push(slideItem);
+      mainCanvases.push(mainCanvas);
+
+      // Thumbnail item
+      const thumbItem = thumbnails.createDiv({ cls: "pptx-thumb-item" });
+      const thumbCanvas = thumbItem.createEl("canvas", { cls: "pptx-thumb-canvas" });
+      thumbItem.createSpan({ cls: "pptx-thumb-label", text: `${i + 1}` });
+      thumbItems.push(thumbItem);
+      thumbCanvases.push(thumbCanvas);
+    }
+
+    // --- Serial render queue to prevent concurrent viewer.renderSlide calls ---
+    let renderQueue: Promise<void> = Promise.resolve();
+    const enqueueRender = (fn: () => Promise<void>): void => {
+      renderQueue = renderQueue.then(fn).catch(() => { /* prevent queue breakage on error */ });
     };
 
-    prevBtn.addEventListener("click", () => {
-      if (viewer.getCurrentSlideIndex() > 0) {
-        void viewer.previousSlide(canvas).then(() => update());
+    // --- Render helpers ---
+    const renderMainSlide = (index: number): void => {
+      if (mainRendered.has(index)) return;
+      mainRendered.add(index);
+      enqueueRender(async () => {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = scrollArea.getBoundingClientRect();
+        const w = Math.max(Math.round(rect.width * 0.95), 200);
+        const h = Math.max(Math.round(w * aspectRatio), 100);
+        const canvas = mainCanvases[index];
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        canvas.style.width = w + "px";
+        canvas.style.height = h + "px";
+        await viewer.renderSlide(index, canvas);
+      });
+    };
+
+    const renderThumbSlide = (index: number): void => {
+      if (thumbRendered.has(index)) return;
+      thumbRendered.add(index);
+      enqueueRender(async () => {
+        const dpr = window.devicePixelRatio || 1;
+        const tw = 100;
+        const th = Math.max(Math.round(tw * aspectRatio), 50);
+        const canvas = thumbCanvases[index];
+        canvas.width = tw * dpr;
+        canvas.height = th * dpr;
+        canvas.style.width = tw + "px";
+        canvas.style.height = th + "px";
+        await viewer.renderSlide(index, canvas);
+      });
+    };
+
+    // --- IntersectionObserver for main slides (lazy render + current tracking) ---
+    const mainObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const target = entry.target as HTMLElement;
+          const idx = slideItems.indexOf(target);
+          if (idx === -1) continue;
+          if (entry.isIntersecting) {
+            void renderMainSlide(idx);
+          }
+        }
+        // Track most visible slide
+        let maxRatio = 0;
+        let mostVisible = currentSlide;
+        for (let i = 0; i < slideItems.length; i++) {
+          const rect = slideItems[i].getBoundingClientRect();
+          const scrollRect = scrollArea.getBoundingClientRect();
+          const visibleTop = Math.max(rect.top, scrollRect.top);
+          const visibleBottom = Math.min(rect.bottom, scrollRect.bottom);
+          const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+          const ratio = rect.height > 0 ? visibleHeight / rect.height : 0;
+          if (ratio > maxRatio) {
+            maxRatio = ratio;
+            mostVisible = i;
+          }
+        }
+        if (mostVisible !== currentSlide) {
+          thumbItems[currentSlide].removeClass("active");
+          currentSlide = mostVisible;
+          thumbItems[currentSlide].addClass("active");
+          statusBar.setText(`${currentSlide + 1} / ${totalSlides}`);
+        }
+      },
+      { root: scrollArea, threshold: 0.1 }
+    );
+
+    for (const item of slideItems) {
+      mainObserver.observe(item);
+    }
+
+    // --- IntersectionObserver for thumbnails (lazy render) ---
+    const thumbObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const target = entry.target as HTMLElement;
+            const idx = thumbItems.indexOf(target);
+            if (idx !== -1) void renderThumbSlide(idx);
+          }
+        }
+      },
+      { root: thumbnails, threshold: 0.1 }
+    );
+
+    for (const item of thumbItems) {
+      thumbObserver.observe(item);
+    }
+
+    // --- Thumbnail click → scroll to slide ---
+    for (let i = 0; i < totalSlides; i++) {
+      thumbItems[i].addEventListener("click", () => {
+        slideItems[i].scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+
+    // --- Toggle sidebar ---
+    let sidebarCollapsed = false;
+    toggleBtn.addEventListener("click", () => {
+      sidebarCollapsed = !sidebarCollapsed;
+      if (sidebarCollapsed) {
+        thumbnails.addClass("collapsed");
+        setLucideIcon(toggleBtn, "PanelRight", 18);
+      } else {
+        thumbnails.removeClass("collapsed");
+        setLucideIcon(toggleBtn, "PanelRightClose", 18);
       }
     });
 
-    nextBtn.addEventListener("click", () => {
-      if (viewer.getCurrentSlideIndex() < totalSlides - 1) {
-        void viewer.nextSlide(canvas).then(() => update());
+    // --- Keyboard navigation ---
+    const scrollToSlide = (index: number): void => {
+      const clamped = Math.max(0, Math.min(index, totalSlides - 1));
+      slideItems[clamped].scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+
+    scrollArea.addEventListener("keydown", (e: KeyboardEvent) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        scrollToSlide(currentSlide + 1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        scrollToSlide(currentSlide - 1);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        scrollToSlide(0);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        scrollToSlide(totalSlides - 1);
       }
     });
 
-    canvasWrapper.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") { prevBtn.click(); e.preventDefault(); }
-      if (e.key === "ArrowRight") { nextBtn.click(); e.preventDefault(); }
+    // --- Re-render all previously rendered slides (used after visibility restore) ---
+    const reRenderAll = (): void => {
+      // Re-render main slides that were previously rendered
+      const mainToReRender = [...mainRendered];
+      mainRendered.clear();
+      for (const idx of mainToReRender) {
+        renderMainSlide(idx);
+      }
+      // Re-render thumbnails that were previously rendered
+      const thumbToReRender = [...thumbRendered];
+      thumbRendered.clear();
+      for (const idx of thumbToReRender) {
+        renderThumbSlide(idx);
+      }
+    };
+
+    // --- ResizeObserver with debounce ---
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+    const resizeObserver = new ResizeObserver(() => {
+      if (resizeTimer !== null) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        // Re-render only visible main canvases
+        mainRendered.clear();
+        const scrollRect = scrollArea.getBoundingClientRect();
+        for (let i = 0; i < slideItems.length; i++) {
+          const rect = slideItems[i].getBoundingClientRect();
+          const visibleTop = Math.max(rect.top, scrollRect.top);
+          const visibleBottom = Math.min(rect.bottom, scrollRect.bottom);
+          if (visibleBottom > visibleTop) {
+            renderMainSlide(i);
+          }
+        }
+        // Re-render visible thumbnails
+        thumbRendered.clear();
+        const thumbRect = thumbnails.getBoundingClientRect();
+        for (let i = 0; i < thumbItems.length; i++) {
+          const rect = thumbItems[i].getBoundingClientRect();
+          const visibleTop = Math.max(rect.top, thumbRect.top);
+          const visibleBottom = Math.min(rect.bottom, thumbRect.bottom);
+          if (visibleBottom > visibleTop) {
+            renderThumbSlide(i);
+          }
+        }
+      }, 200);
     });
-    canvasWrapper.tabIndex = 0;
+    resizeObserver.observe(scrollArea);
 
-    const ro = new ResizeObserver(() => { void renderSlide(); });
-    ro.observe(canvasWrapper);
+    // --- Visibility change detection (canvas content is lost when element is hidden) ---
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        reRenderAll();
+      }
+    });
 
-    await renderSlide();
+    // Also detect when the container becomes visible again (e.g., tab switch in Obsidian)
+    const visibilityObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && entry.target === wrapper) {
+            // Container became visible — re-render all canvases
+            reRenderAll();
+          }
+        }
+      },
+      { threshold: 0 }
+    );
+    visibilityObserver.observe(wrapper);
+
+    // --- Cleanup on container detach ---
+    const cleanup = (): void => {
+      mainObserver.disconnect();
+      thumbObserver.disconnect();
+      resizeObserver.disconnect();
+      visibilityObserver.disconnect();
+      if (resizeTimer !== null) clearTimeout(resizeTimer);
+      viewer.destroy();
+    };
+
+    // Use Node removal detection via MutationObserver
+    const detachObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of Array.from(mutation.removedNodes)) {
+          if (node === container || node.contains(container)) {
+            cleanup();
+            detachObserver.disconnect();
+            return;
+          }
+        }
+      }
+    });
+    if (container.parentElement) {
+      detachObserver.observe(container.parentElement, { childList: true, subtree: true });
+    }
+
+    // Mark first thumbnail as active
+    if (thumbItems.length > 0) {
+      thumbItems[0].addClass("active");
+    }
+
     return filename;
   }
 

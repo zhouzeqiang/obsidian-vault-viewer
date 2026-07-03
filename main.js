@@ -2698,7 +2698,9 @@ var iconSets = {
     Image: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
     Locate: '<line x1="2" x2="5" y1="12" y2="12"/><line x1="19" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="5"/><line x1="12" x2="12" y1="19" y2="22"/><circle cx="12" cy="12" r="7"/>',
     Eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
-    EyeOff: '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    EyeOff: '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>',
+    PanelRightClose: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M15 3v18"/><path d="m9 15-3-3 3-3"/>',
+    PanelRight: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M15 3v18"/>'
   },
   fresh: {
     FolderPlus: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>',
@@ -2730,7 +2732,9 @@ var iconSets = {
     Image: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
     Locate: '<circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>',
     Eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
-    EyeOff: '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    EyeOff: '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
+    PanelRightClose: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M15 3v18"/><path d="m9 15-3-3 3-3"/>',
+    PanelRight: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M15 3v18"/>'
   }
 };
 var currentTheme = "default";
@@ -46145,56 +46149,241 @@ var OfficeRenderer = class {
   async renderPptx(buffer, filename, container) {
     container.classList.add("office-view-has-pptx");
     const wrapper = container.createDiv({ cls: "office-pptx" });
-    const navBar = wrapper.createDiv({ cls: "pptx-nav" });
-    const prevBtn = navBar.createEl("button", { cls: "office-view-btn", text: "\u25C0" });
-    const slideLabel = navBar.createSpan({ cls: "pptx-nav-label", text: "1 / ?" });
-    const nextBtn = navBar.createEl("button", { cls: "office-view-btn", text: "\u25B6" });
-    const canvasWrapper = wrapper.createDiv({ cls: "pptx-canvas-wrapper" });
-    const canvas = canvasWrapper.createEl("canvas", { cls: "pptx-canvas" });
-    const viewer = new PPTXViewer({ canvas, backgroundColor: "#ffffff" });
+    const viewer = new PPTXViewer({ backgroundColor: "#ffffff" });
     await viewer.loadFile(buffer);
     const totalSlides = viewer.getSlideCount();
-    const update = () => {
-      slideLabel.setText(`${viewer.getCurrentSlideIndex() + 1} / ${totalSlides}`);
+    const toolbar = wrapper.createDiv({ cls: "pptx-toolbar" });
+    const toggleBtn = toolbar.createEl("button", { cls: "pptx-toggle-btn" });
+    setLucideIcon(toggleBtn, "PanelRightClose", 18);
+    const body = wrapper.createDiv({ cls: "pptx-body" });
+    const scrollArea = body.createDiv({ cls: "pptx-scroll-area" });
+    scrollArea.tabIndex = 0;
+    const thumbnails = body.createDiv({ cls: "pptx-thumbnails" });
+    const statusBar = wrapper.createDiv({ cls: "pptx-status-bar", text: `1 / ${totalSlides}` });
+    const SLIDE_WIDTH = 960;
+    const SLIDE_HEIGHT = 540;
+    const aspectRatio = SLIDE_HEIGHT / SLIDE_WIDTH;
+    const slideItems = [];
+    const thumbItems = [];
+    const mainCanvases = [];
+    const thumbCanvases = [];
+    const mainRendered = /* @__PURE__ */ new Set();
+    const thumbRendered = /* @__PURE__ */ new Set();
+    let currentSlide = 0;
+    for (let i = 0; i < totalSlides; i++) {
+      const slideItem = scrollArea.createDiv({ cls: "pptx-slide-item" });
+      const mainCanvas = slideItem.createEl("canvas", { cls: "pptx-slide-canvas" });
+      slideItem.createSpan({ cls: "pptx-slide-number", text: `${i + 1}` });
+      slideItems.push(slideItem);
+      mainCanvases.push(mainCanvas);
+      const thumbItem = thumbnails.createDiv({ cls: "pptx-thumb-item" });
+      const thumbCanvas = thumbItem.createEl("canvas", { cls: "pptx-thumb-canvas" });
+      thumbItem.createSpan({ cls: "pptx-thumb-label", text: `${i + 1}` });
+      thumbItems.push(thumbItem);
+      thumbCanvases.push(thumbCanvas);
+    }
+    let renderQueue = Promise.resolve();
+    const enqueueRender = (fn) => {
+      renderQueue = renderQueue.then(fn).catch(() => {
+      });
     };
-    update();
-    const renderSlide = async () => {
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvasWrapper.getBoundingClientRect();
-      const w = Math.max(Math.round(rect.width * 0.95), 200);
-      const h = Math.max(Math.round(rect.height * 0.95), 100);
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      canvas.style.width = w + "px";
-      canvas.style.height = h + "px";
-      await viewer.render(canvas);
+    const renderMainSlide = (index) => {
+      if (mainRendered.has(index)) return;
+      mainRendered.add(index);
+      enqueueRender(async () => {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = scrollArea.getBoundingClientRect();
+        const w = Math.max(Math.round(rect.width * 0.95), 200);
+        const h = Math.max(Math.round(w * aspectRatio), 100);
+        const canvas = mainCanvases[index];
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        canvas.style.width = w + "px";
+        canvas.style.height = h + "px";
+        await viewer.renderSlide(index, canvas);
+      });
     };
-    prevBtn.addEventListener("click", () => {
-      if (viewer.getCurrentSlideIndex() > 0) {
-        void viewer.previousSlide(canvas).then(() => update());
+    const renderThumbSlide = (index) => {
+      if (thumbRendered.has(index)) return;
+      thumbRendered.add(index);
+      enqueueRender(async () => {
+        const dpr = window.devicePixelRatio || 1;
+        const tw = 100;
+        const th = Math.max(Math.round(tw * aspectRatio), 50);
+        const canvas = thumbCanvases[index];
+        canvas.width = tw * dpr;
+        canvas.height = th * dpr;
+        canvas.style.width = tw + "px";
+        canvas.style.height = th + "px";
+        await viewer.renderSlide(index, canvas);
+      });
+    };
+    const mainObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const target = entry.target;
+          const idx = slideItems.indexOf(target);
+          if (idx === -1) continue;
+          if (entry.isIntersecting) {
+            void renderMainSlide(idx);
+          }
+        }
+        let maxRatio = 0;
+        let mostVisible = currentSlide;
+        for (let i = 0; i < slideItems.length; i++) {
+          const rect = slideItems[i].getBoundingClientRect();
+          const scrollRect = scrollArea.getBoundingClientRect();
+          const visibleTop = Math.max(rect.top, scrollRect.top);
+          const visibleBottom = Math.min(rect.bottom, scrollRect.bottom);
+          const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+          const ratio = rect.height > 0 ? visibleHeight / rect.height : 0;
+          if (ratio > maxRatio) {
+            maxRatio = ratio;
+            mostVisible = i;
+          }
+        }
+        if (mostVisible !== currentSlide) {
+          thumbItems[currentSlide].removeClass("active");
+          currentSlide = mostVisible;
+          thumbItems[currentSlide].addClass("active");
+          statusBar.setText(`${currentSlide + 1} / ${totalSlides}`);
+        }
+      },
+      { root: scrollArea, threshold: 0.1 }
+    );
+    for (const item of slideItems) {
+      mainObserver.observe(item);
+    }
+    const thumbObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const target = entry.target;
+            const idx = thumbItems.indexOf(target);
+            if (idx !== -1) void renderThumbSlide(idx);
+          }
+        }
+      },
+      { root: thumbnails, threshold: 0.1 }
+    );
+    for (const item of thumbItems) {
+      thumbObserver.observe(item);
+    }
+    for (let i = 0; i < totalSlides; i++) {
+      thumbItems[i].addEventListener("click", () => {
+        slideItems[i].scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+    let sidebarCollapsed = false;
+    toggleBtn.addEventListener("click", () => {
+      sidebarCollapsed = !sidebarCollapsed;
+      if (sidebarCollapsed) {
+        thumbnails.addClass("collapsed");
+        setLucideIcon(toggleBtn, "PanelRight", 18);
+      } else {
+        thumbnails.removeClass("collapsed");
+        setLucideIcon(toggleBtn, "PanelRightClose", 18);
       }
     });
-    nextBtn.addEventListener("click", () => {
-      if (viewer.getCurrentSlideIndex() < totalSlides - 1) {
-        void viewer.nextSlide(canvas).then(() => update());
-      }
-    });
-    canvasWrapper.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") {
-        prevBtn.click();
+    const scrollToSlide = (index) => {
+      const clamped = Math.max(0, Math.min(index, totalSlides - 1));
+      slideItems[clamped].scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+    scrollArea.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") {
         e.preventDefault();
-      }
-      if (e.key === "ArrowRight") {
-        nextBtn.click();
+        scrollToSlide(currentSlide + 1);
+      } else if (e.key === "ArrowUp") {
         e.preventDefault();
+        scrollToSlide(currentSlide - 1);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        scrollToSlide(0);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        scrollToSlide(totalSlides - 1);
       }
     });
-    canvasWrapper.tabIndex = 0;
-    const ro = new ResizeObserver(() => {
-      void renderSlide();
+    const reRenderAll = () => {
+      const mainToReRender = [...mainRendered];
+      mainRendered.clear();
+      for (const idx of mainToReRender) {
+        renderMainSlide(idx);
+      }
+      const thumbToReRender = [...thumbRendered];
+      thumbRendered.clear();
+      for (const idx of thumbToReRender) {
+        renderThumbSlide(idx);
+      }
+    };
+    let resizeTimer = null;
+    const resizeObserver = new ResizeObserver(() => {
+      if (resizeTimer !== null) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        mainRendered.clear();
+        const scrollRect = scrollArea.getBoundingClientRect();
+        for (let i = 0; i < slideItems.length; i++) {
+          const rect = slideItems[i].getBoundingClientRect();
+          const visibleTop = Math.max(rect.top, scrollRect.top);
+          const visibleBottom = Math.min(rect.bottom, scrollRect.bottom);
+          if (visibleBottom > visibleTop) {
+            renderMainSlide(i);
+          }
+        }
+        thumbRendered.clear();
+        const thumbRect = thumbnails.getBoundingClientRect();
+        for (let i = 0; i < thumbItems.length; i++) {
+          const rect = thumbItems[i].getBoundingClientRect();
+          const visibleTop = Math.max(rect.top, thumbRect.top);
+          const visibleBottom = Math.min(rect.bottom, thumbRect.bottom);
+          if (visibleBottom > visibleTop) {
+            renderThumbSlide(i);
+          }
+        }
+      }, 200);
     });
-    ro.observe(canvasWrapper);
-    await renderSlide();
+    resizeObserver.observe(scrollArea);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        reRenderAll();
+      }
+    });
+    const visibilityObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && entry.target === wrapper) {
+            reRenderAll();
+          }
+        }
+      },
+      { threshold: 0 }
+    );
+    visibilityObserver.observe(wrapper);
+    const cleanup = () => {
+      mainObserver.disconnect();
+      thumbObserver.disconnect();
+      resizeObserver.disconnect();
+      visibilityObserver.disconnect();
+      if (resizeTimer !== null) clearTimeout(resizeTimer);
+      viewer.destroy();
+    };
+    const detachObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of Array.from(mutation.removedNodes)) {
+          if (node === container || node.contains(container)) {
+            cleanup();
+            detachObserver.disconnect();
+            return;
+          }
+        }
+      }
+    });
+    if (container.parentElement) {
+      detachObserver.observe(container.parentElement, { childList: true, subtree: true });
+    }
+    if (thumbItems.length > 0) {
+      thumbItems[0].addClass("active");
+    }
     return filename;
   }
   escapeHtml(text) {

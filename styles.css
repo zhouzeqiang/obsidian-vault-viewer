@@ -346,6 +346,7 @@
   color: var(--text-accent);
 }
 
+/* PPTX Scrollable Viewer */
 .office-pptx {
   display: flex;
   flex-direction: column;
@@ -358,40 +359,139 @@
   padding: 0;
 }
 
-.pptx-nav {
+.pptx-toolbar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 8px 12px;
+  justify-content: flex-end;
+  padding: 4px 8px;
   background: var(--background-primary);
   border-bottom: 1px solid var(--background-modifier-border);
   flex-shrink: 0;
+  gap: 4px;
 }
 
-.pptx-nav-label {
-  font-size: 0.85em;
-  font-weight: 600;
+.pptx-toggle-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px 6px;
+  cursor: pointer;
   color: var(--text-muted);
-  min-width: 80px;
-  text-align: center;
-}
-
-.pptx-canvas-wrapper {
-  flex: 1;
-  display: flex; flex-direction: column;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  overflow: auto;
-  outline: none;
-  min-height: 0;
+  transition: background 0.15s, color 0.15s;
 }
 
-.pptx-canvas {
+.pptx-toggle-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.pptx-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pptx-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  outline: none;
+}
+
+.pptx-slide-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.pptx-slide-canvas {
   display: block;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  background: #ffffff;
+}
+
+.pptx-slide-number {
+  font-size: 0.75em;
+  color: var(--text-faint);
+  margin-top: 4px;
+}
+
+.pptx-thumbnails {
+  width: 120px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 6px;
+  background: var(--background-primary);
+  border-left: 1px solid var(--background-modifier-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: width 0.2s ease, padding 0.2s ease, border-width 0.2s ease;
+}
+
+.pptx-thumbnails.collapsed {
+  width: 0;
+  padding: 0;
+  border-left-width: 0;
+  overflow: hidden;
+}
+
+.pptx-thumb-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.pptx-thumb-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.pptx-thumb-item.active {
+  border-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+}
+
+.pptx-thumb-canvas {
+  display: block;
+  border-radius: 2px;
+  background: #ffffff;
+}
+
+.pptx-thumb-label {
+  font-size: 0.65em;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.pptx-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  background: var(--background-primary);
+  border-top: 1px solid var(--background-modifier-border);
+  font-size: 0.8em;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .office-table {
@@ -1117,65 +1217,6 @@
 /* Ensure table cells have relative positioning for resizer */
 .vault-viewer-table-th {
   position: relative;
-}
-
-/* ===== XLSX Sheet Tabs at bottom-left ===== */
-
-.pptx-bottom-bar {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  background: var(--background-primary);
-  border-top: 1px solid var(--background-modifier-border);
-  padding: 2px 8px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  min-height: 28px;
-}
-
-.pptx-sheet-tabs {
-  display: flex;
-  align-items: center;
-  gap: 0;
-}
-
-.pptx-sheet-tab {
-  background: none;
-  border: none;
-  border-right: 1px solid var(--background-modifier-border);
-  padding: 4px 12px;
-  font-size: 0.78em;
-  color: var(--text-muted);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.1s, color 0.1s;
-  min-width: 40px;
-  text-align: center;
-}
-
-.pptx-sheet-tab:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
-}
-
-.pptx-sheet-tab.active {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-  font-weight: 600;
-}
-
-/* Remove old nav bar top positioning */
-.office-pptx > .pptx-nav {
-  display: none;
-}
-
-/* XLSX table wrapper takes flex space */
-.office-pptx > .pptx-canvas-wrapper {
-  flex: 1;
-  display: block;
-  overflow: auto;
-  padding: 0;
-  text-align: left;
 }
 
 /* Table cells default border */
