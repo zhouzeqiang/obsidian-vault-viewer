@@ -9432,7 +9432,7 @@ function requireFontConfig() {
       constructor(options = {}) {
         this.options = this._validateOptions(options);
         try {
-          this.logger = typeof Logger !== "undefined" ? new Logger("ChartFontConfig") : this._createFallbackLogger();
+          this.logger = typeof globalThis.Logger !== "undefined" ? new globalThis.Logger("ChartFontConfig") : this._createFallbackLogger();
         } catch (error) {
           this.logger = this._createFallbackLogger();
         }
@@ -9921,8 +9921,8 @@ function requireZipProcessor() {
       this.engine = null;
       this.files = {};
       this.isModuleInit = true;
-      if (typeof Logger !== "undefined") {
-        this.logger = new Logger("ZLib");
+      if (typeof globalThis.Logger !== "undefined") {
+        this.logger = new globalThis.Logger("ZLib");
       } else if (typeof window !== "undefined" && window.Logger) {
         this.logger = new window.Logger("ZLib");
       } else if (typeof globalThis !== "undefined" && globalThis.Logger) {
@@ -10521,7 +10521,7 @@ function requireXmlParser() {
       this.masterLayoutMap = /* @__PURE__ */ new Map();
       this.themeMap = {};
       this.colorMaps = {};
-      this.logger = new Logger("XmlParserContext");
+      this.logger = new globalThis.Logger("XmlParserContext");
     }
     /**
      * Register slide master following standard patterns
@@ -10593,7 +10593,7 @@ function requireXmlParser() {
         "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
         "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
       };
-      this.logger = new Logger("StaxParser");
+      this.logger = new globalThis.Logger("StaxParser");
     }
     /**
      * Parse XML document with error handling
@@ -13023,7 +13023,7 @@ function requirePresentationDom() {
 var presentationDomExports = requirePresentationDom();
 var TableProcessor$1 = class TableProcessor2 {
   constructor(options = {}) {
-    this.logger = new Logger("TableProcessor");
+    this.logger = new globalThis.Logger("TableProcessor");
     this.validator = this._getValidator();
     this.errorBoundary = new (this._getErrorBoundary())({
       context: "TableProcessor",
@@ -15341,7 +15341,7 @@ function requireChartProcessor() {
         this.context = context;
         this.currentSlideContext = null;
         try {
-          this.logger = new Logger("ChartProcessor");
+          this.logger = new globalThis.Logger("ChartProcessor");
         } catch (error) {
           console.warn("[ChartProcessor] Logger initialization failed, using fallback:", error);
           this.logger = this._createFallbackLogger();
@@ -17963,7 +17963,7 @@ function requireChartRenderer() {
         this.graphics = graphics;
         this.options = options;
         try {
-          this.logger = new Logger("ChartRenderer");
+          this.logger = new globalThis.Logger("ChartRenderer");
         } catch (error) {
           console.warn("[ChartRenderer] Logger initialization failed, using fallback:", error);
           this.logger = this._createFallbackLogger();
@@ -25711,7 +25711,7 @@ function requireGraphicsAdapter() {
       this.graphics = null;
       this.canvas = null;
       this.processor = null;
-      this.logger = new Logger("CDrawingDocument");
+      this.logger = new globalThis.Logger("CDrawingDocument");
       this.currentLayer = null;
     }
     /**
@@ -33921,7 +33921,7 @@ function requireFontEngine() {
   hasRequiredFontEngine = 1;
   class FontEngine {
     constructor() {
-      this.logger = new Logger("FontEngine");
+      this.logger = new globalThis.Logger("FontEngine");
       this.initializeFontSystem();
       this.availableFonts = /* @__PURE__ */ new Set([
         "Arial",
@@ -34330,7 +34330,7 @@ function requireMediaProcessor() {
   class MediaProcessor {
     constructor(context) {
       this.context = context;
-      this.logger = new Logger("MediaProcessor");
+      this.logger = new globalThis.Logger("MediaProcessor");
       this.supportedVideoTypes = ["mp4", "webm", "ogg", "avi", "mov", "wmv"];
       this.supportedAudioTypes = ["mp3", "wav", "ogg", "aac", "m4a", "wma"];
       this.supportedImageTypes = ["jpg", "jpeg", "png", "gif", "bmp", "svg", "webp"];
@@ -34782,7 +34782,7 @@ function requireSvgRenderer() {
   class SVGRenderer {
     constructor(graphics) {
       this.graphics = graphics;
-      this.logger = new Logger("SVGRenderer");
+      this.logger = new globalThis.Logger("SVGRenderer");
       this.parser = new DOMParser();
     }
     /**
@@ -35538,7 +35538,7 @@ function requireThemeProcessor() {
   class ThemeProcessor {
     constructor(context) {
       this.context = context;
-      this.logger = new Logger("ThemeProcessor");
+      this.logger = new globalThis.Logger("ThemeProcessor");
       this.themes = /* @__PURE__ */ new Map();
       this.masters = /* @__PURE__ */ new Map();
       this.layouts = /* @__PURE__ */ new Map();
@@ -36093,8 +36093,8 @@ var PPTXSlideRenderer = class {
    * Initialize standard graphics engine
    */
   initializeGraphicsEngine() {
-    if (typeof CDrawingDocument !== "undefined") {
-      this.drawingDocument = new CDrawingDocument();
+    if (typeof globalThis.CDrawingDocument !== "undefined") {
+      this.drawingDocument = new globalThis.CDrawingDocument();
     } else {
       this.drawingDocument = new CDrawingDocumentClass();
     }
@@ -36153,7 +36153,7 @@ var PPTXSlideRenderer = class {
    * Step 1: Process ZIP archive
    */
   async processZIP(arrayBuffer) {
-    this.zip = typeof ZLib !== "undefined" ? new ZLib() : new ZLibClass();
+    this.zip = typeof globalThis.ZLib !== "undefined" ? new globalThis.ZLib() : new ZLibClass();
     const success = await this.zip.open(arrayBuffer);
     if (!success) {
       throw new Error("Failed to open ZIP archive");
@@ -44387,7 +44387,7 @@ var PPTXSlideRenderer = class {
 var ImageLoader = class {
   constructor() {
     this.loadingImages = /* @__PURE__ */ new Set();
-    this.logger = new Logger("ImageLoader");
+    this.logger = new globalThis.Logger("ImageLoader");
   }
   /**
    * Load image from URL
@@ -45274,7 +45274,7 @@ var PPTXProcessor = class {
   const create = (options = {}) => {
     var _a, _b;
     try {
-      return new PPTXProcessor(options);
+      return new globalThis.PPTXProcessor(options);
     } catch (error) {
       try {
         (_b = (_a = g.logger || (window == null ? void 0 : window.logger)) == null ? void 0 : _a.error) == null ? void 0 : _b.call(_a, "PPTXProcessor", "Failed to create processor:", error);
@@ -45406,13 +45406,13 @@ if (typeof globalThis !== "undefined") {
     globalThis.PPTXProcessor = PPTXProcessor;
   }
   if (!globalThis.createPPTXProcessor && typeof PPTXProcessor === "function") {
-    globalThis.createPPTXProcessor = (options = {}) => new PPTXProcessor(options);
+    globalThis.createPPTXProcessor = (options = {}) => new globalThis.PPTXProcessor(options);
   }
 }
 if (typeof globalThis !== "undefined") {
   if (typeof window !== "undefined") {
     window.CGraphics = window.CGraphics || (globalThis.CGraphics || void 0);
-    if (!window.Chart && typeof Chart !== "undefined") {
+    if (!window.Chart && typeof globalThis.Chart !== "undefined") {
       window.Chart = Chart;
     }
     if (!window.PPTXSlideRenderer && typeof globalThis.PPTXSlideRenderer !== "undefined") {
@@ -45902,11 +45902,11 @@ var maybeExposeOnApi = (name) => {
 ].forEach(maybeExposeOnApi);
 if (typeof globalThis !== "undefined") {
   globalThis.PptxViewJS = api;
-  if (!globalThis.PPTXProcessor && typeof PPTXProcessor !== "undefined") {
+  if (!globalThis.PPTXProcessor && typeof globalThis.PPTXProcessor !== "undefined") {
     globalThis.PPTXProcessor = PPTXProcessor;
   }
-  if (!globalThis.createPPTXProcessor && typeof PPTXProcessor !== "undefined") {
-    globalThis.createPPTXProcessor = (options = {}) => new PPTXProcessor(options);
+  if (!globalThis.createPPTXProcessor && typeof globalThis.PPTXProcessor !== "undefined") {
+    globalThis.createPPTXProcessor = (options = {}) => new globalThis.PPTXProcessor(options);
   }
 }
 if (!globalThis.PPTXSlideRenderer && typeof PPTXSlideRenderer === "function") {

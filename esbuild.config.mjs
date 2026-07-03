@@ -24,6 +24,52 @@ const chartJsStubPlugin = {
   },
 };
 
+const globalFixupPlugin = {
+  name: "global-fixup",
+  setup(build) {
+    build.onEnd((result) => {
+      if (result.errors.length > 0) return;
+      let code = fs.readFileSync("main.js", "utf8");
+      // pptxviewjs uses bare global identifiers (typeof X, new X()) to detect
+      // and instantiate globals that it registers on globalThis/window. After
+      // esbuild bundling, these bare identifiers are no longer in module scope,
+      // so the checks always fail and empty fallback stubs are used instead.
+      // Replace bare references with globalThis-based references so they
+      // resolve correctly at runtime.
+      const globalNames = [
+        "CDrawingDocument",
+        "ZLib",
+        "Logger",
+        "Chart",
+        "PPTXProcessor",
+        "PPTXSlideRenderer",
+        "ErrorRecovery",
+        "OpenXmlPackage",
+        "OpenXmlTypes",
+      ];
+      for (const name of globalNames) {
+        // typeof X !== "undefined"  →  typeof globalThis.X !== "undefined"
+        code = code.replace(
+          new RegExp(`typeof ${name} !== "undefined"`, "g"),
+          `typeof globalThis.${name} !== "undefined"`
+        );
+        // typeof X !== 'undefined'  →  typeof globalThis.X !== 'undefined'
+        code = code.replace(
+          new RegExp(`typeof ${name} !== 'undefined'`, "g"),
+          `typeof globalThis.${name} !== 'undefined'`
+        );
+        // new X(...)  →  new globalThis.X(...)
+        // Only match when X is used as a constructor (preceded by "new ")
+        code = code.replace(
+          new RegExp(`new ${name}\\(`, "g"),
+          `new globalThis.${name}(`
+        );
+      }
+      fs.writeFileSync("main.js", code);
+    });
+  },
+};
+
 const scriptWarningPlugin = {
   name: "script-warning",
   setup(build) {
@@ -44,7 +90,7 @@ const context = await esbuild.context({
   banner: { js: banner },
   entryPoints: ["src/main.ts"],
   bundle: true,
-  plugins: [chartJsStubPlugin, scriptWarningPlugin, inlineCssPlugin()],
+  plugins: [chartJsStubPlugin, globalFixupPlugin, scriptWarningPlugin, inlineCssPlugin()],
   external: [
     "obsidian",
     "electron",
