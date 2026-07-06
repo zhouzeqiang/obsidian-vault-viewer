@@ -1,3 +1,4 @@
+declare const activeDocument: Document;
 import { TFile, Vault } from "obsidian";
 import * as docx from "docx-preview";
 import JSZip from "jszip";
@@ -595,8 +596,8 @@ export class OfficeRenderer {
     resizeObserver.observe(scrollArea);
 
     // --- Visibility change detection (canvas content is lost when element is hidden) ---
-    (activeDocument ?? document).addEventListener("visibilitychange", () => {
-      if (!(activeDocument ?? document).hidden) {
+    activeDocument.addEventListener("visibilitychange", () => {
+      if (!activeDocument.hidden) {
         reRenderAll();
       }
     });
@@ -621,7 +622,7 @@ export class OfficeRenderer {
       thumbObserver.disconnect();
       resizeObserver.disconnect();
       visibilityObserver.disconnect();
-      if (resizeTimer !== null) clearTimeout(resizeTimer);
+      if (resizeTimer !== null) window.clearTimeout(resizeTimer);
       viewer.destroy();
     };
 

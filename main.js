@@ -3596,7 +3596,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     if (!iconName) return;
     const filledName = this.getFilledIconName(iconName);
     const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon");
-    if (!iconEl) return;
+    if (!iconEl || !(iconEl instanceof HTMLElement)) return;
     iconEl.empty();
     setLucideIconFilled(iconEl, filledName, 16);
   }
@@ -3605,7 +3605,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     const iconName = row.dataset.iconName;
     if (!iconName) return;
     const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon");
-    if (!iconEl) return;
+    if (!iconEl || !(iconEl instanceof HTMLElement)) return;
     iconEl.empty();
     setLucideIcon(iconEl, iconName, 16);
   }
@@ -46554,8 +46554,8 @@ var OfficeRenderer = class {
       }, 200);
     });
     resizeObserver.observe(scrollArea);
-    (activeDocument != null ? activeDocument : document).addEventListener("visibilitychange", () => {
-      if (!(activeDocument != null ? activeDocument : document).hidden) {
+    activeDocument.addEventListener("visibilitychange", () => {
+      if (!activeDocument.hidden) {
         reRenderAll();
       }
     });
@@ -46575,7 +46575,7 @@ var OfficeRenderer = class {
       thumbObserver.disconnect();
       resizeObserver.disconnect();
       visibilityObserver.disconnect();
-      if (resizeTimer !== null) clearTimeout(resizeTimer);
+      if (resizeTimer !== null) window.clearTimeout(resizeTimer);
       viewer.destroy();
     };
     const detachObserver = new MutationObserver((mutations) => {

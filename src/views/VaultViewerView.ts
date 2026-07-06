@@ -704,8 +704,8 @@ export class VaultViewerView extends ItemView {
     const iconName = row.dataset.iconName;
     if (!iconName) return;
     const filledName = this.getFilledIconName(iconName);
-    const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon") as HTMLElement | null;
-    if (!iconEl) return;
+    const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon");
+    if (!iconEl || !(iconEl instanceof HTMLElement)) return;
     iconEl.empty();
     setLucideIconFilled(iconEl, filledName, 16);
   }
@@ -714,8 +714,8 @@ export class VaultViewerView extends ItemView {
   private restoreOutlineIcon(row: HTMLElement): void {
     const iconName = row.dataset.iconName;
     if (!iconName) return;
-    const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon") as HTMLElement | null;
-    if (!iconEl) return;
+    const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon");
+    if (!iconEl || !(iconEl instanceof HTMLElement)) return;
     iconEl.empty();
     setLucideIcon(iconEl, iconName, 16);
   }
