@@ -4084,17 +4084,14 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       return;
     }
     try {
-      const _win = window;
-      const fs = _win.require("fs");
-      const path2 = _win.require("path");
-      const buffer = await fs.promises.readFile(filePath);
-      const fileName = path2.basename(filePath);
+      const buffer = await import_obsidian4.FileSystemAdapter.readLocalFile(filePath);
+      const fileName = filePath.replace(/^.*[\\/]/, "");
+      const ext = fileName.includes(".") ? "." + fileName.split(".").pop() : "";
+      const base = ext ? fileName.slice(0, -ext.length) : fileName;
       let targetPath = this.currentFolder.path + "/" + fileName;
       let finalName = fileName;
       let counter = 1;
       while (this.app.vault.getAbstractFileByPath(targetPath)) {
-        const ext = path2.extname(fileName);
-        const base = path2.basename(fileName, ext);
         finalName = `${base}-${counter}${ext}`;
         targetPath = this.currentFolder.path + "/" + finalName;
         counter++;

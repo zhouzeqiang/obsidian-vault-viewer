@@ -1298,20 +1298,16 @@ export class VaultViewerView extends ItemView {
     }
 
     try {
-      const _win = window as unknown as { require: (mod: string) => unknown };
-      const fs = _win.require("fs") as { promises: { readFile: (p: string) => Promise<Buffer> } };
-      const path = _win.require("path") as { basename: (p: string, ext?: string) => string; extname: (p: string) => string };
-
-      const buffer = await fs.promises.readFile(filePath);
-      const fileName = path.basename(filePath);
+      const buffer = await FileSystemAdapter.readLocalFile(filePath);
+      const fileName = filePath.replace(/^.*[\\/]/, "");
+      const ext = fileName.includes(".") ? "." + fileName.split(".").pop() : "";
+      const base = ext ? fileName.slice(0, -ext.length) : fileName;
 
       let targetPath = this.currentFolder.path + "/" + fileName;
       let finalName = fileName;
       let counter = 1;
 
       while (this.app.vault.getAbstractFileByPath(targetPath)) {
-        const ext = path.extname(fileName);
-        const base = path.basename(fileName, ext);
         finalName = `${base}-${counter}${ext}`;
         targetPath = this.currentFolder.path + "/" + finalName;
         counter++;
