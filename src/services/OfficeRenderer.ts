@@ -564,10 +564,10 @@ export class OfficeRenderer {
     };
 
     // --- ResizeObserver with debounce ---
-    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+    let resizeTimer: number | null = null;
     const resizeObserver = new ResizeObserver(() => {
-      if (resizeTimer !== null) clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
+      if (resizeTimer !== null) window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
         // Re-render only visible main canvases
         mainRendered.clear();
         const scrollRect = scrollArea.getBoundingClientRect();
@@ -595,8 +595,8 @@ export class OfficeRenderer {
     resizeObserver.observe(scrollArea);
 
     // --- Visibility change detection (canvas content is lost when element is hidden) ---
-    document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) {
+    (activeDocument ?? document).addEventListener("visibilitychange", () => {
+      if (!(activeDocument ?? document).hidden) {
         reRenderAll();
       }
     });

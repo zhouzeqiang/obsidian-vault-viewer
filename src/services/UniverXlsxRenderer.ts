@@ -1,4 +1,5 @@
 // src/services/UniverXlsxRenderer.ts
+import { getLanguage } from "obsidian";
 import {
 	createUniver,
 	LocaleType,
@@ -17,17 +18,16 @@ export class UniverXlsxRenderer {
 	async render(buffer: ArrayBuffer, filename: string, container: HTMLElement): Promise<boolean> {
 		console.warn("[UniverXlsxRenderer] render() called - delegating to fallback");
 		try {
-			const univerContainer = document.createElement("div");
+			const univerContainer = (activeDocument ?? document).createElement("div");
 			univerContainer.className = "univer-xlsx-container";
-			univerContainer.style.width = "100%";
-			univerContainer.style.height = "100%";
+			univerContainer.setCssProps({ width: "100%", height: "100%" });
 			container.appendChild(univerContainer);
 			// Add class to parent so CSS can target it without :has()
 			container.classList.add("has-univer-xlsx");
 			this.univerContainer = univerContainer;
 
 			const locale =
-				window.localStorage.getItem("language") === "zh"
+				getLanguage() === "zh"
 					? LocaleType.ZH_CN
 					: LocaleType.EN_US;
 			const localeData =
@@ -36,7 +36,7 @@ export class UniverXlsxRenderer {
 			const { univerAPI } = createUniver({
 				locale: locale,
 				locales: {
-					[locale]: (localeData as Record<string, unknown>),
+					[locale]: localeData as Record<string, unknown>,
 				},
 				theme: defaultTheme as Record<string, string>,
 				presets: [
@@ -63,11 +63,11 @@ export class UniverXlsxRenderer {
 
 	dispose(): void {
 		if (this.univerAPI) {
-			try { this.univerAPI.dispose(); } catch (e) { /* ignore */ }
+			try { this.univerAPI.dispose(); } catch { /* ignore */ }
 			this.univerAPI = null;
 		}
 		if (this.univerContainer && this.univerContainer.parentNode) {
-			try { this.univerContainer.parentNode.removeChild(this.univerContainer); } catch (e) { /* ignore */ }
+			try { this.univerContainer.parentNode.removeChild(this.univerContainer); } catch { /* ignore */ }
 		}
 		this.univerContainer = null;
 	}

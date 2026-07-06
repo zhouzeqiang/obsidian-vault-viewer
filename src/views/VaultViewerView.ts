@@ -1,4 +1,4 @@
-﻿import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder, TAbstractFile, FileSystemAdapter, MarkdownView } from "obsidian";
+﻿import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder, TAbstractFile, FileSystemAdapter, MarkdownView, Platform } from "obsidian";
 import VaultViewerPlugin from "../main";
 import { setLucideIcon, setLucideIconFilled } from "../utils/lucide-icons";
 import { InputModal } from "../ui/InputModal";
@@ -1150,8 +1150,8 @@ export class VaultViewerView extends ItemView {
           window.open(folderPath);
         }
       }},
-      { icon: "Clipboard", text: t("context.copyPath"), action: () => navigator.clipboard.writeText(fullPath) },
-      { icon: "Pencil", text: t("context.copyName"), action: () => navigator.clipboard.writeText(file.name) },
+      { icon: "Clipboard", text: t("context.copyPath"), action: () => window.navigator.clipboard.writeText(fullPath) },
+      { icon: "Pencil", text: t("context.copyName"), action: () => window.navigator.clipboard.writeText(file.name) },
       { separator: true },
       { icon: "Paperclip", text: t("context.openExternal"), action: () => {
         const electron = getElectron();
@@ -1206,7 +1206,7 @@ export class VaultViewerView extends ItemView {
       const { clipboard } = _window.require("electron");
 
       // Windows: read FileNameW (UTF-16LE null-terminated path)
-      if (navigator.platform.startsWith("Win")) {
+      if (Platform.isWin) {
         const buf = clipboard.readBuffer("FileNameW");
         if (buf && buf.length > 0) {
           const raw = buf.toString("utf16le").replace(/\0+$/, "");
@@ -1215,7 +1215,7 @@ export class VaultViewerView extends ItemView {
       }
 
       // macOS: read NSFilenamesPboardType (XML plist with file paths)
-      if (navigator.platform.startsWith("Mac")) {
+      if (Platform.isMacOS) {
         const buf = clipboard.readBuffer("NSFilenamesPboardType");
         if (buf && buf.length > 0) {
           const xml = buf.toString("utf-8");
@@ -1267,7 +1267,7 @@ export class VaultViewerView extends ItemView {
       row.createSpan({ text: item.text });
       if (!item.disabled) {
         row.addEventListener("click", () => {
-          item.action();
+          void item.action();
           this.closeListAreaContextMenu();
         });
       }
@@ -1298,8 +1298,9 @@ export class VaultViewerView extends ItemView {
     }
 
     try {
-      const fs = require("fs") as { promises: { readFile: (p: string) => Promise<Buffer> } };
-      const path = require("path") as { basename: (p: string, ext?: string) => string; extname: (p: string) => string };
+      const _win = window as unknown as { require: (mod: string) => unknown };
+      const fs = _win.require("fs") as { promises: { readFile: (p: string) => Promise<Buffer> } };
+      const path = _win.require("path") as { basename: (p: string, ext?: string) => string; extname: (p: string) => string };
 
       const buffer = await fs.promises.readFile(filePath);
       const fileName = path.basename(filePath);
@@ -1394,7 +1395,7 @@ export class VaultViewerView extends ItemView {
     copyBtn.createSpan({ text: ` ${t("treeContext.copyPath")}` });
     copyBtn.addEventListener("click", () => {
       this.closeTreeContextMenu();
-      void navigator.clipboard.writeText(item.path);
+      void window.navigator.clipboard.writeText(item.path);
       new Notice(t("notice.pathCopied"));
     });
 
