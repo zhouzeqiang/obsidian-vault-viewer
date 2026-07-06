@@ -1,5 +1,6 @@
 // src/services/UniverXlsxRenderer.ts
 declare const activeDocument: Document;
+import { getLanguage } from "obsidian";
 import {
 	createUniver,
 	LocaleType,
@@ -27,7 +28,7 @@ export class UniverXlsxRenderer {
 			this.univerContainer = univerContainer;
 
 			const locale =
-				window.localStorage.getItem("language") === "zh"
+				getLanguage() === "zh"
 					? LocaleType.ZH_CN
 					: LocaleType.EN_US;
 			const localeData =

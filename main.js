@@ -3596,7 +3596,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     if (!iconName) return;
     const filledName = this.getFilledIconName(iconName);
     const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon");
-    if (!iconEl || !(iconEl instanceof HTMLElement)) return;
+    if (!iconEl || !iconEl.instanceOf(HTMLElement)) return;
     iconEl.empty();
     setLucideIconFilled(iconEl, filledName, 16);
   }
@@ -3605,7 +3605,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     const iconName = row.dataset.iconName;
     if (!iconName) return;
     const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon");
-    if (!iconEl || !(iconEl instanceof HTMLElement)) return;
+    if (!iconEl || !iconEl.instanceOf(HTMLElement)) return;
     iconEl.empty();
     setLucideIcon(iconEl, iconName, 16);
   }
