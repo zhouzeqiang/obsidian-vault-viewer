@@ -1,6 +1,7 @@
 import {
   isTreeExtension,
   isOfficeExtension,
+  isCodeExtension,
   isFileTypeVisible,
   getFileType,
 } from "../src/utils/extensions";
@@ -50,6 +51,28 @@ describe("isFileTypeVisible", () => {
   });
   test("hides files in hidden list", () => {
     expect(isFileTypeVisible(".pdf", [".pdf"])).toBe(false);
+  });
+});
+
+describe("isCodeExtension", () => {
+  const codeFiles = ["script.py", "app.js", "main.ts", "index.html", "style.css",
+    "data.json", "config.yaml", "program.java", "main.c", "lib.rs"];
+
+  test("recognizes extensionless code files", () => {
+    expect(isCodeExtension("Dockerfile")).toBe(true);
+    expect(isCodeExtension("Makefile")).toBe(true);
+    expect(isCodeExtension("makefile")).toBe(true);
+    expect(isCodeExtension(".gitignore")).toBe(true);
+  });
+  test.each(codeFiles)("recognizes %s as code", (name) => {
+    expect(isCodeExtension(name)).toBe(true);
+  });
+
+  test("rejects non-code files", () => {
+    expect(isCodeExtension("note.md")).toBe(false);
+    expect(isCodeExtension("doc.docx")).toBe(false);
+    expect(isCodeExtension("image.png")).toBe(false);
+    expect(isCodeExtension("data.xlsx")).toBe(false);
   });
 });
 
