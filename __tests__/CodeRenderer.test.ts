@@ -4,8 +4,11 @@ describe("extensionToLanguage", () => {
   const cases: [string, string][] = [
     ["java", "java"],
     ["py", "python"],
+    ["Py", "python"],
     ["js", "javascript"],
+    ["JS", "javascript"],
     ["ts", "typescript"],
+    ["Ts", "typescript"],
     ["json", "json"],
     ["xml", "markup"],
     ["yaml", "yaml"],
