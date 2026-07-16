@@ -12,8 +12,9 @@ in the system's external application.
 src/services/CodeRenderer.ts   — Prism.js-based syntax highlighting
 src/views/CodeView.ts           — ItemView for the code preview tab
 src/utils/extensions.ts         — Add isCodeExtension() helper
+src/utils/file-icons.ts         — Devicon-based language icon map (SVG + color)
 src/main.ts                     — Register CodeView, add openCodeFile()
-src/views/VaultViewerView.ts    — Route code files to CodeView
+src/views/VaultViewerView.ts    — Route code files, apply language icons/colours
 src/i18n/*.ts                   — Add code view translations
 styles.css                      — Code view layout + Prism theme colours
 ```
@@ -105,6 +106,64 @@ Mirrors the OfficeView pattern:
 
 Registered as `VIEW_TYPE_CODE = "vault-viewer-code"`.
 
+## File Icons & Colours
+
+Add language-specific file icons with brand colours (inspired by VSCode icon
+themes) using SVGs from the [devicon](https://devicon.dev) set.
+
+### `src/utils/file-icons.ts`
+
+Each supported language stores an inline SVG path and its brand colour:
+
+```typescript
+interface FileIcon {
+  svg: string;   // SVG path data (devicon-derived)
+  color: string; // brand colour (e.g. "#3178C6")
+}
+
+const FILE_ICONS: Record<string, FileIcon> = {
+  py:   { svg: "<path d='...'/>", color: "#3776AB" },
+  js:   { svg: "<path d='...'/>", color: "#F7DF1E" },
+  ts:   { svg: "<path d='...'/>", color: "#3178C6" },
+  java: { svg: "<path d='...'/>", color: "#ED8B00" },
+  rs:   { svg: "<path d='...'/>", color: "#DEA584" },
+  go:   { svg: "<path d='...'/>", color: "#00ADD8" },
+  rb:   { svg: "<path d='...'/>", color: "#CC342D" },
+  php:  { svg: "<path d='...'/>", color: "#777BB4" },
+  // ... all supported languages
+};
+```
+
+Functions:
+- `getFileIcon(extension: string): FileIcon | null` — lookup by extension key.
+- **Fallback**: unknown extensions → `null` (caller uses existing Lucide icon).
+
+### How it renders
+
+In tree rows and list rows, the existing icon `<span>` gets:
+1. The devicon SVG inserted as inner HTML.
+2. CSS `color` set to the brand colour (via `style.color`).
+3. SVG width/height set to 16×16 for tree/list, 20×20 for CodeView.
+
+### Integration in VaultViewerView
+
+- Existing `getFileIcon(file)` is augmented: code files with a devicon entry use
+  the devicon SVG + brand colour. All other files (Office, images, unknown)
+  continue using Lucide icons as before.
+- The rendered icon `<span>` gets a CSS class `vv-file-icon--devicon` for
+  consistent sizing.
+
+### Integration in CodeView
+
+- The action bar language badge shows the devicon icon + language name.
+- The tab icon (optional) uses the devicon colour.
+
+### Files NOT affected
+
+- Office files (.docx .xlsx .pptx) — keep Lucide icons.
+- Image files — keep Lucide icons.
+- Markdown files — keep Lucide icons.
+
 ## Changes to existing files
 
 ### `src/main.ts`
@@ -117,10 +176,18 @@ Registered as `VIEW_TYPE_CODE = "vault-viewer-code"`.
 - In `onListFileClick()` and `onReferenceClick()`: add extension check via
   `isCodeExtension()`. Route matching files to `plugin.openCodeFile()`.
 - Order of checks: office extensions first, then code extensions, then default.
+- `getFileIcon()` extended: code files with a devicon entry use devicon SVG +
+  brand colour; others keep Lucide icons.
+- Icon rendering applies SVG color via `style.color`.
+- New CSS class `vv-file-icon--devicon` for consistent sizing.
 
 ### `src/utils/extensions.ts`
 - Add a `CODE_EXTENSIONS` set (all extensions from the mapping table).
 - Add `isCodeExtension(filename: string): boolean`.
+
+### `src/utils/file-icons.ts`
+- New file: devicon-derived SVG icons + brand colours for each language.
+- Export `getFileIcon(extension): FileIcon | null`.
 
 ### `src/i18n/*.ts`
 Add keys: `code.back`, `code.tooLarge`, `code.lines`, `code.openExternal`,
@@ -144,10 +211,15 @@ Add keys: `code.back`, `code.tooLarge`, `code.lines`, `code.openExternal`,
 
 ## Testing
 
-File: `__tests__/CodeRenderer.test.ts`
-
+### `__tests__/CodeRenderer.test.ts`
 - `extensionToLanguage` returns correct Prism ID for each extension.
 - `highlight` produces expected token classes (`.token.keyword`, `.token.string` etc.).
 - `highlight` with unsupported extension returns plain text.
 - Large content truncation respects limit and appends notice.
 - Empty content renders an empty code block.
+
+### `__tests__/file-icons.test.ts`
+- `getFileIcon` returns correct `FileIcon` for each code extension.
+- `getFileIcon` returns `null` for unsupported extensions (`.docx`, `.md`, etc.).
+- All returned icons have a non-empty SVG path and a valid hex colour.
+- Brand colours match expected values for key languages.
