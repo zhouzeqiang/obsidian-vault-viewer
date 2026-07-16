@@ -7,7 +7,7 @@ describe("getFileIcon", () => {
     "r", "dart", "erl", "ex", "coffee", "tex", "css",
     "scss", "less", "sh", "ps1", "bat", "sql", "json",
     "xml", "yaml", "toml", "ini", "properties", "html",
-    "vue", "groovy", "gradle",
+    "vue", "groovy", "gradle", "dockerfile",
   ];
 
   test.each(knownCases)(".getFileIcon(%s) returns a FileIcon", (ext) => {
