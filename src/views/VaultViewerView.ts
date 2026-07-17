@@ -5,6 +5,8 @@ import { InputModal } from "../ui/InputModal";
 import { ConfirmModal } from "../ui/ConfirmModal";
 import { t } from "../i18n";
 import { ResolvedLink } from "../services/LinkService";
+import { isCodeExtension } from "../utils/extensions";
+import { getFileIcon as getDeviconIcon } from "../utils/file-icons";
 
 export const VIEW_TYPE_VAULT_VIEWER = "vault-viewer-view";
 
@@ -652,9 +654,19 @@ export class VaultViewerView extends ItemView {
       row.dataset.path = file.path;
 
       const fileIcon = row.createSpan({ cls: "vault-viewer-file-icon" });
-      const iconName = this.getFileIcon(file);
-      setLucideIcon(fileIcon, iconName);
-      row.dataset.iconName = iconName;
+      const deviconIcon = getDeviconIcon(file.extension);
+      if (deviconIcon) {
+        fileIcon.innerHTML = deviconIcon.svg;
+        fileIcon.style.color = deviconIcon.color;
+        fileIcon.addClass("vv-file-icon--devicon");
+        const svg = fileIcon.querySelector("svg");
+        if (svg) { svg.setAttribute("width", "16"); svg.setAttribute("height", "16"); }
+        row.dataset.iconName = "devicon";
+      } else {
+        const iconName = this.getFileIcon(file);
+        setLucideIcon(fileIcon, iconName);
+        row.dataset.iconName = iconName;
+      }
       row.createSpan({ cls: "vault-viewer-tree-name", text: file.name });
 
       row.addEventListener("click", (e) => {
@@ -852,9 +864,19 @@ export class VaultViewerView extends ItemView {
 
       const nameTd = row.createEl("td", { cls: "vault-viewer-list-name" });
       const iconSpan = nameTd.createSpan({ cls: "vault-viewer-list-icon" });
-      const iconName = this.getFileIcon(file);
-      setLucideIcon(iconSpan, iconName);
-      row.dataset.iconName = iconName;
+      const deviconIcon = getDeviconIcon(file.extension);
+      if (deviconIcon) {
+        iconSpan.innerHTML = deviconIcon.svg;
+        iconSpan.style.color = deviconIcon.color;
+        iconSpan.addClass("vv-file-icon--devicon");
+        const svg = iconSpan.querySelector("svg");
+        if (svg) { svg.setAttribute("width", "16"); svg.setAttribute("height", "16"); }
+        row.dataset.iconName = "devicon";
+      } else {
+        const iconName = this.getFileIcon(file);
+        setLucideIcon(iconSpan, iconName);
+        row.dataset.iconName = iconName;
+      }
       nameTd.createSpan({ text: file.name });
 
       const timeTd = row.createEl("td", { cls: "vault-viewer-list-time" });
@@ -931,15 +953,24 @@ export class VaultViewerView extends ItemView {
 
       const nameTd = row.createEl("td", { cls: "vault-viewer-list-name" });
       const iconSpan = nameTd.createSpan({ cls: "vault-viewer-list-icon" });
-      let iconName: string;
       if (link.linkType === "embed") {
-        iconName = "Image";
         setLucideIcon(iconSpan, "Image");
+        row.dataset.iconName = "Image";
       } else {
-        iconName = this.getFileIcon(link.file);
-        setLucideIcon(iconSpan, iconName);
+        const deviconIcon = getDeviconIcon(link.file.extension);
+        if (deviconIcon) {
+          iconSpan.innerHTML = deviconIcon.svg;
+          iconSpan.style.color = deviconIcon.color;
+          iconSpan.addClass("vv-file-icon--devicon");
+          const svg = iconSpan.querySelector("svg");
+          if (svg) { svg.setAttribute("width", "16"); svg.setAttribute("height", "16"); }
+          row.dataset.iconName = "devicon";
+        } else {
+          const iconName = this.getFileIcon(link.file);
+          setLucideIcon(iconSpan, iconName);
+          row.dataset.iconName = iconName;
+        }
       }
-      row.dataset.iconName = iconName;
       nameTd.createSpan({ text: link.file.name });
 
       const badgeTd = row.createEl("td", { cls: "vault-viewer-list-badge-cell" });
@@ -997,6 +1028,12 @@ export class VaultViewerView extends ItemView {
     if ([".docx", ".xlsx", ".pptx", ".sql"].includes(ext)) {
       if (this.plugin.openOfficeFile) {
         void this.plugin.openOfficeFile(link.file);
+        return;
+      }
+    }
+    if (isCodeExtension(link.file.name)) {
+      if (this.plugin.openCodeFile) {
+        void this.plugin.openCodeFile(link.file);
         return;
       }
     }
@@ -1583,6 +1620,10 @@ export class VaultViewerView extends ItemView {
     if ([".docx", ".xlsx", ".pptx", ".sql"].includes(ext)) {
       if (this.plugin.openOfficeFile) {
         void this.plugin.openOfficeFile(file);
+      }
+    } else if (isCodeExtension(file.name)) {
+      if (this.plugin.openCodeFile) {
+        void this.plugin.openCodeFile(file);
       }
     } else {
       void this.app.workspace.openLinkText(file.path, "/", false);
