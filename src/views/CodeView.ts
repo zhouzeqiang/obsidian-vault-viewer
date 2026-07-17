@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, FileSystemAdapter, ViewStateResult, Notice } from "obsidian";
+import { ItemView, WorkspaceLeaf, TFile, FileSystemAdapter, ViewStateResult, Notice, setIcon } from "obsidian";
 import { highlight, extensionToLanguage } from "../services/CodeRenderer";
 import { getFileIcon } from "../utils/file-icons";
 import { setLucideIcon } from "../utils/lucide-icons";
@@ -84,7 +84,11 @@ export class CodeView extends ItemView {
       const iconEl = langBadge.createSpan({ cls: "code-view-lang-icon" });
       iconEl.innerHTML = langIcon.svg;
       const svg = iconEl.querySelector("svg");
-      if (svg) { svg.style.setProperty("color", langIcon.color); svg.setAttribute("width", "16"); svg.setAttribute("height", "16"); }
+      if (svg) {
+        svg.setAttribute("width", "16");
+        svg.setAttribute("height", "16");
+        svg.style.color = langIcon.color;
+      }
     }
     langBadge.createSpan({ text: langId || ext, cls: "code-view-lang-name" });
 
@@ -95,31 +99,33 @@ export class CodeView extends ItemView {
     const openBtn = actionBar.createEl("button", { cls: "code-view-btn external" });
     setLucideIcon(openBtn.createSpan(), "Paperclip", 14);
     openBtn.createSpan({ text: ` ${t("code.openExternal")}` });
-    openBtn.addEventListener("click", () => this.openExternally());
+    openBtn.addEventListener("click", () => { void this.openExternally(); });
 
     // Copy All button
     const copyAllBtn = actionBar.createEl("button", { cls: "code-view-btn copy-all" });
     setLucideIcon(copyAllBtn.createSpan(), "Copy", 14);
     copyAllBtn.createSpan({ text: ` ${t("code.copyAll")}` });
-    copyAllBtn.addEventListener("click", async () => {
+    copyAllBtn.addEventListener("click", () => {
       if (!this.file) return;
-      try {
-        const content = await this.app.vault.read(this.file);
-        await navigator.clipboard.writeText(content);
-        copyAllBtn.empty();
-        setLucideIcon(copyAllBtn.createSpan(), "Check", 14);
-        copyAllBtn.createSpan({ text: ` ${t("code.copied")}` });
-        copyAllBtn.addClass("copied");
-        setTimeout(() => {
+      void (async () => {
+        try {
+          const content = await this.app.vault.read(this.file!);
+          await navigator.clipboard.writeText(content);
           copyAllBtn.empty();
-          setLucideIcon(copyAllBtn.createSpan(), "Copy", 14);
-          copyAllBtn.createSpan({ text: ` ${t("code.copyAll")}` });
-          copyAllBtn.removeClass("copied");
-        }, 2000);
-      } catch (err) {
-        console.error("Copy failed:", err);
-        new Notice(t("code.copyFailed", (err as Error).message));
-      }
+          setLucideIcon(copyAllBtn.createSpan(), "Check", 14);
+          copyAllBtn.createSpan({ text: ` ${t("code.copied")}` });
+          copyAllBtn.addClass("copied");
+          window.setTimeout(() => {
+            copyAllBtn.empty();
+            setLucideIcon(copyAllBtn.createSpan(), "Copy", 14);
+            copyAllBtn.createSpan({ text: ` ${t("code.copyAll")}` });
+            copyAllBtn.removeClass("copied");
+          }, 2000);
+        } catch (_err) {
+          console.error("Copy failed:", _err);
+          new Notice(t("code.copyFailed", (_err as Error).message));
+        }
+      })();
     });
 
     // Status
@@ -128,8 +134,6 @@ export class CodeView extends ItemView {
 
     // Code content
     const codeWrapper = container.createDiv({ cls: "code-view-wrapper" });
-    codeWrapper.style.setProperty("user-select", "text");
-    codeWrapper.style.setProperty("-webkit-user-select", "text");
 
     try {
       const content = await this.app.vault.read(this.file);
@@ -137,13 +141,9 @@ export class CodeView extends ItemView {
 
       const rendered = highlight(content, ext);
       const pre = codeWrapper.createEl("pre", { cls: "code-view-pre" });
-      pre.style.setProperty("user-select", "text");
-      pre.style.setProperty("-webkit-user-select", "text");
       const code = pre.createEl("code", {
         cls: langId ? `language-${langId}` : "language-none",
       });
-      code.style.setProperty("user-select", "text");
-      code.style.setProperty("-webkit-user-select", "text");
 
       if (langId) {
         code.innerHTML = rendered;
@@ -153,7 +153,7 @@ export class CodeView extends ItemView {
 
       // Line numbers via CSS counter — triggered by the code element being populated
       pre.addClass("code-view-line-numbers");
-    } catch (err) {
+    } catch (_err) {
       statusEl.setText("");
       codeWrapper.createEl("p", { text: t("code.parseError"), cls: "code-view-error" });
     }

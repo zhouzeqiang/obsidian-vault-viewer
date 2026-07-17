@@ -1396,6 +1396,8 @@
   flex: 1;
   overflow: auto;
   padding: 0;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .code-view-pre {
@@ -1406,12 +1408,16 @@
   overflow-x: auto;
   tab-size: 2;
   -moz-tab-size: 2;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .code-view-pre code {
   font-family: var(--font-monospace);
   display: block;
   padding: 0 12px;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .code-view-error {
