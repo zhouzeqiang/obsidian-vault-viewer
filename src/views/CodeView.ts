@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, FileSystemAdapter, ViewStateResult } from "obsidian";
+import { ItemView, WorkspaceLeaf, TFile, FileSystemAdapter, ViewStateResult, Notice } from "obsidian";
 import { highlight, extensionToLanguage } from "../services/CodeRenderer";
 import { getFileIcon } from "../utils/file-icons";
 import { setLucideIcon } from "../utils/lucide-icons";
@@ -96,6 +96,31 @@ export class CodeView extends ItemView {
     setLucideIcon(openBtn.createSpan(), "Paperclip", 14);
     openBtn.createSpan({ text: ` ${t("code.openExternal")}` });
     openBtn.addEventListener("click", () => this.openExternally());
+
+    // Copy All button
+    const copyAllBtn = actionBar.createEl("button", { cls: "code-view-btn copy-all" });
+    setLucideIcon(copyAllBtn.createSpan(), "Copy", 14);
+    copyAllBtn.createSpan({ text: ` ${t("code.copyAll")}` });
+    copyAllBtn.addEventListener("click", async () => {
+      if (!this.file) return;
+      try {
+        const content = await this.app.vault.read(this.file);
+        await navigator.clipboard.writeText(content);
+        copyAllBtn.empty();
+        setLucideIcon(copyAllBtn.createSpan(), "Check", 14);
+        copyAllBtn.createSpan({ text: ` ${t("code.copied")}` });
+        copyAllBtn.addClass("copied");
+        setTimeout(() => {
+          copyAllBtn.empty();
+          setLucideIcon(copyAllBtn.createSpan(), "Copy", 14);
+          copyAllBtn.createSpan({ text: ` ${t("code.copyAll")}` });
+          copyAllBtn.removeClass("copied");
+        }, 2000);
+      } catch (err) {
+        console.error("Copy failed:", err);
+        new Notice(t("code.copyFailed", (err as Error).message));
+      }
+    });
 
     // Status
     const statusEl = container.createDiv({ cls: "code-view-status" });
