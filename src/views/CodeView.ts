@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, FileSystemAdapter, ViewStateResult, Notice, setIcon } from "obsidian";
+import { ItemView, WorkspaceLeaf, TFile, FileSystemAdapter, ViewStateResult, Notice } from "obsidian";
 import { highlight, extensionToLanguage } from "../services/CodeRenderer";
 import { getFileIcon } from "../utils/file-icons";
 import { setLucideIcon } from "../utils/lucide-icons";
@@ -82,7 +82,7 @@ export class CodeView extends ItemView {
     const langIcon = getFileIcon(ext);
     if (langIcon) {
       const iconEl = langBadge.createSpan({ cls: "code-view-lang-icon" });
-      iconEl.innerHTML = langIcon.svg;
+      iconEl.insertAdjacentHTML("beforeend", langIcon.svg);
       const svg = iconEl.querySelector("svg");
       if (svg) {
         svg.setAttribute("width", "16");
@@ -146,14 +146,14 @@ export class CodeView extends ItemView {
       });
 
       if (langId) {
-        code.innerHTML = rendered;
+        code.insertAdjacentHTML("beforeend", rendered);
       } else {
         code.setText(content);
       }
 
       // Line numbers via CSS counter — triggered by the code element being populated
       pre.addClass("code-view-line-numbers");
-    } catch (_err) {
+    } catch {
       statusEl.setText("");
       codeWrapper.createEl("p", { text: t("code.parseError"), cls: "code-view-error" });
     }

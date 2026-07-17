@@ -19,9 +19,8 @@ export class UniverXlsxRenderer {
 	async render(buffer: ArrayBuffer, filename: string, container: HTMLElement): Promise<boolean> {
 		console.warn("[UniverXlsxRenderer] render() called - delegating to fallback");
 		try {
-			const univerContainer = activeDocument.createElement("div");
-			univerContainer.className = "univer-xlsx-container";
-			univerContainer.setCssProps({ width: "100%", height: "100%" });
+		const univerContainer = container.createDiv({ cls: "univer-xlsx-container" });
+		univerContainer.setCssProps({ width: "100%", height: "100%" });
 			container.appendChild(univerContainer);
 			// Add class to parent so CSS can target it without :has()
 			container.classList.add("has-univer-xlsx");

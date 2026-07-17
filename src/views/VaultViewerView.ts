@@ -425,8 +425,7 @@ export class VaultViewerView extends ItemView {
     }
 
     const btnRect = this.sortBtnEl.getBoundingClientRect();
-    const dropdown = activeDocument.createElement("div");
-    dropdown.className = "vault-viewer-sort-dropdown";
+    const dropdown = activeDocument.body.createDiv({ cls: "vault-viewer-sort-dropdown" });
     activeDocument.body.appendChild(dropdown);
     dropdown.style.setProperty("left", `${btnRect.left}px`);
     dropdown.style.setProperty("top", `${btnRect.bottom + 4}px`);
@@ -656,7 +655,7 @@ export class VaultViewerView extends ItemView {
       const fileIcon = row.createSpan({ cls: "vault-viewer-file-icon" });
       const deviconIcon = getDeviconIcon(file.extension);
       if (deviconIcon) {
-        fileIcon.innerHTML = deviconIcon.svg;
+        fileIcon.insertAdjacentHTML("beforeend", deviconIcon.svg);
         fileIcon.style.color = deviconIcon.color;
         fileIcon.addClass("vv-file-icon--devicon");
         const svg = fileIcon.querySelector("svg");
@@ -719,7 +718,7 @@ export class VaultViewerView extends ItemView {
     if (iconName === "devicon") return;
     const filledName = this.getFilledIconName(iconName);
     const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon");
-    if (!iconEl || !(iconEl instanceof HTMLElement)) return;
+    if (!iconEl || !(iconEl.instanceOf(HTMLElement))) return;
     iconEl.empty();
     setLucideIconFilled(iconEl, filledName, 16);
   }
@@ -731,7 +730,7 @@ export class VaultViewerView extends ItemView {
     // devicon icons are custom SVGs with color - they don't have outline/filled variants
     if (iconName === "devicon") return;
     const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon");
-    if (!iconEl || !(iconEl instanceof HTMLElement)) return;
+    if (!iconEl || !(iconEl.instanceOf(HTMLElement))) return;
     iconEl.empty();
     setLucideIcon(iconEl, iconName, 16);
   }
@@ -870,7 +869,7 @@ export class VaultViewerView extends ItemView {
       const iconSpan = nameTd.createSpan({ cls: "vault-viewer-list-icon" });
       const deviconIcon = getDeviconIcon(file.extension);
       if (deviconIcon) {
-        iconSpan.innerHTML = deviconIcon.svg;
+        iconSpan.insertAdjacentHTML("beforeend", deviconIcon.svg);
         iconSpan.style.color = deviconIcon.color;
         iconSpan.addClass("vv-file-icon--devicon");
         const svg = iconSpan.querySelector("svg");

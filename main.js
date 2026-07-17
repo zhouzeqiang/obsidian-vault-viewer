@@ -4304,6 +4304,18 @@ var VaultViewerSettingTab = class extends import_obsidian.PluginSettingTab {
     super(app, plugin);
     this.plugin = plugin;
   }
+  getSettingDefinitions() {
+    return [
+      { name: t("settings.title") },
+      { name: t("settings.theme"), desc: t("settings.themeDesc") },
+      { name: t("settings.lang"), desc: t("settings.langDesc") },
+      { name: t("settings.defaultSort"), desc: t("settings.defaultSortDesc") },
+      { name: t("settings.sortOrder") },
+      { name: t("settings.hideTypes"), desc: t("settings.hideTypesDesc") },
+      { name: t("settings.treeExtensions"), desc: t("settings.treeExtensionsDesc") },
+      { name: t("settings.sortFolders"), desc: t("settings.sortFoldersDesc") }
+    ];
+  }
   display() {
     const { containerEl } = this;
     containerEl.empty();
@@ -4986,8 +4998,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       return;
     }
     const btnRect = this.sortBtnEl.getBoundingClientRect();
-    const dropdown = activeDocument.createElement("div");
-    dropdown.className = "vault-viewer-sort-dropdown";
+    const dropdown = activeDocument.body.createDiv({ cls: "vault-viewer-sort-dropdown" });
     activeDocument.body.appendChild(dropdown);
     dropdown.style.setProperty("left", `${btnRect.left}px`);
     dropdown.style.setProperty("top", `${btnRect.bottom + 4}px`);
@@ -5174,7 +5185,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       const fileIcon = row.createSpan({ cls: "vault-viewer-file-icon" });
       const deviconIcon = getFileIcon(file.extension);
       if (deviconIcon) {
-        fileIcon.innerHTML = deviconIcon.svg;
+        fileIcon.insertAdjacentHTML("beforeend", deviconIcon.svg);
         fileIcon.style.color = deviconIcon.color;
         fileIcon.addClass("vv-file-icon--devicon");
         const svg = fileIcon.querySelector("svg");
@@ -5237,7 +5248,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     if (iconName === "devicon") return;
     const filledName = this.getFilledIconName(iconName);
     const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon");
-    if (!iconEl || !(iconEl instanceof HTMLElement)) return;
+    if (!iconEl || !iconEl.instanceOf(HTMLElement)) return;
     iconEl.empty();
     setLucideIconFilled(iconEl, filledName, 16);
   }
@@ -5247,7 +5258,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     if (!iconName) return;
     if (iconName === "devicon") return;
     const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon");
-    if (!iconEl || !(iconEl instanceof HTMLElement)) return;
+    if (!iconEl || !iconEl.instanceOf(HTMLElement)) return;
     iconEl.empty();
     setLucideIcon(iconEl, iconName, 16);
   }
@@ -5361,7 +5372,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       const iconSpan = nameTd.createSpan({ cls: "vault-viewer-list-icon" });
       const deviconIcon = getFileIcon(file.extension);
       if (deviconIcon) {
-        iconSpan.innerHTML = deviconIcon.svg;
+        iconSpan.insertAdjacentHTML("beforeend", deviconIcon.svg);
         iconSpan.style.color = deviconIcon.color;
         iconSpan.addClass("vv-file-icon--devicon");
         const svg = iconSpan.querySelector("svg");
@@ -10156,7 +10167,7 @@ var CodeView = class extends import_obsidian5.ItemView {
     const langIcon = getFileIcon(ext);
     if (langIcon) {
       const iconEl = langBadge.createSpan({ cls: "code-view-lang-icon" });
-      iconEl.innerHTML = langIcon.svg;
+      iconEl.insertAdjacentHTML("beforeend", langIcon.svg);
       const svg = iconEl.querySelector("svg");
       if (svg) {
         svg.setAttribute("width", "16");
@@ -10209,12 +10220,12 @@ var CodeView = class extends import_obsidian5.ItemView {
         cls: langId ? `language-${langId}` : "language-none"
       });
       if (langId) {
-        code.innerHTML = rendered;
+        code.insertAdjacentHTML("beforeend", rendered);
       } else {
         code.setText(content);
       }
       pre.addClass("code-view-line-numbers");
-    } catch (_err) {
+    } catch (e) {
       statusEl.setText("");
       codeWrapper.createEl("p", { text: t("code.parseError"), cls: "code-view-error" });
     }

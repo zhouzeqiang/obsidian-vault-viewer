@@ -149,6 +149,7 @@ export function highlight(content: string, extension: string): string {
       return truncated ? html + `<p class="code-truncated">(File truncated, showing first ${MAX_LINES} lines)</p>` : html;
     }
   } catch {
+    // fall through to plain text escape
   }
 
   const escaped = content

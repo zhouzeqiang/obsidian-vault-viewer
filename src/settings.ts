@@ -33,6 +33,19 @@ export class VaultViewerSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
+  getSettingDefinitions(): { name: string; desc?: string }[] {
+    return [
+      { name: t("settings.title") },
+      { name: t("settings.theme"), desc: t("settings.themeDesc") },
+      { name: t("settings.lang"), desc: t("settings.langDesc") },
+      { name: t("settings.defaultSort"), desc: t("settings.defaultSortDesc") },
+      { name: t("settings.sortOrder") },
+      { name: t("settings.hideTypes"), desc: t("settings.hideTypesDesc") },
+      { name: t("settings.treeExtensions"), desc: t("settings.treeExtensionsDesc") },
+      { name: t("settings.sortFolders"), desc: t("settings.sortFoldersDesc") },
+    ];
+  }
+
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
