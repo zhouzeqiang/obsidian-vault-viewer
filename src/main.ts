@@ -8,6 +8,7 @@ import {
   VaultViewerView,
   VIEW_TYPE_VAULT_VIEWER,
 } from "./views/VaultViewerView";
+import { CodeView, VIEW_TYPE_CODE } from "./views/CodeView";
 import { OfficeView, VIEW_TYPE_OFFICE } from "./views/OfficeView";
 import { OfficeRenderer } from "./services/OfficeRenderer";
 import { FileService } from "./services/FileService";
@@ -31,6 +32,11 @@ export default class VaultViewerPlugin extends Plugin {
     this.officeRenderer = new OfficeRenderer(this.app.vault);
 
     this.addSettingTab(new VaultViewerSettingTab(this.app, this));
+
+    this.registerView(
+      VIEW_TYPE_CODE,
+      (leaf) => new CodeView(leaf)
+    );
 
     this.registerView(
       VIEW_TYPE_OFFICE,
@@ -111,6 +117,26 @@ export default class VaultViewerPlugin extends Plugin {
       state: { filePath: file.path },
     });
 
+    workspace.setActiveLeaf(leaf);
+  }
+
+  async openCodeFile(file: TFile): Promise<void> {
+    const { workspace } = this.app;
+    const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE_CODE);
+    for (const leaf of existingLeaves) {
+      const view = leaf.view;
+      if (view instanceof CodeView && view.file?.path === file.path) {
+        workspace.setActiveLeaf(leaf);
+        return;
+      }
+    }
+    const leaf = workspace.getLeaf(true);
+    if (!leaf) return;
+    await leaf.setViewState({
+      type: VIEW_TYPE_CODE,
+      active: true,
+      state: { filePath: file.path },
+    });
     workspace.setActiveLeaf(leaf);
   }
 
