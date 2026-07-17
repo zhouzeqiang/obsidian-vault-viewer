@@ -3951,7 +3951,10 @@ var zhCN = {
   "code.back": "\u8FD4\u56DE",
   "code.openExternal": "\u5728\u5916\u90E8\u6253\u5F00",
   "code.parsing": "\u6B63\u5728\u52A0\u8F7D\u6587\u4EF6...",
-  "code.parseError": "\u65E0\u6CD5\u8BFB\u53D6\u6B64\u6587\u4EF6"
+  "code.parseError": "\u65E0\u6CD5\u8BFB\u53D6\u6B64\u6587\u4EF6",
+  "code.copyAll": "\u5168\u9009\u590D\u5236",
+  "code.copied": "\u5DF2\u590D\u5236\uFF01",
+  "code.copyFailed": "\u590D\u5236\u5931\u8D25: {0}"
 };
 var zh_CN_default = zhCN;
 
@@ -4034,7 +4037,10 @@ var zhTW = {
   "code.back": "\u8FD4\u56DE",
   "code.openExternal": "\u5728\u5916\u90E8\u958B\u555F",
   "code.parsing": "\u6B63\u5728\u8F09\u5165\u6A94\u6848...",
-  "code.parseError": "\u7121\u6CD5\u8B80\u53D6\u6B64\u6A94\u6848"
+  "code.parseError": "\u7121\u6CD5\u8B80\u53D6\u6B64\u6A94\u6848",
+  "code.copyAll": "\u5168\u9078\u8907\u88FD",
+  "code.copied": "\u5DF2\u8907\u88FD\uFF01",
+  "code.copyFailed": "\u8907\u88FD\u5931\u6557: {0}"
 };
 var zh_TW_default = zhTW;
 
@@ -4117,7 +4123,10 @@ var en = {
   "code.back": "Back",
   "code.openExternal": "Open externally",
   "code.parsing": "Loading file...",
-  "code.parseError": "Could not read this file."
+  "code.parseError": "Could not read this file.",
+  "code.copyAll": "Copy All",
+  "code.copied": "Copied!",
+  "code.copyFailed": "Copy failed: {0}"
 };
 var en_default = en;
 
@@ -10161,17 +10170,46 @@ var CodeView = class extends import_obsidian5.ItemView {
     setLucideIcon(openBtn.createSpan(), "Paperclip", 14);
     openBtn.createSpan({ text: ` ${t("code.openExternal")}` });
     openBtn.addEventListener("click", () => this.openExternally());
+    const copyAllBtn = actionBar.createEl("button", { cls: "code-view-btn copy-all" });
+    setLucideIcon(copyAllBtn.createSpan(), "Copy", 14);
+    copyAllBtn.createSpan({ text: ` ${t("code.copyAll")}` });
+    copyAllBtn.addEventListener("click", async () => {
+      if (!this.file) return;
+      try {
+        const content = await this.app.vault.read(this.file);
+        await navigator.clipboard.writeText(content);
+        copyAllBtn.empty();
+        setLucideIcon(copyAllBtn.createSpan(), "Check", 14);
+        copyAllBtn.createSpan({ text: ` ${t("code.copied")}` });
+        copyAllBtn.addClass("copied");
+        setTimeout(() => {
+          copyAllBtn.empty();
+          setLucideIcon(copyAllBtn.createSpan(), "Copy", 14);
+          copyAllBtn.createSpan({ text: ` ${t("code.copyAll")}` });
+          copyAllBtn.removeClass("copied");
+        }, 2e3);
+      } catch (err) {
+        console.error("Copy failed:", err);
+        new import_obsidian5.Notice(t("code.copyFailed", err.message));
+      }
+    });
     const statusEl = container.createDiv({ cls: "code-view-status" });
     statusEl.setText(t("code.parsing"));
     const codeWrapper = container.createDiv({ cls: "code-view-wrapper" });
+    codeWrapper.style.setProperty("user-select", "text");
+    codeWrapper.style.setProperty("-webkit-user-select", "text");
     try {
       const content = await this.app.vault.read(this.file);
       statusEl.setText("");
       const rendered = highlight2(content, ext);
       const pre = codeWrapper.createEl("pre", { cls: "code-view-pre" });
+      pre.style.setProperty("user-select", "text");
+      pre.style.setProperty("-webkit-user-select", "text");
       const code = pre.createEl("code", {
         cls: langId ? `language-${langId}` : "language-none"
       });
+      code.style.setProperty("user-select", "text");
+      code.style.setProperty("-webkit-user-select", "text");
       if (langId) {
         code.innerHTML = rendered;
       } else {

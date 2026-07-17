@@ -73,7 +73,7 @@ const en: Record<string, string | ((...args: any[]) => string)> = {
   "notice.filePasted": (name: string) => `File pasted: ${name}`,
   "notice.pasteFailed": "Failed to paste file",
   "notice.noFileInClipboard": "No file found in clipboard",
-  "code.back": "Back",
+"code.back": "Back",
   "code.openExternal": "Open externally",
   "code.parsing": "Loading file...",
   "code.parseError": "Could not read this file.",

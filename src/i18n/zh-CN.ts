@@ -73,7 +73,7 @@ const zhCN: Record<string, string | ((...args: any[]) => string)> = {
   "notice.filePasted": (name: string) => `已粘贴文件: ${name}`,
   "notice.pasteFailed": "粘贴文件失败",
   "notice.noFileInClipboard": "剪贴板中没有文件",
-  "code.back": "返回",
+"code.back": "返回",
   "code.openExternal": "在外部打开",
   "code.parsing": "正在加载文件...",
   "code.parseError": "无法读取此文件",
