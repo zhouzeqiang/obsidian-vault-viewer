@@ -1319,3 +1319,279 @@
 .office-table th {
   position: relative;
 }
+
+/* ─── Code View ─────────────────────────── */
+
+.code-view-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--background-primary);
+}
+
+.code-view-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  flex-shrink: 0;
+}
+
+.code-view-btn {
+  background: none;
+  border: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+  padding: 4px 10px;
+  font-size: 0.85em;
+  border-radius: 4px;
+  color: var(--text-muted);
+  transition: background 0.1s;
+}
+
+.code-view-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.code-view-lang-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--background-modifier-hover);
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+.code-view-lang-icon svg {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+}
+
+.code-view-lang-name {
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.code-view-filename {
+  flex: 1;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-view-status {
+  padding: 4px 12px;
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+.code-view-wrapper {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
+
+.code-view-pre {
+  margin: 0;
+  padding: 12px 0;
+  font-size: 0.85em;
+  line-height: 1.5;
+  overflow-x: auto;
+  tab-size: 2;
+  -moz-tab-size: 2;
+}
+
+.code-view-pre code {
+  font-family: var(--font-monospace);
+  display: block;
+  padding: 0 12px;
+}
+
+.code-view-error {
+  padding: 12px;
+  color: var(--text-error);
+}
+
+/* ─── Line numbers (CSS counters) ──────── */
+
+.code-view-line-numbers code {
+  counter-reset: line;
+}
+
+.code-view-line-numbers code > span.line,
+.code-view-line-numbers code > div {
+  counter-increment: line;
+}
+
+.code-view-line-numbers code > span.line::before,
+.code-view-line-numbers code > div::before {
+  content: counter(line);
+  display: inline-block;
+  width: 3em;
+  padding-right: 1em;
+  margin-left: -3em;
+  text-align: right;
+  color: var(--text-faint);
+  user-select: none;
+}
+
+/* ─── Truncation notice ────────────────── */
+
+.code-truncated {
+  padding: 8px 12px;
+  margin: 0;
+  color: var(--text-warning);
+  font-size: 0.85em;
+  font-style: italic;
+}
+
+/* ─── Prism.js Token Colours (Dark) ──────── */
+
+.theme-dark .token.comment,
+.theme-dark .token.prolog,
+.theme-dark .token.doctype,
+.theme-dark .token.cdata {
+  color: #6a9955;
+}
+
+.theme-dark .token.punctuation {
+  color: #d4d4d4;
+}
+
+.theme-dark .token.property,
+.theme-dark .token.tag,
+.theme-dark .token.boolean,
+.theme-dark .token.number,
+.theme-dark .token.constant,
+.theme-dark .token.symbol,
+.theme-dark .token.deleted {
+  color: #b5cea8;
+}
+
+.theme-dark .token.selector,
+.theme-dark .token.attr-name,
+.theme-dark .token.string,
+.theme-dark .token.char,
+.theme-dark .token.builtin,
+.theme-dark .token.inserted {
+  color: #ce9178;
+}
+
+.theme-dark .token.operator,
+.theme-dark .token.entity,
+.theme-dark .token.url {
+  color: #d4d4d4;
+}
+
+.theme-dark .token.atrule,
+.theme-dark .token.attr-value,
+.theme-dark .token.keyword {
+  color: #569cd6;
+}
+
+.theme-dark .token.function,
+.theme-dark .token.maybe-class-name {
+  color: #dcdcaa;
+}
+
+.theme-dark .token.regex,
+.theme-dark .token.important,
+.theme-dark .token.variable {
+  color: #d16969;
+}
+
+.theme-dark .token.important,
+.theme-dark .token.bold {
+  font-weight: bold;
+}
+
+.theme-dark .token.italic {
+  font-style: italic;
+}
+
+.theme-dark .token.class-name {
+  color: #4ec9b0;
+}
+
+/* ─── Prism.js Token Colours (Light) ─────── */
+
+.theme-light .token.comment,
+.theme-light .token.prolog,
+.theme-light .token.doctype,
+.theme-light .token.cdata {
+  color: #008000;
+}
+
+.theme-light .token.punctuation {
+  color: #393a34;
+}
+
+.theme-light .token.property,
+.theme-light .token.tag,
+.theme-light .token.boolean,
+.theme-light .token.number,
+.theme-light .token.constant,
+.theme-light .token.symbol,
+.theme-light .token.deleted {
+  color: #36acaa;
+}
+
+.theme-light .token.selector,
+.theme-light .token.attr-name,
+.theme-light .token.string,
+.theme-light .token.char,
+.theme-light .token.builtin,
+.theme-light .token.inserted {
+  color: #a31515;
+}
+
+.theme-light .token.operator,
+.theme-light .token.entity,
+.theme-light .token.url {
+  color: #393a34;
+}
+
+.theme-light .token.atrule,
+.theme-light .token.attr-value,
+.theme-light .token.keyword {
+  color: #0000ff;
+}
+
+.theme-light .token.function,
+.theme-light .token.maybe-class-name {
+  color: #795e26;
+}
+
+.theme-light .token.regex,
+.theme-light .token.important,
+.theme-light .token.variable {
+  color: #e90;
+}
+
+.theme-light .token.important,
+.theme-light .token.bold {
+  font-weight: bold;
+}
+
+.theme-light .token.italic {
+  font-style: italic;
+}
+
+.theme-light .token.class-name {
+  color: #267f99;
+}
+
+/* ─── Devicon icon sizing ──────────────── */
+
+.vv-file-icon--devicon svg {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+}
