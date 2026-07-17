@@ -35,6 +35,18 @@ Vault Viewer 是一个 Obsidian 插件，提供直观的文件浏览器界面，
 
 预览界面提供"返回"和"在外部打开"按钮，可调用系统默认应用打开文档。解析失败时会显示错误提示并提供外部编辑器打开选项。
 
+### 💻 代码文件预览
+
+支持以下代码文件的语法高亮预览：
+
+- **多种语言** — JavaScript、TypeScript、Python、JSON、CSS、HTML、Markdown、YAML、TOML、SQL 等
+- **语法高亮** — 基于 Prism.js 提供完整的语法着色
+- **行号显示** — 自动显示行号，便于阅读和定位
+- **文本选择与复制** — 支持鼠标选中任意代码片段复制，工具栏提供"全选复制"按钮一键复制整个文件内容
+- **工具栏** — 返回、语言标识、文件名、复制全部、在外部打开
+
+预览界面提供"返回"、"复制全部"和"在外部打开"按钮。复制功能将原始源代码写入剪贴板，方便粘贴到编辑器中。
+
 ### 🎨 主题系统
 
 - **Default** — 适配 Obsidian 深色/浅色主题
@@ -184,6 +196,18 @@ Preview the following formats without external applications:
 - **SQL** — Syntax-highlighted code display
 
 The preview provides "Back" and "Open externally" buttons to open documents with the system default application. On parse failure, an error message is shown with an option to open in an external editor.
+
+### 💻 Code File Preview
+
+Supports syntax-highlighted preview for the following code files:
+
+- **Multiple languages** — JavaScript, TypeScript, Python, JSON, CSS, HTML, Markdown, YAML, TOML, SQL, and more
+- **Syntax highlighting** — Full syntax coloring powered by Prism.js
+- **Line numbers** — Automatic line number display for easier reading and navigation
+- **Text selection and copy** — Support mouse selection of any code snippet; toolbar provides "Copy All" button to copy entire file content in one click
+- **Toolbar** — Back, language badge, filename, Copy All, open externally
+
+The preview provides "Back", "Copy All", and "Open externally" buttons. The copy feature writes the raw source code to the clipboard for easy pasting into editors.
 
 ### 🎨 Theme System
 
