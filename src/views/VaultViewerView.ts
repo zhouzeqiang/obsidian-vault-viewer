@@ -711,23 +711,27 @@ export class VaultViewerView extends ItemView {
     return fillMap[iconName] ?? iconName;
   }
 
-  /** Switch the icon inside a row to its filled variant */
+/** Switch the icon inside a row to its filled variant */
   private applyFilledIcon(row: HTMLElement): void {
     const iconName = row.dataset.iconName;
     if (!iconName) return;
+    // devicon icons are custom SVGs with color - they don't have filled variants
+    if (iconName === "devicon") return;
     const filledName = this.getFilledIconName(iconName);
     const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon");
-    if (!iconEl || !(iconEl.instanceOf(HTMLElement))) return;
+    if (!iconEl || !(iconEl instanceof HTMLElement)) return;
     iconEl.empty();
     setLucideIconFilled(iconEl, filledName, 16);
   }
 
-  /** Switch the icon inside a row back to its outline variant */
+/** Switch the icon inside a row back to its outline variant */
   private restoreOutlineIcon(row: HTMLElement): void {
     const iconName = row.dataset.iconName;
     if (!iconName) return;
+    // devicon icons are custom SVGs with color - they don't have outline/filled variants
+    if (iconName === "devicon") return;
     const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon");
-    if (!iconEl || !(iconEl.instanceOf(HTMLElement))) return;
+    if (!iconEl || !(iconEl instanceof HTMLElement)) return;
     iconEl.empty();
     setLucideIcon(iconEl, iconName, 16);
   }

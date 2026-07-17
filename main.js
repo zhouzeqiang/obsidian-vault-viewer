@@ -39,6 +39,1455 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
+// node_modules/prismjs/prism.js
+var require_prism = __commonJS({
+  "node_modules/prismjs/prism.js"(exports, module2) {
+    var _self = typeof window !== "undefined" ? window : typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope ? self : {};
+    var Prism3 = (function(_self2) {
+      var lang = /(?:^|\s)lang(?:uage)?-([\w-]+)(?=\s|$)/i;
+      var uniqueId = 0;
+      var plainTextGrammar = {};
+      var _ = {
+        /**
+         * By default, Prism will attempt to highlight all code elements (by calling {@link Prism.highlightAll}) on the
+         * current page after the page finished loading. This might be a problem if e.g. you wanted to asynchronously load
+         * additional languages or plugins yourself.
+         *
+         * By setting this value to `true`, Prism will not automatically highlight all code elements on the page.
+         *
+         * You obviously have to change this value before the automatic highlighting started. To do this, you can add an
+         * empty Prism object into the global scope before loading the Prism script like this:
+         *
+         * ```js
+         * window.Prism = window.Prism || {};
+         * Prism.manual = true;
+         * // add a new <script> to load Prism's script
+         * ```
+         *
+         * @default false
+         * @type {boolean}
+         * @memberof Prism
+         * @public
+         */
+        manual: _self2.Prism && _self2.Prism.manual,
+        /**
+         * By default, if Prism is in a web worker, it assumes that it is in a worker it created itself, so it uses
+         * `addEventListener` to communicate with its parent instance. However, if you're using Prism manually in your
+         * own worker, you don't want it to do this.
+         *
+         * By setting this value to `true`, Prism will not add its own listeners to the worker.
+         *
+         * You obviously have to change this value before Prism executes. To do this, you can add an
+         * empty Prism object into the global scope before loading the Prism script like this:
+         *
+         * ```js
+         * window.Prism = window.Prism || {};
+         * Prism.disableWorkerMessageHandler = true;
+         * // Load Prism's script
+         * ```
+         *
+         * @default false
+         * @type {boolean}
+         * @memberof Prism
+         * @public
+         */
+        disableWorkerMessageHandler: _self2.Prism && _self2.Prism.disableWorkerMessageHandler,
+        /**
+         * A namespace for utility methods.
+         *
+         * All function in this namespace that are not explicitly marked as _public_ are for __internal use only__ and may
+         * change or disappear at any time.
+         *
+         * @namespace
+         * @memberof Prism
+         */
+        util: {
+          encode: function encode(tokens) {
+            if (tokens instanceof Token) {
+              return new Token(tokens.type, encode(tokens.content), tokens.alias);
+            } else if (Array.isArray(tokens)) {
+              return tokens.map(encode);
+            } else {
+              return tokens.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\u00a0/g, " ");
+            }
+          },
+          /**
+           * Returns the name of the type of the given value.
+           *
+           * @param {any} o
+           * @returns {string}
+           * @example
+           * type(null)      === 'Null'
+           * type(undefined) === 'Undefined'
+           * type(123)       === 'Number'
+           * type('foo')     === 'String'
+           * type(true)      === 'Boolean'
+           * type([1, 2])    === 'Array'
+           * type({})        === 'Object'
+           * type(String)    === 'Function'
+           * type(/abc+/)    === 'RegExp'
+           */
+          type: function(o) {
+            return Object.prototype.toString.call(o).slice(8, -1);
+          },
+          /**
+           * Returns a unique number for the given object. Later calls will still return the same number.
+           *
+           * @param {Object} obj
+           * @returns {number}
+           */
+          objId: function(obj) {
+            if (!obj["__id"]) {
+              Object.defineProperty(obj, "__id", { value: ++uniqueId });
+            }
+            return obj["__id"];
+          },
+          /**
+           * Creates a deep clone of the given object.
+           *
+           * The main intended use of this function is to clone language definitions.
+           *
+           * @param {T} o
+           * @param {Record<number, any>} [visited]
+           * @returns {T}
+           * @template T
+           */
+          clone: function deepClone(o, visited) {
+            visited = visited || {};
+            var clone;
+            var id;
+            switch (_.util.type(o)) {
+              case "Object":
+                id = _.util.objId(o);
+                if (visited[id]) {
+                  return visited[id];
+                }
+                clone = /** @type {Record<string, any>} */
+                {};
+                visited[id] = clone;
+                for (var key in o) {
+                  if (o.hasOwnProperty(key)) {
+                    clone[key] = deepClone(o[key], visited);
+                  }
+                }
+                return (
+                  /** @type {any} */
+                  clone
+                );
+              case "Array":
+                id = _.util.objId(o);
+                if (visited[id]) {
+                  return visited[id];
+                }
+                clone = [];
+                visited[id] = clone;
+                /** @type {Array} */
+                /** @type {any} */
+                o.forEach(function(v, i) {
+                  clone[i] = deepClone(v, visited);
+                });
+                return (
+                  /** @type {any} */
+                  clone
+                );
+              default:
+                return o;
+            }
+          },
+          /**
+           * Returns the Prism language of the given element set by a `language-xxxx` or `lang-xxxx` class.
+           *
+           * If no language is set for the element or the element is `null` or `undefined`, `none` will be returned.
+           *
+           * @param {Element} element
+           * @returns {string}
+           */
+          getLanguage: function(element) {
+            while (element) {
+              var m = lang.exec(element.className);
+              if (m) {
+                return m[1].toLowerCase();
+              }
+              element = element.parentElement;
+            }
+            return "none";
+          },
+          /**
+           * Sets the Prism `language-xxxx` class of the given element.
+           *
+           * @param {Element} element
+           * @param {string} language
+           * @returns {void}
+           */
+          setLanguage: function(element, language) {
+            element.className = element.className.replace(RegExp(lang, "gi"), "");
+            element.classList.add("language-" + language);
+          },
+          /**
+           * Returns the script element that is currently executing.
+           *
+           * This does __not__ work for line script element.
+           *
+           * @returns {HTMLScriptElement | null}
+           */
+          currentScript: function() {
+            if (typeof document === "undefined") {
+              return null;
+            }
+            if (document.currentScript && document.currentScript.tagName === "SCRIPT" && 1 < 2) {
+              return (
+                /** @type {any} */
+                document.currentScript
+              );
+            }
+            try {
+              throw new Error();
+            } catch (err) {
+              var src = (/at [^(\r\n]*\((.*):[^:]+:[^:]+\)$/i.exec(err.stack) || [])[1];
+              if (src) {
+                var scripts = document.getElementsByTagName("script");
+                for (var i in scripts) {
+                  if (scripts[i].src == src) {
+                    return scripts[i];
+                  }
+                }
+              }
+              return null;
+            }
+          },
+          /**
+           * Returns whether a given class is active for `element`.
+           *
+           * The class can be activated if `element` or one of its ancestors has the given class and it can be deactivated
+           * if `element` or one of its ancestors has the negated version of the given class. The _negated version_ of the
+           * given class is just the given class with a `no-` prefix.
+           *
+           * Whether the class is active is determined by the closest ancestor of `element` (where `element` itself is
+           * closest ancestor) that has the given class or the negated version of it. If neither `element` nor any of its
+           * ancestors have the given class or the negated version of it, then the default activation will be returned.
+           *
+           * In the paradoxical situation where the closest ancestor contains __both__ the given class and the negated
+           * version of it, the class is considered active.
+           *
+           * @param {Element} element
+           * @param {string} className
+           * @param {boolean} [defaultActivation=false]
+           * @returns {boolean}
+           */
+          isActive: function(element, className, defaultActivation) {
+            var no = "no-" + className;
+            while (element) {
+              var classList = element.classList;
+              if (classList.contains(className)) {
+                return true;
+              }
+              if (classList.contains(no)) {
+                return false;
+              }
+              element = element.parentElement;
+            }
+            return !!defaultActivation;
+          }
+        },
+        /**
+         * This namespace contains all currently loaded languages and the some helper functions to create and modify languages.
+         *
+         * @namespace
+         * @memberof Prism
+         * @public
+         */
+        languages: {
+          /**
+           * The grammar for plain, unformatted text.
+           */
+          plain: plainTextGrammar,
+          plaintext: plainTextGrammar,
+          text: plainTextGrammar,
+          txt: plainTextGrammar,
+          /**
+           * Creates a deep copy of the language with the given id and appends the given tokens.
+           *
+           * If a token in `redef` also appears in the copied language, then the existing token in the copied language
+           * will be overwritten at its original position.
+           *
+           * ## Best practices
+           *
+           * Since the position of overwriting tokens (token in `redef` that overwrite tokens in the copied language)
+           * doesn't matter, they can technically be in any order. However, this can be confusing to others that trying to
+           * understand the language definition because, normally, the order of tokens matters in Prism grammars.
+           *
+           * Therefore, it is encouraged to order overwriting tokens according to the positions of the overwritten tokens.
+           * Furthermore, all non-overwriting tokens should be placed after the overwriting ones.
+           *
+           * @param {string} id The id of the language to extend. This has to be a key in `Prism.languages`.
+           * @param {Grammar} redef The new tokens to append.
+           * @returns {Grammar} The new language created.
+           * @public
+           * @example
+           * Prism.languages['css-with-colors'] = Prism.languages.extend('css', {
+           *     // Prism.languages.css already has a 'comment' token, so this token will overwrite CSS' 'comment' token
+           *     // at its original position
+           *     'comment': { ... },
+           *     // CSS doesn't have a 'color' token, so this token will be appended
+           *     'color': /\b(?:red|green|blue)\b/
+           * });
+           */
+          extend: function(id, redef) {
+            var lang2 = _.util.clone(_.languages[id]);
+            for (var key in redef) {
+              lang2[key] = redef[key];
+            }
+            return lang2;
+          },
+          /**
+           * Inserts tokens _before_ another token in a language definition or any other grammar.
+           *
+           * ## Usage
+           *
+           * This helper method makes it easy to modify existing languages. For example, the CSS language definition
+           * not only defines CSS highlighting for CSS documents, but also needs to define highlighting for CSS embedded
+           * in HTML through `<style>` elements. To do this, it needs to modify `Prism.languages.markup` and add the
+           * appropriate tokens. However, `Prism.languages.markup` is a regular JavaScript object literal, so if you do
+           * this:
+           *
+           * ```js
+           * Prism.languages.markup.style = {
+           *     // token
+           * };
+           * ```
+           *
+           * then the `style` token will be added (and processed) at the end. `insertBefore` allows you to insert tokens
+           * before existing tokens. For the CSS example above, you would use it like this:
+           *
+           * ```js
+           * Prism.languages.insertBefore('markup', 'cdata', {
+           *     'style': {
+           *         // token
+           *     }
+           * });
+           * ```
+           *
+           * ## Special cases
+           *
+           * If the grammars of `inside` and `insert` have tokens with the same name, the tokens in `inside`'s grammar
+           * will be ignored.
+           *
+           * This behavior can be used to insert tokens after `before`:
+           *
+           * ```js
+           * Prism.languages.insertBefore('markup', 'comment', {
+           *     'comment': Prism.languages.markup.comment,
+           *     // tokens after 'comment'
+           * });
+           * ```
+           *
+           * ## Limitations
+           *
+           * The main problem `insertBefore` has to solve is iteration order. Since ES2015, the iteration order for object
+           * properties is guaranteed to be the insertion order (except for integer keys) but some browsers behave
+           * differently when keys are deleted and re-inserted. So `insertBefore` can't be implemented by temporarily
+           * deleting properties which is necessary to insert at arbitrary positions.
+           *
+           * To solve this problem, `insertBefore` doesn't actually insert the given tokens into the target object.
+           * Instead, it will create a new object and replace all references to the target object with the new one. This
+           * can be done without temporarily deleting properties, so the iteration order is well-defined.
+           *
+           * However, only references that can be reached from `Prism.languages` or `insert` will be replaced. I.e. if
+           * you hold the target object in a variable, then the value of the variable will not change.
+           *
+           * ```js
+           * var oldMarkup = Prism.languages.markup;
+           * var newMarkup = Prism.languages.insertBefore('markup', 'comment', { ... });
+           *
+           * assert(oldMarkup !== Prism.languages.markup);
+           * assert(newMarkup === Prism.languages.markup);
+           * ```
+           *
+           * @param {string} inside The property of `root` (e.g. a language id in `Prism.languages`) that contains the
+           * object to be modified.
+           * @param {string} before The key to insert before.
+           * @param {Grammar} insert An object containing the key-value pairs to be inserted.
+           * @param {Object<string, any>} [root] The object containing `inside`, i.e. the object that contains the
+           * object to be modified.
+           *
+           * Defaults to `Prism.languages`.
+           * @returns {Grammar} The new grammar object.
+           * @public
+           */
+          insertBefore: function(inside, before, insert, root) {
+            root = root || /** @type {any} */
+            _.languages;
+            var grammar = root[inside];
+            var ret = {};
+            for (var token in grammar) {
+              if (grammar.hasOwnProperty(token)) {
+                if (token == before) {
+                  for (var newToken in insert) {
+                    if (insert.hasOwnProperty(newToken)) {
+                      ret[newToken] = insert[newToken];
+                    }
+                  }
+                }
+                if (!insert.hasOwnProperty(token)) {
+                  ret[token] = grammar[token];
+                }
+              }
+            }
+            var old = root[inside];
+            root[inside] = ret;
+            _.languages.DFS(_.languages, function(key, value) {
+              if (value === old && key != inside) {
+                this[key] = ret;
+              }
+            });
+            return ret;
+          },
+          // Traverse a language definition with Depth First Search
+          DFS: function DFS(o, callback, type, visited) {
+            visited = visited || {};
+            var objId = _.util.objId;
+            for (var i in o) {
+              if (o.hasOwnProperty(i)) {
+                callback.call(o, i, o[i], type || i);
+                var property = o[i];
+                var propertyType = _.util.type(property);
+                if (propertyType === "Object" && !visited[objId(property)]) {
+                  visited[objId(property)] = true;
+                  DFS(property, callback, null, visited);
+                } else if (propertyType === "Array" && !visited[objId(property)]) {
+                  visited[objId(property)] = true;
+                  DFS(property, callback, i, visited);
+                }
+              }
+            }
+          }
+        },
+        plugins: {},
+        /**
+         * This is the most high-level function in Prism’s API.
+         * It fetches all the elements that have a `.language-xxxx` class and then calls {@link Prism.highlightElement} on
+         * each one of them.
+         *
+         * This is equivalent to `Prism.highlightAllUnder(document, async, callback)`.
+         *
+         * @param {boolean} [async=false] Same as in {@link Prism.highlightAllUnder}.
+         * @param {HighlightCallback} [callback] Same as in {@link Prism.highlightAllUnder}.
+         * @memberof Prism
+         * @public
+         */
+        highlightAll: function(async, callback) {
+          _.highlightAllUnder(document, async, callback);
+        },
+        /**
+         * Fetches all the descendants of `container` that have a `.language-xxxx` class and then calls
+         * {@link Prism.highlightElement} on each one of them.
+         *
+         * The following hooks will be run:
+         * 1. `before-highlightall`
+         * 2. `before-all-elements-highlight`
+         * 3. All hooks of {@link Prism.highlightElement} for each element.
+         *
+         * @param {ParentNode} container The root element, whose descendants that have a `.language-xxxx` class will be highlighted.
+         * @param {boolean} [async=false] Whether each element is to be highlighted asynchronously using Web Workers.
+         * @param {HighlightCallback} [callback] An optional callback to be invoked on each element after its highlighting is done.
+         * @memberof Prism
+         * @public
+         */
+        highlightAllUnder: function(container, async, callback) {
+          var env = {
+            callback,
+            container,
+            selector: 'code[class*="language-"], [class*="language-"] code, code[class*="lang-"], [class*="lang-"] code'
+          };
+          _.hooks.run("before-highlightall", env);
+          env.elements = Array.prototype.slice.apply(env.container.querySelectorAll(env.selector));
+          _.hooks.run("before-all-elements-highlight", env);
+          for (var i = 0, element; element = env.elements[i++]; ) {
+            _.highlightElement(element, async === true, env.callback);
+          }
+        },
+        /**
+         * Highlights the code inside a single element.
+         *
+         * The following hooks will be run:
+         * 1. `before-sanity-check`
+         * 2. `before-highlight`
+         * 3. All hooks of {@link Prism.highlight}. These hooks will be run by an asynchronous worker if `async` is `true`.
+         * 4. `before-insert`
+         * 5. `after-highlight`
+         * 6. `complete`
+         *
+         * Some the above hooks will be skipped if the element doesn't contain any text or there is no grammar loaded for
+         * the element's language.
+         *
+         * @param {Element} element The element containing the code.
+         * It must have a class of `language-xxxx` to be processed, where `xxxx` is a valid language identifier.
+         * @param {boolean} [async=false] Whether the element is to be highlighted asynchronously using Web Workers
+         * to improve performance and avoid blocking the UI when highlighting very large chunks of code. This option is
+         * [disabled by default](https://prismjs.com/faq.html#why-is-asynchronous-highlighting-disabled-by-default).
+         *
+         * Note: All language definitions required to highlight the code must be included in the main `prism.js` file for
+         * asynchronous highlighting to work. You can build your own bundle on the
+         * [Download page](https://prismjs.com/download.html).
+         * @param {HighlightCallback} [callback] An optional callback to be invoked after the highlighting is done.
+         * Mostly useful when `async` is `true`, since in that case, the highlighting is done asynchronously.
+         * @memberof Prism
+         * @public
+         */
+        highlightElement: function(element, async, callback) {
+          var language = _.util.getLanguage(element);
+          var grammar = _.languages[language];
+          _.util.setLanguage(element, language);
+          var parent = element.parentElement;
+          if (parent && parent.nodeName.toLowerCase() === "pre") {
+            _.util.setLanguage(parent, language);
+          }
+          var code = element.textContent;
+          var env = {
+            element,
+            language,
+            grammar,
+            code
+          };
+          function insertHighlightedCode(highlightedCode) {
+            env.highlightedCode = highlightedCode;
+            _.hooks.run("before-insert", env);
+            env.element.innerHTML = env.highlightedCode;
+            _.hooks.run("after-highlight", env);
+            _.hooks.run("complete", env);
+            callback && callback.call(env.element);
+          }
+          _.hooks.run("before-sanity-check", env);
+          parent = env.element.parentElement;
+          if (parent && parent.nodeName.toLowerCase() === "pre" && !parent.hasAttribute("tabindex")) {
+            parent.setAttribute("tabindex", "0");
+          }
+          if (!env.code) {
+            _.hooks.run("complete", env);
+            callback && callback.call(env.element);
+            return;
+          }
+          _.hooks.run("before-highlight", env);
+          if (!env.grammar) {
+            insertHighlightedCode(_.util.encode(env.code));
+            return;
+          }
+          if (async && _self2.Worker) {
+            var worker = new Worker(_.filename);
+            worker.onmessage = function(evt) {
+              insertHighlightedCode(evt.data);
+            };
+            worker.postMessage(JSON.stringify({
+              language: env.language,
+              code: env.code,
+              immediateClose: true
+            }));
+          } else {
+            insertHighlightedCode(_.highlight(env.code, env.grammar, env.language));
+          }
+        },
+        /**
+         * Low-level function, only use if you know what you’re doing. It accepts a string of text as input
+         * and the language definitions to use, and returns a string with the HTML produced.
+         *
+         * The following hooks will be run:
+         * 1. `before-tokenize`
+         * 2. `after-tokenize`
+         * 3. `wrap`: On each {@link Token}.
+         *
+         * @param {string} text A string with the code to be highlighted.
+         * @param {Grammar} grammar An object containing the tokens to use.
+         *
+         * Usually a language definition like `Prism.languages.markup`.
+         * @param {string} language The name of the language definition passed to `grammar`.
+         * @returns {string} The highlighted HTML.
+         * @memberof Prism
+         * @public
+         * @example
+         * Prism.highlight('var foo = true;', Prism.languages.javascript, 'javascript');
+         */
+        highlight: function(text, grammar, language) {
+          var env = {
+            code: text,
+            grammar,
+            language
+          };
+          _.hooks.run("before-tokenize", env);
+          if (!env.grammar) {
+            throw new Error('The language "' + env.language + '" has no grammar.');
+          }
+          env.tokens = _.tokenize(env.code, env.grammar);
+          _.hooks.run("after-tokenize", env);
+          return Token.stringify(_.util.encode(env.tokens), env.language);
+        },
+        /**
+         * This is the heart of Prism, and the most low-level function you can use. It accepts a string of text as input
+         * and the language definitions to use, and returns an array with the tokenized code.
+         *
+         * When the language definition includes nested tokens, the function is called recursively on each of these tokens.
+         *
+         * This method could be useful in other contexts as well, as a very crude parser.
+         *
+         * @param {string} text A string with the code to be highlighted.
+         * @param {Grammar} grammar An object containing the tokens to use.
+         *
+         * Usually a language definition like `Prism.languages.markup`.
+         * @returns {TokenStream} An array of strings and tokens, a token stream.
+         * @memberof Prism
+         * @public
+         * @example
+         * let code = `var foo = 0;`;
+         * let tokens = Prism.tokenize(code, Prism.languages.javascript);
+         * tokens.forEach(token => {
+         *     if (token instanceof Prism.Token && token.type === 'number') {
+         *         console.log(`Found numeric literal: ${token.content}`);
+         *     }
+         * });
+         */
+        tokenize: function(text, grammar) {
+          var rest = grammar.rest;
+          if (rest) {
+            for (var token in rest) {
+              grammar[token] = rest[token];
+            }
+            delete grammar.rest;
+          }
+          var tokenList = new LinkedList();
+          addAfter(tokenList, tokenList.head, text);
+          matchGrammar(text, tokenList, grammar, tokenList.head, 0);
+          return toArray(tokenList);
+        },
+        /**
+         * @namespace
+         * @memberof Prism
+         * @public
+         */
+        hooks: {
+          all: {},
+          /**
+           * Adds the given callback to the list of callbacks for the given hook.
+           *
+           * The callback will be invoked when the hook it is registered for is run.
+           * Hooks are usually directly run by a highlight function but you can also run hooks yourself.
+           *
+           * One callback function can be registered to multiple hooks and the same hook multiple times.
+           *
+           * @param {string} name The name of the hook.
+           * @param {HookCallback} callback The callback function which is given environment variables.
+           * @public
+           */
+          add: function(name, callback) {
+            var hooks = _.hooks.all;
+            hooks[name] = hooks[name] || [];
+            hooks[name].push(callback);
+          },
+          /**
+           * Runs a hook invoking all registered callbacks with the given environment variables.
+           *
+           * Callbacks will be invoked synchronously and in the order in which they were registered.
+           *
+           * @param {string} name The name of the hook.
+           * @param {Object<string, any>} env The environment variables of the hook passed to all callbacks registered.
+           * @public
+           */
+          run: function(name, env) {
+            var callbacks = _.hooks.all[name];
+            if (!callbacks || !callbacks.length) {
+              return;
+            }
+            for (var i = 0, callback; callback = callbacks[i++]; ) {
+              callback(env);
+            }
+          }
+        },
+        Token
+      };
+      _self2.Prism = _;
+      function Token(type, content, alias, matchedStr) {
+        this.type = type;
+        this.content = content;
+        this.alias = alias;
+        this.length = (matchedStr || "").length | 0;
+      }
+      Token.stringify = function stringify(o, language) {
+        if (typeof o == "string") {
+          return o;
+        }
+        if (Array.isArray(o)) {
+          var s = "";
+          o.forEach(function(e) {
+            s += stringify(e, language);
+          });
+          return s;
+        }
+        var env = {
+          type: o.type,
+          content: stringify(o.content, language),
+          tag: "span",
+          classes: ["token", o.type],
+          attributes: {},
+          language
+        };
+        var aliases = o.alias;
+        if (aliases) {
+          if (Array.isArray(aliases)) {
+            Array.prototype.push.apply(env.classes, aliases);
+          } else {
+            env.classes.push(aliases);
+          }
+        }
+        _.hooks.run("wrap", env);
+        var attributes = "";
+        for (var name in env.attributes) {
+          attributes += " " + name + '="' + (env.attributes[name] || "").replace(/"/g, "&quot;") + '"';
+        }
+        return "<" + env.tag + ' class="' + env.classes.join(" ") + '"' + attributes + ">" + env.content + "</" + env.tag + ">";
+      };
+      function matchPattern(pattern, pos, text, lookbehind) {
+        pattern.lastIndex = pos;
+        var match = pattern.exec(text);
+        if (match && lookbehind && match[1]) {
+          var lookbehindLength = match[1].length;
+          match.index += lookbehindLength;
+          match[0] = match[0].slice(lookbehindLength);
+        }
+        return match;
+      }
+      function matchGrammar(text, tokenList, grammar, startNode, startPos, rematch) {
+        for (var token in grammar) {
+          if (!grammar.hasOwnProperty(token) || !grammar[token]) {
+            continue;
+          }
+          var patterns = grammar[token];
+          patterns = Array.isArray(patterns) ? patterns : [patterns];
+          for (var j = 0; j < patterns.length; ++j) {
+            if (rematch && rematch.cause == token + "," + j) {
+              return;
+            }
+            var patternObj = patterns[j];
+            var inside = patternObj.inside;
+            var lookbehind = !!patternObj.lookbehind;
+            var greedy = !!patternObj.greedy;
+            var alias = patternObj.alias;
+            if (greedy && !patternObj.pattern.global) {
+              var flags = patternObj.pattern.toString().match(/[imsuy]*$/)[0];
+              patternObj.pattern = RegExp(patternObj.pattern.source, flags + "g");
+            }
+            var pattern = patternObj.pattern || patternObj;
+            for (var currentNode = startNode.next, pos = startPos; currentNode !== tokenList.tail; pos += currentNode.value.length, currentNode = currentNode.next) {
+              if (rematch && pos >= rematch.reach) {
+                break;
+              }
+              var str = currentNode.value;
+              if (tokenList.length > text.length) {
+                return;
+              }
+              if (str instanceof Token) {
+                continue;
+              }
+              var removeCount = 1;
+              var match;
+              if (greedy) {
+                match = matchPattern(pattern, pos, text, lookbehind);
+                if (!match || match.index >= text.length) {
+                  break;
+                }
+                var from = match.index;
+                var to = match.index + match[0].length;
+                var p = pos;
+                p += currentNode.value.length;
+                while (from >= p) {
+                  currentNode = currentNode.next;
+                  p += currentNode.value.length;
+                }
+                p -= currentNode.value.length;
+                pos = p;
+                if (currentNode.value instanceof Token) {
+                  continue;
+                }
+                for (var k = currentNode; k !== tokenList.tail && (p < to || typeof k.value === "string"); k = k.next) {
+                  removeCount++;
+                  p += k.value.length;
+                }
+                removeCount--;
+                str = text.slice(pos, p);
+                match.index -= pos;
+              } else {
+                match = matchPattern(pattern, 0, str, lookbehind);
+                if (!match) {
+                  continue;
+                }
+              }
+              var from = match.index;
+              var matchStr = match[0];
+              var before = str.slice(0, from);
+              var after = str.slice(from + matchStr.length);
+              var reach = pos + str.length;
+              if (rematch && reach > rematch.reach) {
+                rematch.reach = reach;
+              }
+              var removeFrom = currentNode.prev;
+              if (before) {
+                removeFrom = addAfter(tokenList, removeFrom, before);
+                pos += before.length;
+              }
+              removeRange(tokenList, removeFrom, removeCount);
+              var wrapped = new Token(token, inside ? _.tokenize(matchStr, inside) : matchStr, alias, matchStr);
+              currentNode = addAfter(tokenList, removeFrom, wrapped);
+              if (after) {
+                addAfter(tokenList, currentNode, after);
+              }
+              if (removeCount > 1) {
+                var nestedRematch = {
+                  cause: token + "," + j,
+                  reach
+                };
+                matchGrammar(text, tokenList, grammar, currentNode.prev, pos, nestedRematch);
+                if (rematch && nestedRematch.reach > rematch.reach) {
+                  rematch.reach = nestedRematch.reach;
+                }
+              }
+            }
+          }
+        }
+      }
+      function LinkedList() {
+        var head = { value: null, prev: null, next: null };
+        var tail = { value: null, prev: head, next: null };
+        head.next = tail;
+        this.head = head;
+        this.tail = tail;
+        this.length = 0;
+      }
+      function addAfter(list, node, value) {
+        var next = node.next;
+        var newNode = { value, prev: node, next };
+        node.next = newNode;
+        next.prev = newNode;
+        list.length++;
+        return newNode;
+      }
+      function removeRange(list, node, count) {
+        var next = node.next;
+        for (var i = 0; i < count && next !== list.tail; i++) {
+          next = next.next;
+        }
+        node.next = next;
+        next.prev = node;
+        list.length -= i;
+      }
+      function toArray(list) {
+        var array = [];
+        var node = list.head.next;
+        while (node !== list.tail) {
+          array.push(node.value);
+          node = node.next;
+        }
+        return array;
+      }
+      if (!_self2.document) {
+        if (!_self2.addEventListener) {
+          return _;
+        }
+        if (!_.disableWorkerMessageHandler) {
+          _self2.addEventListener("message", function(evt) {
+            var message = JSON.parse(evt.data);
+            var lang2 = message.language;
+            var code = message.code;
+            var immediateClose = message.immediateClose;
+            _self2.postMessage(_.highlight(code, _.languages[lang2], lang2));
+            if (immediateClose) {
+              _self2.close();
+            }
+          }, false);
+        }
+        return _;
+      }
+      var script = _.util.currentScript();
+      if (script) {
+        _.filename = script.src;
+        if (script.hasAttribute("data-manual")) {
+          _.manual = true;
+        }
+      }
+      function highlightAutomaticallyCallback() {
+        if (!_.manual) {
+          _.highlightAll();
+        }
+      }
+      if (!_.manual) {
+        var readyState = document.readyState;
+        if (readyState === "loading" || readyState === "interactive" && script && script.defer) {
+          document.addEventListener("DOMContentLoaded", highlightAutomaticallyCallback);
+        } else {
+          if (window.requestAnimationFrame) {
+            window.requestAnimationFrame(highlightAutomaticallyCallback);
+          } else {
+            window.setTimeout(highlightAutomaticallyCallback, 16);
+          }
+        }
+      }
+      return _;
+    })(_self);
+    if (typeof module2 !== "undefined" && module2.exports) {
+      module2.exports = Prism3;
+    }
+    if (typeof global !== "undefined") {
+      global.Prism = Prism3;
+    }
+    Prism3.languages.markup = {
+      "comment": {
+        pattern: /<!--(?:(?!<!--)[\s\S])*?-->/,
+        greedy: true
+      },
+      "prolog": {
+        pattern: /<\?[\s\S]+?\?>/,
+        greedy: true
+      },
+      "doctype": {
+        // https://www.w3.org/TR/xml/#NT-doctypedecl
+        pattern: /<!DOCTYPE(?:[^>"'[\]]|"[^"]*"|'[^']*')+(?:\[(?:[^<"'\]]|"[^"]*"|'[^']*'|<(?!!--)|<!--(?:[^-]|-(?!->))*-->)*\]\s*)?>/i,
+        greedy: true,
+        inside: {
+          "internal-subset": {
+            pattern: /(^[^\[]*\[)[\s\S]+(?=\]>$)/,
+            lookbehind: true,
+            greedy: true,
+            inside: null
+            // see below
+          },
+          "string": {
+            pattern: /"[^"]*"|'[^']*'/,
+            greedy: true
+          },
+          "punctuation": /^<!|>$|[[\]]/,
+          "doctype-tag": /^DOCTYPE/i,
+          "name": /[^\s<>'"]+/
+        }
+      },
+      "cdata": {
+        pattern: /<!\[CDATA\[[\s\S]*?\]\]>/i,
+        greedy: true
+      },
+      "tag": {
+        pattern: /<\/?(?!\d)[^\s>\/=$<%]+(?:\s(?:\s*[^\s>\/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+(?=[\s>]))|(?=[\s/>])))+)?\s*\/?>/,
+        greedy: true,
+        inside: {
+          "tag": {
+            pattern: /^<\/?[^\s>\/]+/,
+            inside: {
+              "punctuation": /^<\/?/,
+              "namespace": /^[^\s>\/:]+:/
+            }
+          },
+          "special-attr": [],
+          "attr-value": {
+            pattern: /=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+)/,
+            inside: {
+              "punctuation": [
+                {
+                  pattern: /^=/,
+                  alias: "attr-equals"
+                },
+                {
+                  pattern: /^(\s*)["']|["']$/,
+                  lookbehind: true
+                }
+              ]
+            }
+          },
+          "punctuation": /\/?>/,
+          "attr-name": {
+            pattern: /[^\s>\/]+/,
+            inside: {
+              "namespace": /^[^\s>\/:]+:/
+            }
+          }
+        }
+      },
+      "entity": [
+        {
+          pattern: /&[\da-z]{1,8};/i,
+          alias: "named-entity"
+        },
+        /&#x?[\da-f]{1,8};/i
+      ]
+    };
+    Prism3.languages.markup["tag"].inside["attr-value"].inside["entity"] = Prism3.languages.markup["entity"];
+    Prism3.languages.markup["doctype"].inside["internal-subset"].inside = Prism3.languages.markup;
+    Prism3.hooks.add("wrap", function(env) {
+      if (env.type === "entity") {
+        env.attributes["title"] = env.content.replace(/&amp;/, "&");
+      }
+    });
+    Object.defineProperty(Prism3.languages.markup.tag, "addInlined", {
+      /**
+       * Adds an inlined language to markup.
+       *
+       * An example of an inlined language is CSS with `<style>` tags.
+       *
+       * @param {string} tagName The name of the tag that contains the inlined language. This name will be treated as
+       * case insensitive.
+       * @param {string} lang The language key.
+       * @example
+       * addInlined('style', 'css');
+       */
+      value: function addInlined2(tagName, lang) {
+        var includedCdataInside = {};
+        includedCdataInside["language-" + lang] = {
+          pattern: /(^<!\[CDATA\[)[\s\S]+?(?=\]\]>$)/i,
+          lookbehind: true,
+          inside: Prism3.languages[lang]
+        };
+        includedCdataInside["cdata"] = /^<!\[CDATA\[|\]\]>$/i;
+        var inside = {
+          "included-cdata": {
+            pattern: /<!\[CDATA\[[\s\S]*?\]\]>/i,
+            inside: includedCdataInside
+          }
+        };
+        inside["language-" + lang] = {
+          pattern: /[\s\S]+/,
+          inside: Prism3.languages[lang]
+        };
+        var def = {};
+        def[tagName] = {
+          pattern: RegExp(/(<__[^>]*>)(?:<!\[CDATA\[(?:[^\]]|\](?!\]>))*\]\]>|(?!<!\[CDATA\[)[\s\S])*?(?=<\/__>)/.source.replace(/__/g, function() {
+            return tagName;
+          }), "i"),
+          lookbehind: true,
+          greedy: true,
+          inside
+        };
+        Prism3.languages.insertBefore("markup", "cdata", def);
+      }
+    });
+    Object.defineProperty(Prism3.languages.markup.tag, "addAttribute", {
+      /**
+       * Adds an pattern to highlight languages embedded in HTML attributes.
+       *
+       * An example of an inlined language is CSS with `style` attributes.
+       *
+       * @param {string} attrName The name of the tag that contains the inlined language. This name will be treated as
+       * case insensitive.
+       * @param {string} lang The language key.
+       * @example
+       * addAttribute('style', 'css');
+       */
+      value: function(attrName, lang) {
+        Prism3.languages.markup.tag.inside["special-attr"].push({
+          pattern: RegExp(
+            /(^|["'\s])/.source + "(?:" + attrName + ")" + /\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+(?=[\s>]))/.source,
+            "i"
+          ),
+          lookbehind: true,
+          inside: {
+            "attr-name": /^[^\s=]+/,
+            "attr-value": {
+              pattern: /=[\s\S]+/,
+              inside: {
+                "value": {
+                  pattern: /(^=\s*(["']|(?!["'])))\S[\s\S]*(?=\2$)/,
+                  lookbehind: true,
+                  alias: [lang, "language-" + lang],
+                  inside: Prism3.languages[lang]
+                },
+                "punctuation": [
+                  {
+                    pattern: /^=/,
+                    alias: "attr-equals"
+                  },
+                  /"|'/
+                ]
+              }
+            }
+          }
+        });
+      }
+    });
+    Prism3.languages.html = Prism3.languages.markup;
+    Prism3.languages.mathml = Prism3.languages.markup;
+    Prism3.languages.svg = Prism3.languages.markup;
+    Prism3.languages.xml = Prism3.languages.extend("markup", {});
+    Prism3.languages.ssml = Prism3.languages.xml;
+    Prism3.languages.atom = Prism3.languages.xml;
+    Prism3.languages.rss = Prism3.languages.xml;
+    (function(Prism4) {
+      var string = /(?:"(?:\\(?:\r\n|[\s\S])|[^"\\\r\n])*"|'(?:\\(?:\r\n|[\s\S])|[^'\\\r\n])*')/;
+      Prism4.languages.css = {
+        "comment": /\/\*[\s\S]*?\*\//,
+        "atrule": {
+          pattern: RegExp("@[\\w-](?:" + /[^;{\s"']|\s+(?!\s)/.source + "|" + string.source + ")*?" + /(?:;|(?=\s*\{))/.source),
+          inside: {
+            "rule": /^@[\w-]+/,
+            "selector-function-argument": {
+              pattern: /(\bselector\s*\(\s*(?![\s)]))(?:[^()\s]|\s+(?![\s)])|\((?:[^()]|\([^()]*\))*\))+(?=\s*\))/,
+              lookbehind: true,
+              alias: "selector"
+            },
+            "keyword": {
+              pattern: /(^|[^\w-])(?:and|not|only|or)(?![\w-])/,
+              lookbehind: true
+            }
+            // See rest below
+          }
+        },
+        "url": {
+          // https://drafts.csswg.org/css-values-3/#urls
+          pattern: RegExp("\\burl\\((?:" + string.source + "|" + /(?:[^\\\r\n()"']|\\[\s\S])*/.source + ")\\)", "i"),
+          greedy: true,
+          inside: {
+            "function": /^url/i,
+            "punctuation": /^\(|\)$/,
+            "string": {
+              pattern: RegExp("^" + string.source + "$"),
+              alias: "url"
+            }
+          }
+        },
+        "selector": {
+          pattern: RegExp(`(^|[{}\\s])[^{}\\s](?:[^{};"'\\s]|\\s+(?![\\s{])|` + string.source + ")*(?=\\s*\\{)"),
+          lookbehind: true
+        },
+        "string": {
+          pattern: string,
+          greedy: true
+        },
+        "property": {
+          pattern: /(^|[^-\w\xA0-\uFFFF])(?!\s)[-_a-z\xA0-\uFFFF](?:(?!\s)[-\w\xA0-\uFFFF])*(?=\s*:)/i,
+          lookbehind: true
+        },
+        "important": /!important\b/i,
+        "function": {
+          pattern: /(^|[^-a-z0-9])[-a-z0-9]+(?=\()/i,
+          lookbehind: true
+        },
+        "punctuation": /[(){};:,]/
+      };
+      Prism4.languages.css["atrule"].inside.rest = Prism4.languages.css;
+      var markup = Prism4.languages.markup;
+      if (markup) {
+        markup.tag.addInlined("style", "css");
+        markup.tag.addAttribute("style", "css");
+      }
+    })(Prism3);
+    Prism3.languages.clike = {
+      "comment": [
+        {
+          pattern: /(^|[^\\])\/\*[\s\S]*?(?:\*\/|$)/,
+          lookbehind: true,
+          greedy: true
+        },
+        {
+          pattern: /(^|[^\\:])\/\/.*/,
+          lookbehind: true,
+          greedy: true
+        }
+      ],
+      "string": {
+        pattern: /(["'])(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/,
+        greedy: true
+      },
+      "class-name": {
+        pattern: /(\b(?:class|extends|implements|instanceof|interface|new|trait)\s+|\bcatch\s+\()[\w.\\]+/i,
+        lookbehind: true,
+        inside: {
+          "punctuation": /[.\\]/
+        }
+      },
+      "keyword": /\b(?:break|catch|continue|do|else|finally|for|function|if|in|instanceof|new|null|return|throw|try|while)\b/,
+      "boolean": /\b(?:false|true)\b/,
+      "function": /\b\w+(?=\()/,
+      "number": /\b0x[\da-f]+\b|(?:\b\d+(?:\.\d*)?|\B\.\d+)(?:e[+-]?\d+)?/i,
+      "operator": /[<>]=?|[!=]=?=?|--?|\+\+?|&&?|\|\|?|[?*/~^%]/,
+      "punctuation": /[{}[\];(),.:]/
+    };
+    Prism3.languages.javascript = Prism3.languages.extend("clike", {
+      "class-name": [
+        Prism3.languages.clike["class-name"],
+        {
+          pattern: /(^|[^$\w\xA0-\uFFFF])(?!\s)[_$A-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\.(?:constructor|prototype))/,
+          lookbehind: true
+        }
+      ],
+      "keyword": [
+        {
+          pattern: /((?:^|\})\s*)catch\b/,
+          lookbehind: true
+        },
+        {
+          pattern: /(^|[^.]|\.\.\.\s*)\b(?:as|assert(?=\s*\{)|async(?=\s*(?:function\b|\(|[$\w\xA0-\uFFFF]|$))|await|break|case|class|const|continue|debugger|default|delete|do|else|enum|export|extends|finally(?=\s*(?:\{|$))|for|from(?=\s*(?:['"]|$))|function|(?:get|set)(?=\s*(?:[#\[$\w\xA0-\uFFFF]|$))|if|implements|import|in|instanceof|interface|let|new|null|of|package|private|protected|public|return|static|super|switch|this|throw|try|typeof|undefined|var|void|while|with|yield)\b/,
+          lookbehind: true
+        }
+      ],
+      // Allow for all non-ASCII characters (See http://stackoverflow.com/a/2008444)
+      "function": /#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*(?:\.\s*(?:apply|bind|call)\s*)?\()/,
+      "number": {
+        pattern: RegExp(
+          /(^|[^\w$])/.source + "(?:" + // constant
+          (/NaN|Infinity/.source + "|" + // binary integer
+          /0[bB][01]+(?:_[01]+)*n?/.source + "|" + // octal integer
+          /0[oO][0-7]+(?:_[0-7]+)*n?/.source + "|" + // hexadecimal integer
+          /0[xX][\dA-Fa-f]+(?:_[\dA-Fa-f]+)*n?/.source + "|" + // decimal bigint
+          /\d+(?:_\d+)*n/.source + "|" + // decimal number (integer or float) but no bigint
+          /(?:\d+(?:_\d+)*(?:\.(?:\d+(?:_\d+)*)?)?|\.\d+(?:_\d+)*)(?:[Ee][+-]?\d+(?:_\d+)*)?/.source) + ")" + /(?![\w$])/.source
+        ),
+        lookbehind: true
+      },
+      "operator": /--|\+\+|\*\*=?|=>|&&=?|\|\|=?|[!=]==|<<=?|>>>?=?|[-+*/%&|^!=<>]=?|\.{3}|\?\?=?|\?\.?|[~:]/
+    });
+    Prism3.languages.javascript["class-name"][0].pattern = /(\b(?:class|extends|implements|instanceof|interface|new)\s+)[\w.\\]+/;
+    Prism3.languages.insertBefore("javascript", "keyword", {
+      "regex": {
+        pattern: RegExp(
+          // lookbehind
+          // eslint-disable-next-line regexp/no-dupe-characters-character-class
+          /((?:^|[^$\w\xA0-\uFFFF."'\])\s]|\b(?:return|yield))\s*)/.source + // Regex pattern:
+          // There are 2 regex patterns here. The RegExp set notation proposal added support for nested character
+          // classes if the `v` flag is present. Unfortunately, nested CCs are both context-free and incompatible
+          // with the only syntax, so we have to define 2 different regex patterns.
+          /\//.source + "(?:" + /(?:\[(?:[^\]\\\r\n]|\\.)*\]|\\.|[^/\\\[\r\n])+\/[dgimyus]{0,7}/.source + "|" + // `v` flag syntax. This supports 3 levels of nested character classes.
+          /(?:\[(?:[^[\]\\\r\n]|\\.|\[(?:[^[\]\\\r\n]|\\.|\[(?:[^[\]\\\r\n]|\\.)*\])*\])*\]|\\.|[^/\\\[\r\n])+\/[dgimyus]{0,7}v[dgimyus]{0,7}/.source + ")" + // lookahead
+          /(?=(?:\s|\/\*(?:[^*]|\*(?!\/))*\*\/)*(?:$|[\r\n,.;:})\]]|\/\/))/.source
+        ),
+        lookbehind: true,
+        greedy: true,
+        inside: {
+          "regex-source": {
+            pattern: /^(\/)[\s\S]+(?=\/[a-z]*$)/,
+            lookbehind: true,
+            alias: "language-regex",
+            inside: Prism3.languages.regex
+          },
+          "regex-delimiter": /^\/|\/$/,
+          "regex-flags": /^[a-z]+$/
+        }
+      },
+      // This must be declared before keyword because we use "function" inside the look-forward
+      "function-variable": {
+        pattern: /#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*[=:]\s*(?:async\s*)?(?:\bfunction\b|(?:\((?:[^()]|\([^()]*\))*\)|(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*)\s*=>))/,
+        alias: "function"
+      },
+      "parameter": [
+        {
+          pattern: /(function(?:\s+(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*)?\s*\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\))/,
+          lookbehind: true,
+          inside: Prism3.languages.javascript
+        },
+        {
+          pattern: /(^|[^$\w\xA0-\uFFFF])(?!\s)[_$a-z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*=>)/i,
+          lookbehind: true,
+          inside: Prism3.languages.javascript
+        },
+        {
+          pattern: /(\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\)\s*=>)/,
+          lookbehind: true,
+          inside: Prism3.languages.javascript
+        },
+        {
+          pattern: /((?:\b|\s|^)(?!(?:as|async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|finally|for|from|function|get|if|implements|import|in|instanceof|interface|let|new|null|of|package|private|protected|public|return|set|static|super|switch|this|throw|try|typeof|undefined|var|void|while|with|yield)(?![$\w\xA0-\uFFFF]))(?:(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*\s*)\(\s*|\]\s*\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\)\s*\{)/,
+          lookbehind: true,
+          inside: Prism3.languages.javascript
+        }
+      ],
+      "constant": /\b[A-Z](?:[A-Z_]|\dx?)*\b/
+    });
+    Prism3.languages.insertBefore("javascript", "string", {
+      "hashbang": {
+        pattern: /^#!.*/,
+        greedy: true,
+        alias: "comment"
+      },
+      "template-string": {
+        pattern: /`(?:\\[\s\S]|\$\{(?:[^{}]|\{(?:[^{}]|\{[^}]*\})*\})+\}|(?!\$\{)[^\\`])*`/,
+        greedy: true,
+        inside: {
+          "template-punctuation": {
+            pattern: /^`|`$/,
+            alias: "string"
+          },
+          "interpolation": {
+            pattern: /((?:^|[^\\])(?:\\{2})*)\$\{(?:[^{}]|\{(?:[^{}]|\{[^}]*\})*\})+\}/,
+            lookbehind: true,
+            inside: {
+              "interpolation-punctuation": {
+                pattern: /^\$\{|\}$/,
+                alias: "punctuation"
+              },
+              rest: Prism3.languages.javascript
+            }
+          },
+          "string": /[\s\S]+/
+        }
+      },
+      "string-property": {
+        pattern: /((?:^|[,{])[ \t]*)(["'])(?:\\(?:\r\n|[\s\S])|(?!\2)[^\\\r\n])*\2(?=\s*:)/m,
+        lookbehind: true,
+        greedy: true,
+        alias: "property"
+      }
+    });
+    Prism3.languages.insertBefore("javascript", "operator", {
+      "literal-property": {
+        pattern: /((?:^|[,{])[ \t]*)(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*:)/m,
+        lookbehind: true,
+        alias: "property"
+      }
+    });
+    if (Prism3.languages.markup) {
+      Prism3.languages.markup.tag.addInlined("script", "javascript");
+      Prism3.languages.markup.tag.addAttribute(
+        /on(?:abort|blur|change|click|composition(?:end|start|update)|dblclick|error|focus(?:in|out)?|key(?:down|up)|load|mouse(?:down|enter|leave|move|out|over|up)|reset|resize|scroll|select|slotchange|submit|unload|wheel)/.source,
+        "javascript"
+      );
+    }
+    Prism3.languages.js = Prism3.languages.javascript;
+    (function() {
+      if (typeof Prism3 === "undefined" || typeof document === "undefined") {
+        return;
+      }
+      if (!Element.prototype.matches) {
+        Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
+      }
+      var LOADING_MESSAGE = "Loading\u2026";
+      var FAILURE_MESSAGE = function(status, message) {
+        return "\u2716 Error " + status + " while fetching file: " + message;
+      };
+      var FAILURE_EMPTY_MESSAGE = "\u2716 Error: File does not exist or is empty";
+      var EXTENSIONS = {
+        "js": "javascript",
+        "py": "python",
+        "rb": "ruby",
+        "ps1": "powershell",
+        "psm1": "powershell",
+        "sh": "bash",
+        "bat": "batch",
+        "h": "c",
+        "tex": "latex"
+      };
+      var STATUS_ATTR = "data-src-status";
+      var STATUS_LOADING = "loading";
+      var STATUS_LOADED = "loaded";
+      var STATUS_FAILED = "failed";
+      var SELECTOR = "pre[data-src]:not([" + STATUS_ATTR + '="' + STATUS_LOADED + '"]):not([' + STATUS_ATTR + '="' + STATUS_LOADING + '"])';
+      function loadFile(src, success, error) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", src, true);
+        xhr.onreadystatechange = function() {
+          if (xhr.readyState == 4) {
+            if (xhr.status < 400 && xhr.responseText) {
+              success(xhr.responseText);
+            } else {
+              if (xhr.status >= 400) {
+                error(FAILURE_MESSAGE(xhr.status, xhr.statusText));
+              } else {
+                error(FAILURE_EMPTY_MESSAGE);
+              }
+            }
+          }
+        };
+        xhr.send(null);
+      }
+      function parseRange(range) {
+        var m = /^\s*(\d+)\s*(?:(,)\s*(?:(\d+)\s*)?)?$/.exec(range || "");
+        if (m) {
+          var start = Number(m[1]);
+          var comma = m[2];
+          var end = m[3];
+          if (!comma) {
+            return [start, start];
+          }
+          if (!end) {
+            return [start, void 0];
+          }
+          return [start, Number(end)];
+        }
+        return void 0;
+      }
+      Prism3.hooks.add("before-highlightall", function(env) {
+        env.selector += ", " + SELECTOR;
+      });
+      Prism3.hooks.add("before-sanity-check", function(env) {
+        var pre = (
+          /** @type {HTMLPreElement} */
+          env.element
+        );
+        if (pre.matches(SELECTOR)) {
+          env.code = "";
+          pre.setAttribute(STATUS_ATTR, STATUS_LOADING);
+          var code = pre.appendChild(document.createElement("CODE"));
+          code.textContent = LOADING_MESSAGE;
+          var src = pre.getAttribute("data-src");
+          var language = env.language;
+          if (language === "none") {
+            var extension = (/\.(\w+)$/.exec(src) || [, "none"])[1];
+            language = EXTENSIONS[extension] || extension;
+          }
+          Prism3.util.setLanguage(code, language);
+          Prism3.util.setLanguage(pre, language);
+          var autoloader = Prism3.plugins.autoloader;
+          if (autoloader) {
+            autoloader.loadLanguages(language);
+          }
+          loadFile(
+            src,
+            function(text) {
+              pre.setAttribute(STATUS_ATTR, STATUS_LOADED);
+              var range = parseRange(pre.getAttribute("data-range"));
+              if (range) {
+                var lines = text.split(/\r\n?|\n/g);
+                var start = range[0];
+                var end = range[1] == null ? lines.length : range[1];
+                if (start < 0) {
+                  start += lines.length;
+                }
+                start = Math.max(0, Math.min(start - 1, lines.length));
+                if (end < 0) {
+                  end += lines.length;
+                }
+                end = Math.max(0, Math.min(end, lines.length));
+                text = lines.slice(start, end).join("\n");
+                if (!pre.hasAttribute("data-start")) {
+                  pre.setAttribute("data-start", String(start + 1));
+                }
+              }
+              code.textContent = text;
+              Prism3.highlightElement(code);
+            },
+            function(error) {
+              pre.setAttribute(STATUS_ATTR, STATUS_FAILED);
+              code.textContent = error;
+            }
+          );
+        }
+      });
+      Prism3.plugins.fileHighlight = {
+        /**
+         * Executes the File Highlight plugin for all matching `pre` elements under the given container.
+         *
+         * Note: Elements which are already loaded or currently loading will not be touched by this method.
+         *
+         * @param {ParentNode} [container=document]
+         */
+        highlight: function highlight3(container) {
+          var elements = (container || document).querySelectorAll(SELECTOR);
+          for (var i = 0, element; element = elements[i++]; ) {
+            Prism3.highlightElement(element);
+          }
+        }
+      };
+      var logged = false;
+      Prism3.fileHighlight = function() {
+        if (!logged) {
+          console.warn("Prism.fileHighlight is deprecated. Use `Prism.plugins.fileHighlight.highlight` instead.");
+          logged = true;
+        }
+        Prism3.plugins.fileHighlight.highlight.apply(this, arguments);
+      };
+    })();
+  }
+});
+
 // node_modules/jszip/dist/jszip.min.js
 var require_jszip_min = __commonJS({
   "node_modules/jszip/dist/jszip.min.js"(exports, module2) {
@@ -2418,7 +3867,7 @@ __export(main_exports, {
   default: () => VaultViewerPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian6 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 
 // src/settings.ts
 var import_obsidian = require("obsidian");
@@ -2498,7 +3947,11 @@ var zhCN = {
   "listContext.pasteFile": "\u7C98\u8D34\u6587\u4EF6",
   "notice.filePasted": (name) => `\u5DF2\u7C98\u8D34\u6587\u4EF6: ${name}`,
   "notice.pasteFailed": "\u7C98\u8D34\u6587\u4EF6\u5931\u8D25",
-  "notice.noFileInClipboard": "\u526A\u8D34\u677F\u4E2D\u6CA1\u6709\u6587\u4EF6"
+  "notice.noFileInClipboard": "\u526A\u8D34\u677F\u4E2D\u6CA1\u6709\u6587\u4EF6",
+  "code.back": "\u8FD4\u56DE",
+  "code.openExternal": "\u5728\u5916\u90E8\u6253\u5F00",
+  "code.parsing": "\u6B63\u5728\u52A0\u8F7D\u6587\u4EF6...",
+  "code.parseError": "\u65E0\u6CD5\u8BFB\u53D6\u6B64\u6587\u4EF6"
 };
 var zh_CN_default = zhCN;
 
@@ -2577,7 +4030,11 @@ var zhTW = {
   "listContext.pasteFile": "\u8CBC\u4E0A\u6A94\u6848",
   "notice.filePasted": (name) => `\u5DF2\u8CBC\u4E0A\u6A94\u6848: ${name}`,
   "notice.pasteFailed": "\u8CBC\u4E0A\u6A94\u6848\u5931\u6557",
-  "notice.noFileInClipboard": "\u526A\u8CBC\u7C3F\u4E2D\u6C92\u6709\u6A94\u6848"
+  "notice.noFileInClipboard": "\u526A\u8CBC\u7C3F\u4E2D\u6C92\u6709\u6A94\u6848",
+  "code.back": "\u8FD4\u56DE",
+  "code.openExternal": "\u5728\u5916\u90E8\u958B\u555F",
+  "code.parsing": "\u6B63\u5728\u8F09\u5165\u6A94\u6848...",
+  "code.parseError": "\u7121\u6CD5\u8B80\u53D6\u6B64\u6A94\u6848"
 };
 var zh_TW_default = zhTW;
 
@@ -2656,7 +4113,11 @@ var en = {
   "listContext.pasteFile": "Paste file",
   "notice.filePasted": (name) => `File pasted: ${name}`,
   "notice.pasteFailed": "Failed to paste file",
-  "notice.noFileInClipboard": "No file found in clipboard"
+  "notice.noFileInClipboard": "No file found in clipboard",
+  "code.back": "Back",
+  "code.openExternal": "Open externally",
+  "code.parsing": "Loading file...",
+  "code.parseError": "Could not read this file."
 };
 var en_default = en;
 
@@ -2984,6 +4445,163 @@ var ConfirmModal = class extends import_obsidian3.Modal {
     this.contentEl.empty();
   }
 };
+
+// src/utils/extensions.ts
+function getExtension(filename) {
+  if (filename.endsWith(".excalidraw.md")) return ".excalidraw.md";
+  if (filename.endsWith(".canvas.md")) return ".canvas.md";
+  const dotIndex = filename.lastIndexOf(".");
+  if (dotIndex === -1) return "";
+  return filename.slice(dotIndex);
+}
+function isTreeExtension(filename, treeExtensions) {
+  return treeExtensions.some((ext) => filename.endsWith(ext));
+}
+var CODE_EXTENSIONS = /* @__PURE__ */ new Set([
+  ".txt",
+  ".sql",
+  ".java",
+  ".py",
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".ts",
+  ".tsx",
+  ".jsx",
+  ".json",
+  ".xml",
+  ".html",
+  ".htm",
+  ".vue",
+  ".yaml",
+  ".yml",
+  ".css",
+  ".scss",
+  ".sass",
+  ".less",
+  ".styl",
+  ".sh",
+  ".bash",
+  ".zsh",
+  ".ps1",
+  ".psm1",
+  ".psd1",
+  ".bat",
+  ".cmd",
+  ".php",
+  ".php3",
+  ".php4",
+  ".php5",
+  ".phtml",
+  ".rb",
+  ".go",
+  ".rs",
+  ".c",
+  ".h",
+  ".cpp",
+  ".cc",
+  ".cxx",
+  ".hpp",
+  ".hxx",
+  ".cs",
+  ".swift",
+  ".kt",
+  ".kts",
+  ".scala",
+  ".groovy",
+  ".gradle",
+  ".pl",
+  ".pm",
+  ".lua",
+  ".r",
+  ".R",
+  ".rmd",
+  ".m",
+  ".mm",
+  ".dart",
+  ".erl",
+  ".ex",
+  ".exs",
+  ".coffee",
+  ".tex",
+  ".sty",
+  ".cls",
+  ".ltx",
+  ".rst",
+  ".toml",
+  ".ini",
+  ".cfg",
+  ".conf",
+  ".env",
+  ".properties",
+  ".makefile",
+  ".Makefile",
+  ".dockerfile",
+  ".Dockerfile",
+  ".gitignore"
+]);
+var CODE_FILENAMES = /* @__PURE__ */ new Set([
+  "makefile",
+  "Makefile",
+  "dockerfile",
+  "Dockerfile",
+  "gitignore"
+]);
+function isCodeExtension(filename) {
+  if (CODE_FILENAMES.has(filename)) return true;
+  const ext = getExtension(filename);
+  return CODE_EXTENSIONS.has(ext);
+}
+
+// src/utils/file-icons.ts
+var FILE_ICONS = {
+  py: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><linearGradient id="python-original-a" gradientUnits="userSpaceOnUse" x1="70.252" y1="1237.476" x2="170.659" y2="1151.089" gradientTransform="matrix(.563 0 0 -.568 -29.215 707.817)"><stop offset="0" stop-color="#5A9FD4"/><stop offset="1" stop-color="#306998"/></linearGradient><linearGradient id="python-original-b" gradientUnits="userSpaceOnUse" x1="209.474" y1="1098.811" x2="173.62" y2="1149.537" gradientTransform="matrix(.563 0 0 -.568 -29.215 707.817)"><stop offset="0" stop-color="#FFD43B"/><stop offset="1" stop-color="#FFE873"/></linearGradient><path fill="url(#python-original-a)" d="M63.391 1.988c-4.222.02-8.252.379-11.8 1.007-10.45 1.846-12.346 5.71-12.346 12.837v9.411h24.693v3.137H29.977c-7.176 0-13.46 4.313-15.426 12.521-2.268 9.405-2.368 15.275 0 25.096 1.755 7.311 5.947 12.519 13.124 12.519h8.491V67.234c0-8.151 7.051-15.34 15.426-15.34h24.665c6.866 0 12.346-5.654 12.346-12.548V15.833c0-6.693-5.646-11.72-12.346-12.837-4.244-.706-8.645-1.027-12.866-1.008zM50.037 9.557c2.55 0 4.634 2.117 4.634 4.721 0 2.593-2.083 4.69-4.634 4.69-2.56 0-4.633-2.097-4.633-4.69-.001-2.604 2.073-4.721 4.633-4.721z" transform="translate(0 10.26)"/><path fill="url(#python-original-b)" d="M91.682 28.38v10.966c0 8.5-7.208 15.655-15.426 15.655H51.591c-6.756 0-12.346 5.783-12.346 12.549v23.515c0 6.691 5.818 10.628 12.346 12.547 7.816 2.297 15.312 2.713 24.665 0 6.216-1.801 12.346-5.423 12.346-12.547v-9.412H63.938v-3.138h37.012c7.176 0 9.852-5.005 12.348-12.519 2.578-7.735 2.467-15.174 0-25.096-1.774-7.145-5.161-12.521-12.348-12.521h-9.268zM77.809 87.927c2.561 0 4.634 2.097 4.634 4.692 0 2.602-2.074 4.719-4.634 4.719-2.55 0-4.633-2.117-4.633-4.719 0-2.595 2.083-4.692 4.633-4.692z" transform="translate(0 10.26)"/><radialGradient id="python-original-c" cx="1825.678" cy="444.45" r="26.743" gradientTransform="matrix(0 -.24 -1.055 0 532.979 557.576)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#B8B8B8" stop-opacity=".498"/><stop offset="1" stop-color="#7F7F7F" stop-opacity="0"/></radialGradient><path opacity=".444" fill="url(#python-original-c)" d="M97.309 119.597c0 3.543-14.816 6.416-33.091 6.416-18.276 0-33.092-2.873-33.092-6.416 0-3.544 14.815-6.417 33.092-6.417 18.275 0 33.091 2.872 33.091 6.417z"/></svg>', color: "#3776AB" },
+  js: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill="#F0DB4F" d="M1.408 1.408h125.184v125.185H1.408z"/><path fill="#323330" d="M116.347 96.736c-.917-5.711-4.641-10.508-15.672-14.981-3.832-1.761-8.104-3.022-9.377-5.926-.452-1.69-.512-2.642-.226-3.665.821-3.32 4.784-4.355 7.925-3.403 2.023.678 3.938 2.237 5.093 4.724 5.402-3.498 5.391-3.475 9.163-5.879-1.381-2.141-2.118-3.129-3.022-4.045-3.249-3.629-7.676-5.498-14.756-5.355l-3.688.477c-3.534.893-6.902 2.748-8.877 5.235-5.926 6.724-4.236 18.492 2.975 23.335 7.104 5.332 17.54 6.545 18.873 11.531 1.297 6.104-4.486 8.08-10.234 7.378-4.236-.881-6.592-3.034-9.139-6.949-4.688 2.713-4.688 2.713-9.508 5.485 1.143 2.499 2.344 3.63 4.26 5.795 9.068 9.198 31.76 8.746 35.83-5.176.165-.478 1.261-3.666.38-8.581zM69.462 58.943H57.753l-.048 30.272c0 6.438.333 12.34-.714 14.149-1.713 3.558-6.152 3.117-8.175 2.427-2.059-1.012-3.106-2.451-4.319-4.485-.333-.584-.583-1.036-.667-1.071l-9.52 5.83c1.583 3.249 3.915 6.069 6.902 7.901 4.462 2.678 10.459 3.499 16.731 2.059 4.082-1.189 7.604-3.652 9.448-7.401 2.666-4.915 2.094-10.864 2.07-17.444.06-10.735.001-21.468.001-32.237z"/></svg>', color: "#F7DF1E" },
+  ts: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill="#fff" d="M22.67 47h99.67v73.67H22.67z"/><path data-name="original" fill="#007acc" d="M1.5 63.91v62.5h125v-125H1.5zm100.73-5a15.56 15.56 0 017.82 4.5 20.58 20.58 0 013 4c0 .16-5.4 3.81-8.69 5.85-.12.08-.6-.44-1.13-1.23a7.09 7.09 0 00-5.87-3.53c-3.79-.26-6.23 1.73-6.21 5a4.58 4.58 0 00.54 2.34c.83 1.73 2.38 2.76 7.24 4.86 8.95 3.85 12.78 6.39 15.16 10 2.66 4 3.25 10.46 1.45 15.24-2 5.2-6.9 8.73-13.83 9.9a38.32 38.32 0 01-9.52-.1 23 23 0 01-12.72-6.63c-1.15-1.27-3.39-4.58-3.25-4.82a9.34 9.34 0 011.15-.73L82 101l3.59-2.08.75 1.11a16.78 16.78 0 004.74 4.54c4 2.1 9.46 1.81 12.16-.62a5.43 5.43 0 00.69-6.92c-1-1.39-3-2.56-8.59-5-6.45-2.78-9.23-4.5-11.77-7.24a16.48 16.48 0 01-3.43-6.25 25 25 0 01-.22-8c1.33-6.23 6-10.58 12.82-11.87a31.66 31.66 0 019.49.26zm-29.34 5.24v5.12H56.66v46.23H45.15V69.26H28.88v-5a49.19 49.19 0 01.12-5.17C29.08 59 39 59 51 59h21.83z"/></svg>', color: "#3178C6" },
+  java: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill="#0074BD" d="M47.617 98.12s-4.767 2.774 3.397 3.71c9.892 1.13 14.947.968 25.845-1.092 0 0 2.871 1.795 6.873 3.351-24.439 10.47-55.308-.607-36.115-5.969zm-2.988-13.665s-5.348 3.959 2.823 4.805c10.567 1.091 18.91 1.18 33.354-1.6 0 0 1.993 2.025 5.132 3.131-29.542 8.64-62.446.68-41.309-6.336z"/><path fill="#EA2D2E" d="M69.802 61.271c6.025 6.935-1.58 13.17-1.58 13.17s15.289-7.891 8.269-17.777c-6.559-9.215-11.587-13.792 15.635-29.58 0 .001-42.731 10.67-22.324 34.187z"/><path fill="#0074BD" d="M102.123 108.229s3.529 2.91-3.888 5.159c-14.102 4.272-58.706 5.56-71.094.171-4.451-1.938 3.899-4.625 6.526-5.192 2.739-.593 4.303-.485 4.303-.485-4.953-3.487-32.013 6.85-13.743 9.815 49.821 8.076 90.817-3.637 77.896-9.468zM49.912 70.294s-22.686 5.389-8.033 7.348c6.188.828 18.518.638 30.011-.326 9.39-.789 18.813-2.474 18.813-2.474s-3.308 1.419-5.704 3.053c-23.042 6.061-67.544 3.238-54.731-2.958 10.832-5.239 19.644-4.643 19.644-4.643zm40.697 22.747c23.421-12.167 12.591-23.86 5.032-22.285-1.848.385-2.677.72-2.677.72s.688-1.079 2-1.543c14.953-5.255 26.451 15.503-4.823 23.725 0-.002.359-.327.468-.617z"/><path fill="#EA2D2E" d="M76.491 1.587S89.459 14.563 64.188 34.51c-20.266 16.006-4.621 25.13-.007 35.559-11.831-10.673-20.509-20.07-14.688-28.815C58.041 28.42 81.722 22.195 76.491 1.587z"/><path fill="#0074BD" d="M52.214 126.021c22.476 1.437 57-.8 57.817-11.436 0 0-1.571 4.032-18.577 7.231-19.186 3.612-42.854 3.191-56.887.874 0 .001 2.875 2.381 17.647 3.331z"/></svg>', color: "#ED8B00" },
+  rs: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path d="M62.96.242c-.232.135-1.203 1.528-2.16 3.097-2.4 3.94-2.426 3.942-5.65.55-2.098-2.208-2.605-2.612-3.28-2.607-.44.002-.995.152-1.235.332-.24.18-.916 1.612-1.504 3.183-1.346 3.6-1.41 3.715-2.156 3.86-.46.086-1.343-.407-3.463-1.929-1.565-1.125-3.1-2.045-3.411-2.045-1.291 0-1.655.706-2.27 4.4-.78 4.697-.754 4.681-4.988 2.758-1.71-.776-3.33-1.41-3.603-1.41-.274 0-.792.293-1.15.652-.652.652-.653.655-.475 4.246l.178 3.595-.68.364c-.602.322-1.017.283-3.684-.348-3.48-.822-4.216-.8-4.92.15l-.516.693.692 2.964c.38 1.63.745 3.2.814 3.487.067.287-.05.746-.26 1.02-.348.448-.717.49-3.94.44-5.452-.086-5.761.382-3.51 5.3.718 1.56 1.305 2.98 1.305 3.15 0 .898-.717 1.224-3.794 1.727-1.722.28-3.218.51-3.326.51-.107 0-.43.235-.717.522-.937.936-.671 1.816 1.453 4.814 2.646 3.735 2.642 3.75-1.73 5.421-4.971 1.902-5.072 2.37-1.287 5.96 3.525 3.344 3.53 3.295-.461 5.804C.208 62.8.162 62.846.085 63.876c-.093 1.253-.071 1.275 3.538 3.48 3.57 2.18 3.57 2.246.067 5.56C-.078 76.48.038 77 5.013 78.877c4.347 1.64 4.353 1.66 1.702 5.394-1.502 2.117-1.981 3-1.981 3.653 0 1.223.637 1.535 4.44 2.174 3.206.54 3.92.857 3.92 1.741 0 .182-.588 1.612-1.307 3.177-2.236 4.87-1.981 5.275 3.31 5.275 4.93 0 4.799-.15 3.737 4.294-.8 3.35-.813 3.992-.088 4.715.554.556 1.6.494 4.87-.289 2.499-.596 2.937-.637 3.516-.328l.66.354-.177 3.594c-.178 3.593-.177 3.595.475 4.248.358.36.884.652 1.165.652.282 0 1.903-.63 3.604-1.404 4.22-1.916 4.194-1.932 4.973 2.75.617 3.711.977 4.4 2.294 4.4.327 0 1.83-.88 3.34-1.958 2.654-1.893 3.342-2.19 4.049-1.74.182.115.89 1.67 1.572 3.455 1.003 2.625 1.37 3.31 1.929 3.576 1.062.51 1.72.1 4.218-2.62 3.016-3.286 3.14-3.27 5.602.72 2.72 4.406 3.424 4.396 6.212-.089 2.402-3.864 2.374-3.862 5.621-.47 2.157 2.25 2.616 2.61 3.343 2.61.464 0 1.019-.175 1.23-.388.214-.213.92-1.786 1.568-3.496.649-1.71 1.321-3.2 1.495-3.31.687-.436 1.398-.13 4.048 1.752 1.56 1.108 3.028 1.96 3.377 1.96 1.296 0 1.764-.92 2.302-4.535.46-3.082.554-3.378 1.16-3.685.596-.302.954-.2 3.75 1.07 1.701.77 3.323 1.402 3.604 1.402.282 0 .816-.302 1.184-.672l.672-.67-.184-3.448c-.177-3.29-.16-3.468.364-3.943.54-.488.596-.486 3.615.204 3.656.835 4.338.857 5.025.17.671-.67.664-.818-.254-4.69-1.03-4.346-1.168-4.19 3.78-4.19 3.374 0 3.75-.049 4.18-.523.718-.793.547-1.702-.896-4.779-.729-1.55-1.32-2.96-1.315-3.135.024-.914.743-1.227 4.065-1.767 2.033-.329 3.553-.71 3.829-.96.923-.833.584-1.918-1.523-4.873-2.642-3.703-2.63-3.738 1.599-5.297 5.064-1.866 5.209-2.488 1.419-6.09-3.51-3.335-3.512-3.317.333-5.677 4.648-2.853 4.655-3.496.082-6.335-3.933-2.44-3.93-2.406-.405-5.753 3.78-3.593 3.678-4.063-1.295-5.965-4.388-1.679-4.402-1.72-1.735-5.38 1.588-2.18 1.982-2.903 1.982-3.65 0-1.306-.586-1.598-4.436-2.22-3.216-.52-3.924-.835-3.924-1.75 0-.174.588-1.574 1.307-3.113 1.406-3.013 1.604-4.22.808-4.94-.428-.387-1-.443-4.067-.392-3.208.054-3.618.008-4.063-.439-.486-.488-.48-.557.278-3.725.931-3.88.935-3.975.17-4.694-.777-.73-1.262-.718-4.826.121-2.597.612-3.027.653-3.617.337l-.67-.36.185-3.582.186-3.58-.67-.67c-.369-.37-.891-.67-1.163-.67-.27 0-1.884.64-3.583 1.421-2.838 1.306-3.143 1.393-3.757 1.072-.612-.32-.714-.637-1.237-3.829-.603-3.693-.977-4.412-2.288-4.412-.311 0-1.853.925-3.426 2.055-2.584 1.856-2.93 2.032-3.574 1.807-.533-.186-.843-.59-1.221-1.599-.28-.742-.817-2.172-1.194-3.177-.762-2.028-1.187-2.482-2.328-2.482-.637 0-1.213.458-3.28 2.604-3.25 3.375-3.261 3.374-5.65-.545C66.073 1.78 65.075.382 64.81.24c-.597-.32-1.3-.32-1.85.002m2.96 11.798c2.83 2.014 1.326 6.75-2.144 6.75-3.368 0-5.064-4.057-2.66-6.36 1.358-1.3 3.304-1.459 4.805-.39m-3.558 12.507c1.855.705 2.616.282 6.852-3.8l3.182-3.07 1.347.18c4.225.56 12.627 4.25 17.455 7.666 4.436 3.14 10.332 9.534 12.845 13.93l.537.942-2.38 5.364c-1.31 2.95-2.382 5.673-2.382 6.053 0 .878.576 2.267 1.13 2.726.234.195 2.457 1.265 4.939 2.378l4.51 2.025.178 1.148c.23 1.495.26 5.167.052 6.21l-.163.816h-2.575c-2.987 0-2.756-.267-2.918 3.396-.118 2.656-.76 4.124-2.22 5.075-2.377 1.551-6.304 1.27-7.97-.57-.255-.284-.752-1.705-1.105-3.16-1.03-4.254-2.413-6.64-5.193-8.965-.878-.733-1.595-1.418-1.595-1.522 0-.102.965-.915 2.145-1.803 4.298-3.24 6.77-7.012 7.04-10.747.519-7.126-5.158-13.767-13.602-15.92-2.002-.51-2.857-.526-27.624-.526-14.057 0-25.56-.092-25.56-.204 0-.263 3.125-3.295 4.965-4.816 5.054-4.178 11.618-7.465 18.417-9.22l2.35-.61 3.34 3.387c1.839 1.863 3.64 3.5 4.003 3.637M20.3 46.34c1.539 1.008 2.17 3.54 1.26 5.062-1.405 2.356-4.966 2.455-6.373.178-2.046-3.309 1.895-7.349 5.113-5.24m90.672.13c4.026 2.454.906 8.493-3.404 6.586-2.877-1.273-2.97-5.206-.155-6.64 1.174-.6 2.523-.579 3.56.053M32.163 61.5v15.02h-13.28l-.526-2.285c-1.036-4.5-1.472-9.156-1.211-12.969l.182-2.679 4.565-2.047c2.864-1.283 4.706-2.262 4.943-2.625 1.038-1.584.94-2.715-.518-5.933l-.68-1.502h6.523V61.5M70.39 47.132c2.843.74 4.345 2.245 4.349 4.355.002 1.55-.765 2.52-2.67 3.38-1.348.61-1.562.625-10.063.708l-8.686.084v-8.92h7.782c6.078 0 8.112.086 9.288.393m-2.934 21.554c1.41.392 3.076 1.616 3.93 2.888.898 1.337 1.423 3.076 2.667 8.836 1.05 4.87 1.727 6.46 3.62 8.532 2.345 2.566 1.8 2.466 13.514 2.466 5.61 0 10.198.09 10.198.2 0 .197-3.863 4.764-4.03 4.764-.048 0-2.066-.422-4.484-.939-6.829-1.458-7.075-1.287-8.642 6.032l-1.008 4.702-.91.448c-1.518.75-6.453 2.292-9.01 2.82-4.228.87-8.828 1.162-12.871.821-6.893-.585-16.02-3.259-16.377-4.8-.075-.327-.535-2.443-1.018-4.704-.485-2.26-1.074-4.404-1.31-4.764-1.13-1.724-2.318-1.83-7.547-.674-1.98.44-3.708.796-3.84.796-.248 0-3.923-4.249-3.923-4.535 0-.09 8.728-.194 19.396-.23l19.395-.066.07-6.89c.05-4.865-.018-6.997-.23-7.25-.234-.284-1.485-.358-6.011-.358H53.32v-8.36l6.597.001c3.626.002 7.02.12 7.539.264M37.57 100.02c3.084 1.88 1.605 6.804-2.043 6.8-3.74 0-5.127-4.88-1.94-6.826 1.055-.643 2.908-.63 3.983.026m56.48.206c1.512 1.108 2.015 3.413 1.079 4.95-2.46 4.034-8.612.827-6.557-3.419 1.01-2.085 3.695-2.837 5.478-1.53"/></svg>', color: "#DEA584" },
+  go: { svg: '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 128 128"><defs><path id="go-original-a" d="M18.8 1h90.5v126H18.8z"/></defs><clipPath id="go-original-b"><use xlink:href="#go-original-a" overflow="visible"/></clipPath><path fill-rule="evenodd" clip-rule="evenodd" fill="#F6D2A2" d="M21.1 68.7c.2 3.5 3.7 1.9 5.3.8 1.5-1.1 2-.2 2.1-2.3.1-1.4.2-2.7.2-4.1-2.3-.2-4.8.3-6.7 1.7-.9.7-2.8 3-.9 3.9" clip-path="url(#go-original-b)"/><path d="M23 71.2c-.7 0-2-.3-2.2-2.3-.6-.4-.8-.9-.8-1.2-.1-1.2 1.2-2.6 1.9-3.1 1.6-1.2 3.7-1.8 5.9-1.8h1.3v.3c.1 1.1 0 2.2-.1 3.2 0 .3 0 .6-.1.9-.1 1.5-.4 1.7-1.1 2-.3.1-.6.2-1.1.6-.5.3-2.2 1.4-3.7 1.4zm4.8-7.8c-2.1 0-4 .6-5.5 1.7-.7.5-1.7 1.7-1.6 2.5 0 .3.2.6.6.8l.2.1v.2c.1 1.6.9 1.8 1.5 1.8 1 0 2.4-.7 3.3-1.3.6-.4 1-.5 1.3-.6.5-.2.6-.2.7-1.4 0-.3 0-.6.1-.9.1-.9.1-1.9.1-2.8-.3-.1-.5-.1-.7-.1z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#C6B198" d="M21.1 68.7c.5-.2 1.1-.3 1.4-.8" clip-path="url(#go-original-b)"/><path d="M21.1 69c-.1 0-.3-.1-.3-.2-.1-.2 0-.4.2-.4.1 0 .2-.1.2-.1.4-.2.8-.3 1-.6.1-.1.3-.2.5-.1.1.1.2.3.1.5-.4.5-.9.7-1.3.8l-.2.1h-.2z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#6AD7E5" d="M29.3 26.4c-13.6-3.8-3.5-21.1 7.4-14l-7.4 14z" clip-path="url(#go-original-b)"/><path d="M29.5 26.8l-.3-.1c-7-2-6.9-7-6.7-8.5.5-3.8 4.1-7.8 8.9-7.8 1.9 0 3.7.6 5.5 1.8l.3.2-7.7 14.4zm1.9-15.7c-4.5 0-7.8 3.7-8.3 7.2-.5 3.6 1.7 6.4 6 7.7l7.1-13.5c-1.5-.9-3.1-1.4-4.8-1.4z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#6AD7E5" d="M89.6 11.1c10.7-7.5 20.5 9.5 8 13.8l-8-13.8z" clip-path="url(#go-original-b)"/><path d="M97.5 25.3L89.2 11l.3-.2c1.9-1.3 3.8-2 5.7-2 4.6 0 7.9 3.8 8.6 7.5.3 1.5.6 6.6-6 8.8l-.3.2zm-7.4-14l7.7 13.3c3.9-1.4 5.9-4.4 5.3-8-.6-3.4-3.7-6.9-7.9-6.9-1.7-.1-3.4.4-5.1 1.6z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#F6D2A2" d="M92 112.3c2.7 1.7 7.7 6.8 3.6 9.3-3.9 3.6-6.1-4-9.6-5 1.5-2 3.4-3.9 6-4.3" clip-path="url(#go-original-b)"/><path d="M93.5 122.9c-1.6 0-3-1.6-4.2-3.1-1.1-1.2-2.2-2.5-3.4-2.9l-.5-.1.3-.4c1.2-1.7 3.2-3.9 6.2-4.4h.1l.1.1c1.7 1.1 5.4 4.2 5.3 7.1 0 1.1-.6 2-1.7 2.7-.7.7-1.4 1-2.2 1zm-7-6.5c1.2.5 2.2 1.8 3.2 2.9 1.2 1.5 2.4 2.8 3.7 2.8.6 0 1.2-.3 1.8-.9h.1c.9-.6 1.4-1.3 1.4-2.2 0-2.3-2.9-5.2-4.9-6.5-1.8.5-3.6 1.7-5.3 3.9zm9.1 5.5c-.1 0-.2-.1-.3-.2-.2-.4-.4-.9-.5-1.3-.3-.8-.6-1.6-1.2-2.2-.1-.1-.1-.3 0-.5.1-.1.3-.1.5 0 .7.7 1.1 1.6 1.4 2.5l.5 1.2c.1.2 0 .4-.1.5h-.3z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#F6D2A2" d="M43.2 118.1c-3.2.5-5 3.4-7.7 4.9-2.5 1.5-3.5-.5-3.7-.9-.4-.2-.4.2-1-.4-2.3-3.7 2.4-6.4 4.9-8.2 3.5-.8 5.7 2.2 7.5 4.6" clip-path="url(#go-original-b)"/><path d="M33.8 123.8c-1.3 0-2-1.1-2.2-1.5h-.1c-.3 0-.5-.1-.9-.5v-.1c-2.2-3.5 1.6-6.2 4.1-8l.9-.6h.2c.4-.1.7-.1 1.1-.1 3 0 4.9 2.6 6.5 4.7l.5.7-.6.1c-1.9.3-3.3 1.5-4.7 2.7-.9.8-1.8 1.5-2.8 2.1-.8.3-1.4.5-2 .5zm-2.2-2.1c.1 0 .2 0 .4.1h.1l.1.1c.2.3.7 1.2 1.7 1.2.5 0 1-.2 1.5-.5 1-.5 1.9-1.3 2.7-2 1.3-1.1 2.7-2.3 4.5-2.8-1.5-2-3.3-4.2-5.8-4.2-.3 0-.6 0-.9.1l-.8.6c-2.6 1.8-5.8 4.1-3.9 7.1.1.2.2.3.4.3zm.2.7c-.2 0-.4-.2-.3-.4.1-1 .6-1.7 1.1-2.5.3-.4.5-.8.7-1.2.1-.2.3-.2.4-.2.2.1.2.3.2.4-.2.5-.5.9-.8 1.3-.5.7-.9 1.3-1 2.1 0 .4-.1.5-.3.5z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" d="M29.9 21.7c-1.8-.9-3.1-2.2-2-4.3 1-1.9 2.9-1.7 4.7-.8l-2.7 5.1zm64.9-1.8c1.8-.9 3.1-2.2 2-4.3-1-1.9-2.9-1.7-4.7-.8l2.7 5.1z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#F6D2A2" d="M107.1 68.2c-.2 3.5-3.7 1.9-5.3.8-1.5-1.1-2-.2-2.1-2.3-.1-1.4-.2-2.7-.2-4.1 2.3-.2 4.8.3 6.7 1.7 1 .8 2.8 3 .9 3.9" clip-path="url(#go-original-b)"/><path d="M105.3 70.7c-1.5 0-3.2-1.1-3.7-1.4-.5-.3-.8-.5-1.1-.6-.8-.3-1-.5-1.1-2 0-.3 0-.6-.1-.9-.1-1-.2-2.1-.1-3.2v-.3h1.3c2.2 0 4.3.6 5.9 1.8.7.5 2 1.9 1.9 3.1 0 .4-.2.9-.8 1.2-.2 2-1.5 2.3-2.2 2.3zM99.8 63c0 .9 0 1.9.1 2.8 0 .3 0 .6.1.9.1 1.2.2 1.2.7 1.4.3.1.7.3 1.3.6.9.6 2.3 1.3 3.3 1.3.6 0 1.4-.2 1.5-1.8V68l.2-.1c.4-.2.6-.4.6-.8.1-.8-.9-2-1.6-2.5-1.5-1.1-3.5-1.7-5.5-1.7-.2.1-.4.1-.7.1z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#C6B198" d="M107.1 68.2c-.5-.2-1.1-.3-1.4-.8" clip-path="url(#go-original-b)"/><path d="M107.1 68.6h-.1l-.2-.1c-.5-.2-1-.3-1.3-.8-.1-.1-.1-.4.1-.5.1-.1.4-.1.5.1.2.3.6.4 1 .6.1 0 .2.1.2.1.2.1.3.3.2.4-.1.1-.3.2-.4.2z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#6AD7E5" d="M62.8 4c13.6 0 26.3 1.9 33 15 6 14.6 3.8 30.4 4.8 45.9.8 13.3 2.5 28.6-3.6 40.9-6.5 12.9-22.7 16.2-36 15.7-10.5-.4-23.1-3.8-29.1-13.4-6.9-11.2-3.7-27.9-3.2-40.4.6-14.8-4-29.7.9-44.1C34.5 8.5 48.1 5.1 62.8 4" clip-path="url(#go-original-b)"/><path d="M63.3 121.9h-2.5c-4.1-.1-10.3-.8-16.4-3.3-5.9-2.4-10.2-5.8-13-10.3-5.6-9.1-4.6-21.6-3.7-32.7.2-2.8.4-5.4.5-7.9.2-5.2-.2-10.6-.7-15.7-.8-9.4-1.6-19.1 1.5-28.5 2.4-7 6.7-12 13.2-15.2 5.1-2.5 11.4-3.9 20.4-4.6C76 3.6 89.3 5.5 96 18.8c4.4 10.7 4.4 22.2 4.5 33.3 0 4.2 0 8.5.3 12.7.1 1.3.2 2.6.2 3.9.8 12.2 1.7 26-3.9 37.2-2.8 5.7-7.7 9.9-14.4 12.6-5.4 2.2-12.2 3.4-19.4 3.4zM62.8 4.3c-14.1 1.1-27.9 4.2-33 19.4-3.1 9.3-2.3 18.9-1.5 28.2.4 5.2.9 10.5.7 15.8-.1 2.5-.3 5.1-.5 7.9-.9 11-1.9 23.4 3.6 32.3 2.3 3.7 9.7 12.5 28.8 13.2h2.5c22.1 0 30.3-9.8 33.3-15.6 5.5-11 4.6-24.8 3.9-36.9-.1-1.3-.2-2.6-.2-3.9-.2-4.2-.3-8.5-.3-12.7-.1-11-.1-22.5-4.4-33.1C92.7 13 88.2 9 82 6.7c-6.4-2.1-13.6-2.4-19.2-2.4z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#fff" d="M65.2 22.2c2.4 14.2 25.6 10.4 22.3-3.9-3-12.8-23.1-9.2-22.3 3.9" clip-path="url(#go-original-b)"/><path d="M76.2 31.5c-4.5 0-10.2-2.4-11.4-9.2-.2-3.2.8-6.1 2.9-8.3 2.3-2.5 5.8-3.9 9.4-3.9 4.2 0 9.2 2.2 10.6 8.3.8 3.4.2 6.4-1.7 8.8-2.1 2.6-5.8 4.3-9.8 4.3zm-10.7-9.3c.5 2.8 1.8 5 3.9 6.6 1.8 1.4 4.3 2.1 6.8 2.1 3.7 0 7.3-1.6 9.3-4.1 1.8-2.2 2.3-5.1 1.6-8.3-1.3-5.7-6-7.7-10-7.7-3.4 0-6.7 1.4-8.9 3.7-1.9 2-2.9 4.7-2.7 7.7z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#fff" d="M37.5 24.5c3.2 12.3 22.9 9.2 22.2-3.2-.9-14.8-25.3-12-22.2 3.2" clip-path="url(#go-original-b)"/><path d="M48 32.7c-4.3 0-9.3-2.1-10.9-8.1-.7-3.5 0-6.7 2-9.1 2.2-2.7 5.8-4.3 9.7-4.3 5.2 0 10.7 3.1 11.1 10.1.2 2.9-.7 5.5-2.7 7.6-2.1 2.3-5.6 3.8-9.2 3.8zm.8-20.8c-3.7 0-7.1 1.5-9.2 4-1.9 2.3-2.5 5.2-1.8 8.5C39.2 30 44 32 48 32c3.4 0 6.7-1.3 8.8-3.6 1.8-1.9 2.7-4.4 2.5-7.1-.2-4.3-3.1-9.4-10.5-9.4z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#fff" d="M68 39.2c0 1.8.4 3.9.1 5.9-.5.9-1.4 1-2.2 1.3-1.1-.2-2-.9-2.5-1.9-.3-2.2.1-4.4.2-6.6l4.4 1.3z" clip-path="url(#go-original-b)"/><path d="M65.9 46.8c-1.3-.2-2.3-1-2.8-2.1-.2-1.6-.1-3.1 0-4.6.1-.7.1-1.4.1-2.1v-.4l5.1 1.6v.2c0 .6.1 1.2.1 1.9.1 1.3.2 2.7 0 4v.1c-.4.8-1.1 1-1.8 1.3-.2-.1-.4 0-.7.1zm-2.2-2.4c.4.9 1.2 1.5 2.1 1.7.2-.1.4-.1.5-.2.6-.2 1.1-.4 1.4-.9.2-1.2.1-2.5 0-3.8 0-.6-.1-1.2-.1-1.7l-3.8-1.2c0 .6-.1 1.2-.1 1.7-.1 1.6-.2 3 0 4.4z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" d="M46.3 22.5c0 2-1.5 3.6-3.3 3.6-1.8 0-3.3-1.6-3.3-3.6s1.5-3.6 3.3-3.6c1.8 0 3.3 1.6 3.3 3.6" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#fff" d="M45.2 23.3c0 .5-.4.9-.8.9s-.8-.4-.8-.9.4-.9.8-.9c.5 0 .8.4.8.9" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" d="M74.2 21.6c0 2-1.5 3.6-3.3 3.6-1.8 0-3.3-1.6-3.3-3.6s1.5-3.6 3.3-3.6c1.8 0 3.3 1.6 3.3 3.6" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#fff" d="M73.2 22.4c0 .5-.3.9-.8.9-.4 0-.8-.4-.8-.9s.3-.9.8-.9c.4 0 .8.4.8.9M58.4 39c-1.5 3.5.8 10.6 4.8 5.4-.3-2.2.1-4.4.2-6.6l-5 1.2z" clip-path="url(#go-original-b)"/><path d="M60.5 46.6c-.7 0-1.4-.4-1.9-1.2-1.1-1.6-1.3-4.6-.5-6.5l.1-.2 5.5-1.4v.4l-.1 2.2c-.1 1.5-.2 2.9 0 4.4v.1l-.1.1c-1 1.4-2 2.1-3 2.1zm-1.8-7.3c-.6 1.7-.4 4.4.5 5.7.4.6.8.9 1.3.9.7 0 1.5-.6 2.3-1.6-.2-1.5-.1-3 .1-4.4l.1-1.7-4.3 1.1z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#F6D2A2" d="M58.9 32.2c-2.7.2-4.9 3.5-3.5 6 1.9 3.4 6-.3 8.6 0 3 .1 5.4 3.2 7.8.6 2.7-2.9-1.2-5.7-4.1-7l-8.8.4z" clip-path="url(#go-original-b)"/><path fill="#231F20" d="M69.7 40.2c-.9 0-1.8-.4-2.7-.8-.9-.4-1.9-.8-3-.8h-.3c-.8 0-1.7.3-2.7.7-1.1.4-2.2.7-3.2.7-1.2 0-2.1-.5-2.7-1.6-.7-1.2-.6-2.6.1-3.9.8-1.5 2.2-2.4 3.7-2.6l8.9-.4h.1c2.2.9 4.7 2.6 5.2 4.6.2 1-.1 2-.9 2.9-.8.9-1.6 1.2-2.5 1.2zM64.1 38c1.1 0 2.2.5 3.2.9.9.4 1.7.7 2.5.7.7 0 1.3-.3 1.9-.9.7-.7.9-1.5.8-2.3-.4-1.7-2.8-3.3-4.7-4.1l-8.7.4c-1.3.1-2.5 1-3.2 2.2-.6 1.1-.6 2.3-.1 3.3.5.9 1.1 1.3 2.1 1.3.9 0 1.9-.4 2.9-.7 1.1-.4 2-.7 3-.7 0-.2.1-.2.3-.1z" clip-path="url(#go-original-b)"/><path fill-rule="evenodd" clip-rule="evenodd" d="M58.6 32.1c-.2-4.7 8.8-5.3 9.8-1.4 1.1 4-9.4 4.9-9.8 1.4" clip-path="url(#go-original-b)"/></svg>', color: "#00ADD8" },
+  rb: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><linearGradient id="ruby-original-a" gradientUnits="userSpaceOnUse" x1="157.08" y1="2382.05" x2="131.682" y2="2426.892" gradientTransform="matrix(1 0 0 -1 -47.5 2517)"><stop offset="0" stop-color="#FB7655"/><stop offset="0" stop-color="#FB7655"/><stop offset=".41" stop-color="#E42B1E"/><stop offset=".99" stop-color="#900"/><stop offset="1" stop-color="#900"/></linearGradient><path fill="url(#ruby-original-a)" d="M97.078 83.214L28.34 124.031l89.003-6.04 6.855-89.745z"/><linearGradient id="ruby-original-b" gradientUnits="userSpaceOnUse" x1="169.731" y1="2419.72" x2="136.998" y2="2441.685" gradientTransform="matrix(1 0 0 -1 -47.5 2517)"><stop offset="0" stop-color="#871101"/><stop offset="0" stop-color="#871101"/><stop offset=".99" stop-color="#911209"/><stop offset="1" stop-color="#911209"/></linearGradient><path fill="url(#ruby-original-b)" d="M117.488 117.93l-7.649-52.799-20.837 27.514z"/><linearGradient id="ruby-original-c" gradientUnits="userSpaceOnUse" x1="143.542" y1="2380.69" x2="110.81" y2="2402.655" gradientTransform="matrix(1 0 0 -1 -47.5 2517)"><stop offset="0" stop-color="#871101"/><stop offset="0" stop-color="#871101"/><stop offset=".99" stop-color="#911209"/><stop offset="1" stop-color="#911209"/></linearGradient><path fill="url(#ruby-original-c)" d="M117.592 117.93l-56.044-4.399-32.91 10.385z"/><linearGradient id="ruby-original-d" gradientUnits="userSpaceOnUse" x1="74.817" y1="2435.622" x2="79.891" y2="2402.644" gradientTransform="matrix(1 0 0 -1 -47.5 2517)"><stop offset="0" stop-color="#fff"/><stop offset="0" stop-color="#fff"/><stop offset=".23" stop-color="#E57252"/><stop offset=".46" stop-color="#DE3B20"/><stop offset=".99" stop-color="#A60003"/><stop offset="1" stop-color="#A60003"/></linearGradient><path fill="url(#ruby-original-d)" d="M28.717 123.928l14.001-45.867-30.81 6.588z"/><linearGradient id="ruby-original-e" gradientUnits="userSpaceOnUse" x1="109.719" y1="2466.413" x2="111.589" y2="2432.757" gradientTransform="matrix(1 0 0 -1 -47.5 2517)"><stop offset="0" stop-color="#fff"/><stop offset="0" stop-color="#fff"/><stop offset=".23" stop-color="#E4714E"/><stop offset=".56" stop-color="#BE1A0D"/><stop offset=".99" stop-color="#A80D00"/><stop offset="1" stop-color="#A80D00"/></linearGradient><path fill="url(#ruby-original-e)" d="M88.996 92.797l-12.882-50.46-36.866 34.558z"/><linearGradient id="ruby-original-f" gradientUnits="userSpaceOnUse" x1="140.691" y1="2497.523" x2="146.289" y2="2473.401" gradientTransform="matrix(1 0 0 -1 -47.5 2517)"><stop offset="0" stop-color="#fff"/><stop offset="0" stop-color="#fff"/><stop offset=".18" stop-color="#E46342"/><stop offset=".4" stop-color="#C82410"/><stop offset=".99" stop-color="#A80D00"/><stop offset="1" stop-color="#A80D00"/></linearGradient><path fill="url(#ruby-original-f)" d="M121.275 43.047L86.426 14.585l-9.704 31.373z"/><linearGradient id="ruby-original-g" gradientUnits="userSpaceOnUse" x1="123.6" y1="2506.018" x2="147.719" y2="2518.077" gradientTransform="matrix(1 0 0 -1 -47.5 2517)"><stop offset="0" stop-color="#fff"/><stop offset="0" stop-color="#fff"/><stop offset=".54" stop-color="#C81F11"/><stop offset=".99" stop-color="#BF0905"/><stop offset="1" stop-color="#BF0905"/></linearGradient><path fill="url(#ruby-original-g)" d="M104.978 4.437L84.481 15.764 71.551 4.285z"/><linearGradient id="ruby-original-h" gradientUnits="userSpaceOnUse" x1="53.674" y1="2444.028" x2="55.66" y2="2424.153" gradientTransform="matrix(1 0 0 -1 -47.5 2517)"><stop offset="0" stop-color="#fff"/><stop offset="0" stop-color="#fff"/><stop offset=".31" stop-color="#DE4024"/><stop offset=".99" stop-color="#BF190B"/><stop offset="1" stop-color="#BF190B"/></linearGradient><path fill="url(#ruby-original-h)" d="M3.802 100.034l8.586-15.659L5.442 65.72z"/><path fill="#fff" d="M4.981 65.131l6.987 19.821 30.365-6.812L77 45.922l9.783-31.075L71.38 3.969l-26.19 9.802c-8.252 7.675-24.263 22.86-24.84 23.146-.573.291-10.575 19.195-15.369 28.214z"/><linearGradient id="ruby-original-i" gradientUnits="userSpaceOnUse" x1="40.026" y1="2418.781" x2="133.345" y2="2514.739" gradientTransform="matrix(1 0 0 -1 -47.5 2517)"><stop offset="0" stop-color="#BD0012"/><stop offset="0" stop-color="#BD0012"/><stop offset=".07" stop-color="#fff"/><stop offset=".17" stop-color="#fff"/><stop offset=".27" stop-color="#C82F1C"/><stop offset=".33" stop-color="#820C01"/><stop offset=".46" stop-color="#A31601"/><stop offset=".72" stop-color="#B31301"/><stop offset=".99" stop-color="#E82609"/><stop offset="1" stop-color="#E82609"/></linearGradient><path fill="url(#ruby-original-i)" d="M29.519 29.521c17.882-17.73 40.937-28.207 49.785-19.28 8.843 8.926-.534 30.62-18.418 48.345-17.884 17.725-40.653 28.779-49.493 19.852-8.849-8.92.242-31.191 18.126-48.917z"/><linearGradient id="ruby-original-j" gradientUnits="userSpaceOnUse" x1="111.507" y1="2409.102" x2="83.398" y2="2416.039" gradientTransform="matrix(1 0 0 -1 -47.5 2517)"><stop offset="0" stop-color="#8C0C01"/><stop offset="0" stop-color="#8C0C01"/><stop offset=".54" stop-color="#990C00"/><stop offset=".99" stop-color="#A80D0E"/><stop offset="1" stop-color="#A80D0E"/></linearGradient><path fill="url(#ruby-original-j)" d="M28.717 123.909l13.89-46.012 46.135 14.82c-16.68 15.642-35.233 28.865-60.025 31.192z"/><linearGradient id="ruby-original-k" gradientUnits="userSpaceOnUse" x1="159.785" y1="2442.837" x2="134.814" y2="2465.217" gradientTransform="matrix(1 0 0 -1 -47.5 2517)"><stop offset="0" stop-color="#7E110B"/><stop offset="0" stop-color="#7E110B"/><stop offset=".99" stop-color="#9E0C00"/><stop offset="1" stop-color="#9E0C00"/></linearGradient><path fill="url(#ruby-original-k)" d="M77.062 45.831l11.844 46.911c13.934-14.65 26.439-30.401 32.563-49.883l-44.407 2.972z"/><linearGradient id="ruby-original-l" gradientUnits="userSpaceOnUse" x1="168.959" y1="2483.901" x2="156.521" y2="2497.199" gradientTransform="matrix(1 0 0 -1 -47.5 2517)"><stop offset="0" stop-color="#79130D"/><stop offset="0" stop-color="#79130D"/><stop offset=".99" stop-color="#9E120B"/><stop offset="1" stop-color="#9E120B"/></linearGradient><path fill="url(#ruby-original-l)" d="M121.348 43.097c4.74-14.305 5.833-34.825-16.517-38.635l-18.339 10.13 34.856 28.505z"/><path fill="#9E1209" d="M3.802 99.828c.656 23.608 17.689 23.959 24.945 24.167l-16.759-39.14-8.186 14.973z"/><radialGradient id="ruby-original-m" cx="138.703" cy="2464.789" r="30.601" gradientTransform="matrix(1 0 0 -1 -47.5 2517)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#A80D00"/><stop offset="0" stop-color="#A80D00"/><stop offset=".99" stop-color="#7E0E08"/><stop offset="1" stop-color="#7E0E08"/></radialGradient><path fill="url(#ruby-original-m)" d="M77.128 45.904c10.708 6.581 32.286 19.798 32.723 20.041.68.383 9.304-14.542 11.261-22.976l-43.984 2.935z"/><radialGradient id="ruby-original-n" cx="96.325" cy="2424.465" r="40.679" gradientTransform="matrix(1 0 0 -1 -47.5 2517)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#A30C00"/><stop offset="0" stop-color="#A30C00"/><stop offset=".99" stop-color="#800E08"/><stop offset="1" stop-color="#800E08"/></radialGradient><path fill="url(#ruby-original-n)" d="M42.589 77.897l18.57 35.828c10.98-5.955 19.579-13.211 27.454-20.983L42.589 77.897z"/><linearGradient id="ruby-original-o" gradientUnits="userSpaceOnUse" x1="67.509" y1="2393.115" x2="57.373" y2="2427.506" gradientTransform="matrix(1 0 0 -1 -47.5 2517)"><stop offset="0" stop-color="#8B2114"/><stop offset="0" stop-color="#8B2114"/><stop offset=".43" stop-color="#9E100A"/><stop offset=".99" stop-color="#B3100C"/><stop offset="1" stop-color="#B3100C"/></linearGradient><path fill="url(#ruby-original-o)" d="M11.914 84.904l-2.631 31.331c4.964 6.781 11.794 7.371 18.96 6.842-5.184-12.9-15.538-38.696-16.329-38.173z"/><linearGradient id="ruby-original-p" gradientUnits="userSpaceOnUse" x1="145.272" y1="2507.076" x2="167.996" y2="2497.045" gradientTransform="matrix(1 0 0 -1 -47.5 2517)"><stop offset="0" stop-color="#B31000"/><stop offset="0" stop-color="#B31000"/><stop offset=".44" stop-color="#910F08"/><stop offset=".99" stop-color="#791C12"/><stop offset="1" stop-color="#791C12"/></linearGradient><path fill="url(#ruby-original-p)" d="M86.384 14.67l36.891 5.177c-1.969-8.343-8.015-13.727-18.32-15.41L86.384 14.67z"/></svg>', color: "#CC342D" },
+  php: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill="url(#a)" d="M0 64c0 18.593 28.654 33.667 64 33.667 35.346 0 64-15.074 64-33.667 0-18.593-28.655-33.667-64-33.667C28.654 30.333 0 45.407 0 64Z"/><path fill="#777bb3" d="M64 95.167c33.965 0 61.5-13.955 61.5-31.167 0-17.214-27.535-31.167-61.5-31.167S2.5 46.786 2.5 64c0 17.212 27.535 31.167 61.5 31.167Z"/><path d="M34.772 67.864c2.793 0 4.877-.515 6.196-1.53 1.306-1.006 2.207-2.747 2.68-5.175.44-2.27.272-3.854-.5-4.71-.788-.874-2.493-1.317-5.067-1.317h-4.464l-2.473 12.732zM20.173 83.547a.694.694 0 0 1-.68-.828l6.557-33.738a.695.695 0 0 1 .68-.561h14.134c4.442 0 7.748 1.206 9.827 3.585 2.088 2.39 2.734 5.734 1.917 9.935-.333 1.711-.905 3.3-1.7 4.724a15.818 15.818 0 0 1-3.128 3.92c-1.531 1.432-3.264 2.472-5.147 3.083-1.852.604-4.232.91-7.07.91h-5.724l-1.634 8.408a.695.695 0 0 1-.682.562z"/><path fill="#fff" d="M34.19 55.826h3.891c3.107 0 4.186.682 4.553 1.089.607.674.723 2.097.331 4.112-.439 2.257-1.253 3.858-2.42 4.756-1.194.92-3.138 1.386-5.773 1.386h-2.786l2.205-11.342zm6.674-8.1H26.731a1.39 1.39 0 0 0-1.364 1.123L18.81 82.588a1.39 1.39 0 0 0 1.363 1.653h7.35a1.39 1.39 0 0 0 1.363-1.124l1.525-7.846h5.151c2.912 0 5.364-.318 7.287-.944 1.977-.642 3.796-1.731 5.406-3.237a16.522 16.522 0 0 0 3.259-4.087c.831-1.487 1.429-3.147 1.775-4.931.86-4.423.161-7.964-2.076-10.524-2.216-2.537-5.698-3.823-10.349-3.823zM30.301 68.557h4.471c2.963 0 5.17-.557 6.62-1.675 1.451-1.116 2.428-2.98 2.938-5.591.485-2.508.264-4.277-.665-5.308-.931-1.03-2.791-1.546-5.584-1.546h-5.036l-2.743 14.12m10.563-19.445c4.252 0 7.353 1.117 9.303 3.348 1.95 2.232 2.536 5.347 1.76 9.346-.322 1.648-.863 3.154-1.625 4.518-.764 1.366-1.76 2.614-2.991 3.747-1.468 1.373-3.097 2.352-4.892 2.935-1.794.584-4.08.875-6.857.875h-6.296l-1.743 8.97h-7.35l6.558-33.739h14.133"/><path d="M69.459 74.577a.694.694 0 0 1-.682-.827l2.9-14.928c.277-1.42.209-2.438-.19-2.87-.245-.263-.979-.704-3.15-.704h-5.256l-3.646 18.768a.695.695 0 0 1-.683.56h-7.29a.695.695 0 0 1-.683-.826l6.558-33.739a.695.695 0 0 1 .682-.561h7.29a.695.695 0 0 1 .683.826L64.41 48.42h5.653c4.307 0 7.227.758 8.928 2.321 1.733 1.593 2.275 4.14 1.608 7.573l-3.051 15.702a.695.695 0 0 1-.682.56h-7.407z"/><path fill="#fff" d="M65.31 38.755h-7.291a1.39 1.39 0 0 0-1.364 1.124l-6.557 33.738a1.39 1.39 0 0 0 1.363 1.654h7.291a1.39 1.39 0 0 0 1.364-1.124l3.537-18.205h4.682c2.168 0 2.624.463 2.641.484.132.14.305.795.019 2.264l-2.9 14.927a1.39 1.39 0 0 0 1.364 1.654h7.408a1.39 1.39 0 0 0 1.363-1.124l3.051-15.7c.715-3.686.103-6.45-1.82-8.217-1.836-1.686-4.91-2.505-9.398-2.505h-4.81l1.421-7.315a1.39 1.39 0 0 0-1.364-1.655zm0 1.39-1.743 8.968h6.496c4.087 0 6.907.714 8.457 2.14 1.553 1.426 2.017 3.735 1.398 6.93l-3.052 15.699h-7.407l2.901-14.928c.33-1.698.208-2.856-.365-3.474-.573-.617-1.793-.926-3.658-.926h-5.829l-3.756 19.327H51.46l6.558-33.739h7.292z"/><path d="M92.136 67.864c2.793 0 4.878-.515 6.198-1.53 1.304-1.006 2.206-2.747 2.679-5.175.44-2.27.273-3.854-.5-4.71-.788-.874-2.493-1.317-5.067-1.317h-4.463l-2.475 12.732zM77.54 83.547a.694.694 0 0 1-.682-.828l6.557-33.738a.695.695 0 0 1 .682-.561H98.23c4.442 0 7.748 1.206 9.826 3.585 2.089 2.39 2.734 5.734 1.917 9.935a15.878 15.878 0 0 1-1.699 4.724 15.838 15.838 0 0 1-3.128 3.92c-1.53 1.432-3.265 2.472-5.147 3.083-1.852.604-4.232.91-7.071.91h-5.723l-1.633 8.408a.695.695 0 0 1-.683.562z"/><path fill="#fff" d="M91.555 55.826h3.891c3.107 0 4.186.682 4.552 1.089.61.674.724 2.097.333 4.112-.44 2.257-1.254 3.858-2.421 4.756-1.195.92-3.139 1.386-5.773 1.386h-2.786l2.204-11.342zm6.674-8.1H84.096a1.39 1.39 0 0 0-1.363 1.123l-6.558 33.739a1.39 1.39 0 0 0 1.364 1.653h7.35a1.39 1.39 0 0 0 1.363-1.124l1.525-7.846h5.15c2.911 0 5.364-.318 7.286-.944 1.978-.642 3.797-1.731 5.408-3.238a16.52 16.52 0 0 0 3.258-4.086c.832-1.487 1.428-3.147 1.775-4.931.86-4.423.162-7.964-2.076-10.524-2.216-2.537-5.697-3.823-10.35-3.823zM87.666 68.557h4.47c2.964 0 5.17-.557 6.622-1.675 1.45-1.116 2.428-2.98 2.936-5.591.487-2.508.266-4.277-.665-5.308-.93-1.03-2.791-1.546-5.583-1.546h-5.035Zm10.563-19.445c4.251 0 7.354 1.117 9.303 3.348 1.95 2.232 2.537 5.347 1.759 9.346-.32 1.648-.862 3.154-1.624 4.518-.763 1.366-1.76 2.614-2.992 3.747-1.467 1.373-3.097 2.352-4.892 2.935-1.793.584-4.078.875-6.856.875h-6.295l-1.745 8.97h-7.35l6.558-33.739h14.133"/><defs><radialGradient id="a" cx="0" cy="0" r="1" gradientTransform="matrix(84.04136 0 0 84.04136 38.426 42.169)" gradientUnits="userSpaceOnUse"><stop stop-color="#AEB2D5"/><stop offset=".3" stop-color="#AEB2D5"/><stop offset=".75" stop-color="#484C89"/><stop offset="1" stop-color="#484C89"/></radialGradient></defs></svg>', color: "#777BB4" },
+  c: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill="#a9bacd" d="M125 50c-4-32-24-50-62-50C29 0 3 24 3 64c0 39 24 64 64 64 32 0 55-19 58-50H87c-2 11-8 20-20 20-21 0-24-16-24-33 0-23 8-35 22-35 13 0 20 7 22 20z" /></svg>', color: "#A8B9CC" },
+  cpp: { svg: '<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"> <path fill="#00599c" d="M118.766 95.82c.89-1.543 1.441-3.28 1.441-4.843V36.78c0-1.558-.55-3.297-1.441-4.84l-55.32 31.94Zm0 0"/> <path fill="#004482" d="m68.36 126.586 46.933-27.094c1.352-.781 2.582-2.129 3.473-3.672l-55.32-31.94L8.12 95.82c.89 1.543 2.121 2.89 3.473 3.672l46.933 27.094c2.703 1.562 7.13 1.562 9.832 0Zm0 0"/> <path fill="#659ad2" d="M118.766 31.941c-.891-1.546-2.121-2.894-3.473-3.671L68.359 1.172c-2.703-1.563-7.129-1.563-9.832 0L11.594 28.27C8.89 29.828 6.68 33.66 6.68 36.78v54.196c0 1.562.55 3.3 1.441 4.843L63.445 63.88Zm0 0"/> <path fill="#fff" d="M63.445 26.035c-20.867 0-37.843 16.977-37.843 37.844s16.976 37.844 37.843 37.844c13.465 0 26.024-7.247 32.77-18.91L79.84 73.335c-3.38 5.84-9.66 9.465-16.395 9.465-10.433 0-18.922-8.488-18.922-18.922 0-10.434 8.49-18.922 18.922-18.922 6.73 0 13.017 3.629 16.39 9.465l16.38-9.477c-6.75-11.664-19.305-18.91-32.77-18.91zM92.88 57.57v4.207h-4.207v4.203h4.207v4.207h4.203V65.98h4.203v-4.203h-4.203V57.57H92.88zm15.766 0v4.207h-4.204v4.203h4.204v4.207h4.207V65.98h4.203v-4.203h-4.203V57.57h-4.207z"/> </svg>', color: "#00599C" },
+  cs: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill="#9B4F96" d="M115.4 30.7L67.1 2.9c-.8-.5-1.9-.7-3.1-.7-1.2 0-2.3.3-3.1.7l-48 27.9c-1.7 1-2.9 3.5-2.9 5.4v55.7c0 1.1.2 2.4 1 3.5l106.8-62c-.6-1.2-1.5-2.1-2.4-2.7z"/><path fill="#68217A" d="M10.7 95.3c.5.8 1.2 1.5 1.9 1.9l48.2 27.9c.8.5 1.9.7 3.1.7 1.2 0 2.3-.3 3.1-.7l48-27.9c1.7-1 2.9-3.5 2.9-5.4V36.1c0-.9-.1-1.9-.6-2.8l-106.6 62z"/><path fill="#fff" d="M85.3 76.1C81.1 83.5 73.1 88.5 64 88.5c-13.5 0-24.5-11-24.5-24.5s11-24.5 24.5-24.5c9.1 0 17.1 5 21.3 12.5l13-7.5c-6.8-11.9-19.6-20-34.3-20-21.8 0-39.5 17.7-39.5 39.5s17.7 39.5 39.5 39.5c14.6 0 27.4-8 34.2-19.8l-12.9-7.6zM97 66.2l.9-4.3h-4.2v-4.7h5.1L100 51h4.9l-1.2 6.1h3.8l1.2-6.1h4.8l-1.2 6.1h2.4v4.7h-3.3l-.9 4.3h4.2v4.7h-5.1l-1.2 6h-4.9l1.2-6h-3.8l-1.2 6h-4.8l1.2-6h-2.4v-4.7H97zm4.8 0h3.8l.9-4.3h-3.8l-.9 4.3z"/></svg>', color: "#239120" },
+  swift: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill="#f05138" d="M126.33 34.06a39.32 39.32 0 00-.79-7.83 28.78 28.78 0 00-2.65-7.58 28.84 28.84 0 00-4.76-6.32 23.42 23.42 0 00-6.62-4.55 27.27 27.27 0 00-7.68-2.53c-2.65-.51-5.56-.51-8.21-.76H30.25a45.46 45.46 0 00-6.09.51 21.82 21.82 0 00-5.82 1.52c-.53.25-1.32.51-1.85.76a33.82 33.82 0 00-5 3.28c-.53.51-1.06.76-1.59 1.26a22.41 22.41 0 00-4.76 6.32 23.61 23.61 0 00-2.65 7.58 78.5 78.5 0 00-.79 7.83v60.39a39.32 39.32 0 00.79 7.83 28.78 28.78 0 002.65 7.58 28.84 28.84 0 004.76 6.32 23.42 23.42 0 006.62 4.55 27.27 27.27 0 007.68 2.53c2.65.51 5.56.51 8.21.76h63.22a45.08 45.08 0 008.21-.76 27.27 27.27 0 007.68-2.53 30.13 30.13 0 006.62-4.55 22.41 22.41 0 004.76-6.32 23.61 23.61 0 002.65-7.58 78.49 78.49 0 00.79-7.83V34.06z"/><path fill="#fefefe" d="M85 96.5c-11.11 6.13-26.38 6.76-41.75.47A64.53 64.53 0 0113.84 73a50 50 0 0010.85 6.32c15.87 7.1 31.73 6.61 42.9 0-15.9-11.66-29.4-26.82-39.46-39.2a43.47 43.47 0 01-5.29-6.82c12.16 10.61 31.5 24 38.38 27.79a271.77 271.77 0 01-27-32.34 266.8 266.8 0 0044.47 34.87c.71.38 1.26.7 1.7 1a32.7 32.7 0 001.21-3.51c3.71-12.89-.53-27.54-9.79-39.67C93.25 33.81 106 57.05 100.66 76.51c-.14.53-.29 1-.45 1.55l.19.22c10.59 12.63 7.68 26 6.35 23.5C101 91 90.37 94.33 85 96.5z"/></svg>', color: "#F05138" },
+  kt: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"> <defs> <linearGradient id="a" x1="500.003" x2="-.097" y1="579.106" y2="1079.206" gradientTransform="translate(15.534 -96.774) scale(.1939)" gradientUnits="userSpaceOnUse"> <stop offset=".003" stop-color="#e44857"/> <stop offset=".469" stop-color="#c711e1"/> <stop offset="1" stop-color="#7f52ff"/> </linearGradient> </defs> <path fill="url(#a)" d="M112.484 112.484H15.516V15.516h96.968L64 64Zm0 0"/> </svg>', color: "#7F52FF" },
+  scala: { svg: '<svg version="1.0" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><path d="M25 110.437V94.874h5.616c3.113 0 8.052-.203 11.03-.474l5.278-.406-7.038-1.894c-3.924-1.015-8.864-2.504-10.961-3.316L25 87.364V55.627h6.293c3.383 0 8.323-.203 10.894-.473l4.737-.406-8.323-2.233C34 51.366 29.128 49.809 27.639 49.2L25 47.982v-30.72l2.098-.473c1.15-.203 3.992-.406 6.293-.406 11.367 0 38.366-3.722 51.628-7.105 9.27-2.436 15.698-4.872 17.931-6.902 1.15-1.015 1.218-.406 1.218 14.548v15.63l-1.624 1.219-1.624 1.285 3.248 2.842v33.9l-1.624 1.218-1.624 1.286 3.248 2.842v33.9l-1.76 1.353c-1.894 1.489-9.202 3.993-17.524 6.09C71.892 121.737 40.157 126 29.33 126H25z" fill="#390d09"/><g fill="#de3423"><path d="M25 110.572V95.077l11.842-.474c12.315-.473 21.45-1.488 34.847-3.789 15.225-2.639 30.246-7.375 31.803-10.082.406-.677.676 4.534.676 14.616v15.698l-1.76 1.353c-1.894 1.489-9.202 3.993-17.524 6.09C71.892 121.737 40.157 126 29.33 126H25zM25 71.327V55.83l11.842-.406c13.127-.541 23.344-1.691 36.877-4.195 15.157-2.842 28.96-7.443 29.976-9.947.203-.473.406 6.09.406 14.616.067 13.533-.068 15.698-1.083 16.78-2.368 2.64-20.638 7.376-39.449 10.286-11.435 1.76-30.381 3.79-35.66 3.79H25zM25 32.352V17.195l2.098-.406c1.15-.203 3.992-.406 6.293-.406 11.367 0 38.366-3.722 51.628-7.105 9.27-2.436 15.698-4.872 17.931-6.902 1.15-1.015 1.218-.406 1.218 14.48 0 14.548-.067 15.63-1.285 16.714-1.827 1.691-14.345 5.548-24.09 7.51-15.765 3.113-41.951 6.429-50.883 6.429H25z"/></g></svg>', color: "#DC322F" },
+  groovy: { svg: '<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><path d="M103.555 95.851L64 80.52 24.446 95.847l15.618-24.436L0 56.447l49.208.23L63.999 32.1l14.794 24.578L128 56.453l-40.065 14.96 15.62 24.438"/><path d="M98.204 91.48l-34.17-13.244-34.168 13.242 13.491-21.11-34.61-12.926 42.506.198L64.03 36.41l12.78 21.23 42.509-.194L84.71 70.37l13.493 21.11" fill="#619cbc"/><path d="M37.804 44.66c3.413 0 1.424 8.528.21 11.1-1.04 2.201-3.38 5.377-6.153 5.377-3.327 0-3.228-3.727-1.904-6.532.717-1.52 1.82-3.222 3.338-4.474-.39 1.307.925 2.2.393 3.325-.363.769-1.114 1.609-1.504 2.436-.631 1.337-.39 3.71 1.135 3.71 1.365 0 2.578-1.692 3.075-2.745 1.019-2.158 3.566-11.366.719-11.366-3.28 0-8.93 7.99-10.113 10.497-2.112 4.474-.58 9.984 4.231 9.984 3.252 0 5.926-3.126 7.218-5.862a14.931 14.931 0 001.353-4.781l.632-.116c.139 4.21 4.592 11.18 2.697 15.196-2.427 5.14-9.681 5.094-13.824 6.918-.87-2.037-2.05-3.93-3.711-5.376 3.695-1.243 12.775-3.33 14.75-7.512.83-1.758.264-4.671-.694-5.659a10.916 10.916 0 01-.689 1.89c-1.69 3.58-5.31 6.357-9.041 6.357-5.196 0-7.398-3.733-4.953-8.913 1.467-3.109 8.96-13.455 12.835-13.455"/><path d="M37.804 44.66c3.413 0 1.424 8.528.21 11.1-1.04 2.201-3.38 5.377-6.153 5.377-3.327 0-3.228-3.727-1.904-6.532.717-1.52 1.82-3.222 3.338-4.474-.39 1.307.925 2.2.393 3.325-.363.769-1.114 1.609-1.504 2.436-.631 1.337-.39 3.71 1.135 3.71 1.365 0 2.578-1.692 3.075-2.745 1.019-2.158 3.566-11.366.719-11.366-3.28 0-8.93 7.99-10.113 10.497-2.112 4.474-.58 9.984 4.231 9.984 3.252 0 5.926-3.126 7.218-5.862a14.931 14.931 0 001.353-4.781l.632-.116c.139 4.21 4.592 11.18 2.697 15.196-2.427 5.14-9.681 5.094-13.824 6.918-.87-2.037-2.05-3.93-3.711-5.376 3.695-1.243 12.775-3.33 14.75-7.512.83-1.758.264-4.671-.694-5.659a10.916 10.916 0 01-.689 1.89c-1.69 3.58-5.31 6.357-9.041 6.357-5.196 0-7.398-3.733-4.953-8.913 1.467-3.109 8.96-13.455 12.835-13.455z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M46.681 57.002c.206.508.803 3.38 1.256 3.38.979 0 2.748-2.663 3.222-3.355.87.57.388 1.767 2 1.767.73 0 1.098-1.573 1.858-1.599.026.636.067 1.211-.28 1.946-.534 1.132-1.886 2.666-3.215 2.666-.953 0-2.279-1.146-2.54-1.146-.282 0-.802.132-.967.483-.693 1.467 1.158 6.363 3.014 6.363.992 0 2.175-.728 3.213-1.176-.27 1.764-.308 3.251.05 4.77a5.674 5.674 0 01-2.942.85c-4.56 0-2.045-10.605-6.25-12.865l1.58-2.084"/><path d="M46.681 57.002c.206.508.803 3.38 1.256 3.38.979 0 2.748-2.663 3.222-3.355.87.57.388 1.767 2 1.767.73 0 1.098-1.573 1.858-1.599.026.636.067 1.211-.28 1.946-.534 1.132-1.886 2.666-3.215 2.666-.953 0-2.279-1.146-2.54-1.146-.282 0-.802.132-.967.483-.693 1.467 1.158 6.363 3.014 6.363.992 0 2.175-.728 3.213-1.176-.27 1.764-.308 3.251.05 4.77a5.674 5.674 0 01-2.942.85c-4.56 0-2.045-10.605-6.25-12.865z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M64.209 56.154c3.447 0 4.808 6.2 3.261 9.476-1.2 2.542-3.327 4.384-6.052 4.384-4.812 0-4.21-6.56-2.332-10.538.518-1.096 2.287-3.484 3.67-3.484.51 0 .93.162 1.453.162zm-.107.579c-.542 0-1.02.268-1.27.802-.53 1.118 2.105 2.25 1.727 3.051-.238.504-1.144.976-1.601.976-2.284 0-2.265-2.972-.903-4.908-.847.539-1.402 1.363-1.762 2.127-1.338 2.835-.276 6.734 2.778 6.734 1.688 0 3.631-1.516 4.387-3.117.93-1.968-1.448-5.665-3.356-5.665" fill-rule="evenodd"/><path d="M64.209 56.154c3.447 0 4.808 6.2 3.261 9.476-1.2 2.542-3.327 4.384-6.052 4.384-4.812 0-4.21-6.56-2.332-10.538.518-1.096 2.287-3.484 3.67-3.484.51 0 .93.162 1.453.162z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M64.101 56.733c-.542 0-1.02.268-1.271.802-.528 1.119 2.106 2.25 1.728 3.051-.238.504-1.144.976-1.601.976-2.284 0-2.265-2.972-.903-4.908-.847.54-1.402 1.363-1.762 2.127-1.339 2.835-.277 6.735 2.778 6.735 1.687 0 3.631-1.517 4.387-3.117.93-1.968-1.448-5.666-3.356-5.666z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M79.875 66.36c-.901 1.908-2.58 2.955-4.47 2.955-5.997 0-7.187-5.469-4.587-10.975.613-1.3 1.62-2.737 3.159-2.737 4.818 0 8.174 5.933 5.897 10.757zM75.09 56.293c-.443 0-.83.16-1.043.61-.466.989 2.072 1.87 2.075 2.892-.265.314-1.007.665-1.33.665-1.828 0-3.208-2.478-1.647-4.32-.634.403-1.01 1.005-1.277 1.57-1.582 3.352.673 6.74 3.96 6.74 1.368 0 3.13-.76 3.841-2.266 1.006-2.13-2.576-5.89-4.58-5.89" fill-rule="evenodd"/><path d="M79.875 66.36c-.901 1.908-2.58 2.955-4.47 2.955-5.997 0-7.187-5.469-4.587-10.975.613-1.3 1.62-2.737 3.159-2.737 4.818 0 8.174 5.933 5.897 10.757z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M75.089 56.294c-.442 0-.83.16-1.043.61-.466.988 2.072 1.87 2.076 2.892-.265.313-1.008.665-1.331.665-1.828 0-3.208-2.478-1.647-4.32-.633.402-1.01 1.004-1.277 1.57-1.582 3.352.674 6.74 3.96 6.74 1.368 0 3.131-.76 3.842-2.266 1.005-2.13-2.576-5.89-4.58-5.89z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M86.077 56.262c5.168 0 7.795 9.484 5.485 14.376-.441.935-1.264 1.87-2.35 1.87-5.904 0-4.397-11.737-7.72-15.072.303-.323.594-.66.861-1 2.246 2.635 1.13 9.572 5.927 9.572 1.105 0 1.941-.967 2.387-1.912 1.191-2.523-1.013-6.906-3.426-6.906-.024 0-.37.014-.363.154.09 1.611 1.356.607.08 3.348-1.303-.26-2.684-2.353-1.971-3.863.21-.444.734-.567 1.09-.567"/><path d="M86.077 56.262c5.168 0 7.795 9.484 5.485 14.376-.441.935-1.264 1.87-2.35 1.87-5.904 0-4.397-11.737-7.72-15.072.303-.323.594-.66.861-1 2.246 2.635 1.13 9.572 5.927 9.572 1.105 0 1.941-.967 2.387-1.912 1.191-2.523-1.013-6.906-3.426-6.906-.024 0-.37.014-.363.154.09 1.611 1.356.607.08 3.348-1.303-.26-2.684-2.353-1.971-3.863.21-.444.734-.567 1.09-.567z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M98.927 56.154c.487.046 1.218.002 1.636.13.078.023.019.121.032.199.127.716.327 1.396.5 2.089.673 2.698 1.078 5.468 1.85 8.142.841 2.912 1.718 6.194.7 9.848-.1.357-.233.72-.405 1.085-1.154 2.445-11.091 5.262-13.686 5.262-.315 0-.655-.09-.805-.295 1.094-.696 1.78-1.41 2.27-2.446.585-1.242.577-2.406.5-3.477.207.12 7.842-.068 8.118-.068 1.123 0 2.086-1.085 2.536-2.04.827-1.751.686-3.539.543-5.031a23.224 23.224 0 00-.312-2.2l-.21-1.036-.027-.113-.026-.114c.125 0 .013.22.018.331.077 1.806.044 4.328-.926 6.384-.451.955-1.189 1.94-2.32 1.94-4.963 0-2.467-14.074-6.444-17.42.22-.363.417-.738.582-1.105 2.353 2.842 2.477 10.677 5.94 10.677.84 0 1.71-.788 2.067-1.545 1.539-3.26-1.017-7.057-2.13-9.197" fill-rule="evenodd"/><path d="M98.927 56.154c.487.046 1.218.002 1.636.13.078.023.019.121.032.199.127.716.327 1.396.5 2.089.673 2.698 1.078 5.468 1.85 8.142.841 2.912 1.718 6.194.7 9.848-.1.357-.233.72-.405 1.085-1.154 2.445-11.091 5.262-13.686 5.262-.315 0-.655-.09-.805-.295 1.094-.696 1.78-1.41 2.27-2.446.585-1.242.577-2.406.5-3.477.207.12 7.842-.068 8.118-.068 1.123 0 2.086-1.085 2.536-2.04.827-1.751.686-3.539.543-5.031a23.224 23.224 0 00-.312-2.2l-.21-1.036-.027-.113-.026-.114c.125 0 .013.22.018.331.077 1.806.044 4.328-.926 6.384-.451.955-1.189 1.94-2.32 1.94-4.963 0-2.467-14.074-6.444-17.42.22-.363.417-.738.582-1.105 2.353 2.842 2.477 10.677 5.94 10.677.84 0 1.71-.788 2.067-1.545 1.539-3.26-1.017-7.057-2.13-9.197z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M37.804 44.66c3.413 0 1.424 8.528.21 11.1-1.04 2.201-3.38 5.377-6.153 5.377-3.327 0-3.228-3.727-1.904-6.532.717-1.52 1.82-3.222 3.338-4.474-.39 1.307.925 2.2.393 3.325-.363.769-1.114 1.609-1.504 2.436-.631 1.337-.39 3.71 1.135 3.71 1.365 0 2.578-1.692 3.075-2.745 1.019-2.158 3.566-11.366.719-11.366-3.28 0-8.93 7.99-10.113 10.497-2.112 4.474-.58 9.984 4.231 9.984 3.252 0 5.926-3.126 7.218-5.862a14.931 14.931 0 001.353-4.781l.632-.116c.139 4.21 4.592 11.18 2.697 15.196-2.427 5.14-9.681 5.094-13.824 6.918-.87-2.037-2.05-3.93-3.711-5.376 3.695-1.243 12.775-3.33 14.75-7.512.83-1.758.264-4.671-.694-5.659a10.916 10.916 0 01-.689 1.89c-1.69 3.58-5.31 6.357-9.041 6.357-5.196 0-7.398-3.733-4.953-8.913 1.467-3.109 8.96-13.455 12.835-13.455"/><path d="M37.804 44.66c3.413 0 1.424 8.528.21 11.1-1.04 2.201-3.38 5.377-6.153 5.377-3.327 0-3.228-3.727-1.904-6.532.717-1.52 1.82-3.222 3.338-4.474-.39 1.307.925 2.2.393 3.325-.363.769-1.114 1.609-1.504 2.436-.631 1.337-.39 3.71 1.135 3.71 1.365 0 2.578-1.692 3.075-2.745 1.019-2.158 3.566-11.366.719-11.366-3.28 0-8.93 7.99-10.113 10.497-2.112 4.474-.58 9.984 4.231 9.984 3.252 0 5.926-3.126 7.218-5.862a14.931 14.931 0 001.353-4.781l.632-.116c.139 4.21 4.592 11.18 2.697 15.196-2.427 5.14-9.681 5.094-13.824 6.918-.87-2.037-2.05-3.93-3.711-5.376 3.695-1.243 12.775-3.33 14.75-7.512.83-1.758.264-4.671-.694-5.659a10.916 10.916 0 01-.689 1.89c-1.69 3.58-5.31 6.357-9.041 6.357-5.196 0-7.398-3.733-4.953-8.913 1.467-3.109 8.96-13.455 12.835-13.455z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M46.681 57.002c.206.508.803 3.38 1.256 3.38.979 0 2.748-2.663 3.222-3.355.87.57.388 1.767 2 1.767.73 0 1.098-1.573 1.858-1.599.026.636.067 1.211-.28 1.946-.534 1.132-1.886 2.666-3.215 2.666-.953 0-2.279-1.146-2.54-1.146-.282 0-.802.132-.967.483-.693 1.467 1.158 6.363 3.014 6.363.992 0 2.175-.728 3.213-1.176-.27 1.764-.308 3.251.05 4.77a5.674 5.674 0 01-2.942.85c-4.56 0-2.045-10.605-6.25-12.865l1.58-2.084"/><path d="M46.681 57.002c.206.508.803 3.38 1.256 3.38.979 0 2.748-2.663 3.222-3.355.87.57.388 1.767 2 1.767.73 0 1.098-1.573 1.858-1.599.026.636.067 1.211-.28 1.946-.534 1.132-1.886 2.666-3.215 2.666-.953 0-2.279-1.146-2.54-1.146-.282 0-.802.132-.967.483-.693 1.467 1.158 6.363 3.014 6.363.992 0 2.175-.728 3.213-1.176-.27 1.764-.308 3.251.05 4.77a5.674 5.674 0 01-2.942.85c-4.56 0-2.045-10.605-6.25-12.865z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M64.209 56.154c3.447 0 4.808 6.2 3.261 9.476-1.2 2.542-3.327 4.384-6.052 4.384-4.812 0-4.21-6.56-2.332-10.538.518-1.096 2.287-3.484 3.67-3.484.51 0 .93.162 1.453.162zm-.107.579c-.542 0-1.02.268-1.27.802-.53 1.118 2.105 2.25 1.727 3.051-.238.504-1.144.976-1.601.976-2.284 0-2.265-2.972-.903-4.908-.847.539-1.402 1.363-1.762 2.127-1.338 2.835-.276 6.734 2.778 6.734 1.688 0 3.631-1.516 4.387-3.117.93-1.968-1.448-5.665-3.356-5.665" fill-rule="evenodd"/><path d="M64.209 56.154c3.447 0 4.808 6.2 3.261 9.476-1.2 2.542-3.327 4.384-6.052 4.384-4.812 0-4.21-6.56-2.332-10.538.518-1.096 2.287-3.484 3.67-3.484.51 0 .93.162 1.453.162z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M64.101 56.733c-.542 0-1.02.268-1.271.802-.528 1.119 2.106 2.25 1.728 3.051-.238.504-1.144.976-1.601.976-2.284 0-2.265-2.972-.903-4.908-.847.54-1.402 1.363-1.762 2.127-1.339 2.835-.277 6.735 2.778 6.735 1.687 0 3.631-1.517 4.387-3.117.93-1.968-1.448-5.666-3.356-5.666z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M79.875 66.36c-.901 1.908-2.58 2.955-4.47 2.955-5.997 0-7.187-5.469-4.587-10.975.613-1.3 1.62-2.737 3.159-2.737 4.818 0 8.174 5.933 5.897 10.757zM75.09 56.293c-.443 0-.83.16-1.043.61-.466.989 2.072 1.87 2.075 2.892-.265.314-1.007.665-1.33.665-1.828 0-3.208-2.478-1.647-4.32-.634.403-1.01 1.005-1.277 1.57-1.582 3.352.673 6.74 3.96 6.74 1.368 0 3.13-.76 3.841-2.266 1.006-2.13-2.576-5.89-4.58-5.89" fill-rule="evenodd"/><path d="M79.875 66.36c-.901 1.908-2.58 2.955-4.47 2.955-5.997 0-7.187-5.469-4.587-10.975.613-1.3 1.62-2.737 3.159-2.737 4.818 0 8.174 5.933 5.897 10.757z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M75.089 56.294c-.442 0-.83.16-1.043.61-.466.988 2.072 1.87 2.076 2.892-.265.313-1.008.665-1.331.665-1.828 0-3.208-2.478-1.647-4.32-.633.402-1.01 1.004-1.277 1.57-1.582 3.352.674 6.74 3.96 6.74 1.368 0 3.131-.76 3.842-2.266 1.005-2.13-2.576-5.89-4.58-5.89z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M86.077 56.262c5.168 0 7.795 9.484 5.485 14.376-.441.935-1.264 1.87-2.35 1.87-5.904 0-4.397-11.737-7.72-15.072.303-.323.594-.66.861-1 2.246 2.635 1.13 9.572 5.927 9.572 1.105 0 1.941-.967 2.387-1.912 1.191-2.523-1.013-6.906-3.426-6.906-.024 0-.37.014-.363.154.09 1.611 1.356.607.08 3.348-1.303-.26-2.684-2.353-1.971-3.863.21-.444.734-.567 1.09-.567"/><path d="M86.077 56.262c5.168 0 7.795 9.484 5.485 14.376-.441.935-1.264 1.87-2.35 1.87-5.904 0-4.397-11.737-7.72-15.072.303-.323.594-.66.861-1 2.246 2.635 1.13 9.572 5.927 9.572 1.105 0 1.941-.967 2.387-1.912 1.191-2.523-1.013-6.906-3.426-6.906-.024 0-.37.014-.363.154.09 1.611 1.356.607.08 3.348-1.303-.26-2.684-2.353-1.971-3.863.21-.444.734-.567 1.09-.567z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M98.927 56.154c.487.046 1.218.002 1.636.13.078.023.019.121.032.199.127.716.327 1.396.5 2.089.673 2.698 1.078 5.468 1.85 8.142.841 2.912 1.718 6.194.7 9.848-.1.357-.233.72-.405 1.085-1.154 2.445-4.12 4.772-6.716 4.772-.315 0-.655-.09-.806-.294 1.096-.696 1.78-1.41 2.27-2.446.587-1.243.578-2.407.5-3.478.208.12.873.422 1.15.422 1.122 0 2.085-1.085 2.536-2.04.827-1.751.685-3.539.542-5.031a23.224 23.224 0 00-.312-2.2l-.21-1.036-.027-.113-.026-.114c.126 0 .013.22.018.331.077 1.806.045 4.328-.926 6.384-.45.955-1.188 1.94-2.32 1.94-4.963 0-2.467-14.074-6.444-17.42.22-.363.417-.738.582-1.105 2.354 2.842 2.477 10.677 5.94 10.677.841 0 1.71-.788 2.067-1.545 1.54-3.26-1.017-7.057-2.13-9.197" fill-rule="evenodd"/><path d="M98.927 56.154c.487.046 1.218.002 1.636.13.078.023.019.121.032.199.127.716.327 1.396.5 2.089.673 2.698 1.078 5.468 1.85 8.142.841 2.912 1.718 6.194.7 9.848-.1.357-.233.72-.405 1.085-1.154 2.445-4.12 4.772-6.716 4.772-.315 0-.655-.09-.806-.294 1.096-.696 1.78-1.41 2.27-2.446.587-1.243.578-2.407.5-3.478.208.12.873.422 1.15.422 1.122 0 2.085-1.085 2.536-2.04.827-1.751.685-3.539.542-5.031a23.224 23.224 0 00-.312-2.2l-.21-1.036-.027-.113-.026-.114c.126 0 .013.22.018.331.077 1.806.045 4.328-.926 6.384-.45.955-1.188 1.94-2.32 1.94-4.963 0-2.467-14.074-6.444-17.42.22-.363.417-.738.582-1.105 2.354 2.842 2.477 10.677 5.94 10.677.841 0 1.71-.788 2.067-1.545 1.54-3.26-1.017-7.057-2.13-9.197z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M37.804 44.66c3.413 0 1.424 8.528.21 11.1-1.04 2.201-3.38 5.377-6.153 5.377-3.327 0-3.228-3.727-1.904-6.532.717-1.52 1.82-3.222 3.338-4.474-.39 1.307.925 2.2.393 3.325-.363.769-1.114 1.609-1.504 2.436-.631 1.337-.39 3.71 1.135 3.71 1.365 0 2.578-1.692 3.075-2.745 1.019-2.158 3.566-11.366.719-11.366-3.28 0-8.93 7.99-10.113 10.497-2.112 4.474-.58 9.984 4.231 9.984 3.252 0 5.926-3.126 7.218-5.862a14.931 14.931 0 001.353-4.781l.632-.116c.139 4.21 4.592 11.18 2.697 15.196-2.427 5.14-9.681 5.094-13.824 6.918-.87-2.037-2.05-3.93-3.711-5.376 3.695-1.243 12.775-3.33 14.75-7.512.83-1.758.264-4.671-.694-5.659a10.916 10.916 0 01-.689 1.89c-1.69 3.58-5.31 6.357-9.041 6.357-5.196 0-7.398-3.733-4.953-8.913 1.467-3.109 8.96-13.455 12.835-13.455"/><path d="M37.804 44.66c3.413 0 1.424 8.528.21 11.1-1.04 2.201-3.38 5.377-6.153 5.377-3.327 0-3.228-3.727-1.904-6.532.717-1.52 1.82-3.222 3.338-4.474-.39 1.307.925 2.2.393 3.325-.363.769-1.114 1.609-1.504 2.436-.631 1.337-.39 3.71 1.135 3.71 1.365 0 2.578-1.692 3.075-2.745 1.019-2.158 3.566-11.366.719-11.366-3.28 0-8.93 7.99-10.113 10.497-2.112 4.474-.58 9.984 4.231 9.984 3.252 0 5.926-3.126 7.218-5.862a14.931 14.931 0 001.353-4.781l.632-.116c.139 4.21 4.592 11.18 2.697 15.196-2.427 5.14-9.681 5.094-13.824 6.918-.87-2.037-2.05-3.93-3.711-5.376 3.695-1.243 12.775-3.33 14.75-7.512.83-1.758.264-4.671-.694-5.659a10.916 10.916 0 01-.689 1.89c-1.69 3.58-5.31 6.357-9.041 6.357-5.196 0-7.398-3.733-4.953-8.913 1.467-3.109 8.96-13.455 12.835-13.455z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M46.681 57.002c.206.508.803 3.38 1.256 3.38.979 0 2.748-2.663 3.222-3.355.87.57.388 1.767 2 1.767.73 0 1.098-1.573 1.858-1.599.026.636.067 1.211-.28 1.946-.534 1.132-1.886 2.666-3.215 2.666-.953 0-2.279-1.146-2.54-1.146-.282 0-.802.132-.967.483-.693 1.467 1.158 6.363 3.014 6.363.992 0 2.175-.728 3.213-1.176-.27 1.764-.308 3.251.05 4.77a5.674 5.674 0 01-2.942.85c-4.56 0-2.045-10.605-6.25-12.865l1.58-2.084"/><path d="M46.681 57.002c.206.508.803 3.38 1.256 3.38.979 0 2.748-2.663 3.222-3.355.87.57.388 1.767 2 1.767.73 0 1.098-1.573 1.858-1.599.026.636.067 1.211-.28 1.946-.534 1.132-1.886 2.666-3.215 2.666-.953 0-2.279-1.146-2.54-1.146-.282 0-.802.132-.967.483-.693 1.467 1.158 6.363 3.014 6.363.992 0 2.175-.728 3.213-1.176-.27 1.764-.308 3.251.05 4.77a5.674 5.674 0 01-2.942.85c-4.56 0-2.045-10.605-6.25-12.865z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M64.209 56.154c3.447 0 4.808 6.2 3.261 9.476-1.2 2.542-3.327 4.384-6.052 4.384-4.812 0-4.21-6.56-2.332-10.538.518-1.096 2.287-3.484 3.67-3.484.51 0 .93.162 1.453.162zm-.107.579c-.542 0-1.02.268-1.27.802-.53 1.118 2.105 2.25 1.727 3.051-.238.504-1.144.976-1.601.976-2.284 0-2.265-2.972-.903-4.908-.847.539-1.402 1.363-1.762 2.127-1.338 2.835-.276 6.734 2.778 6.734 1.688 0 3.631-1.516 4.387-3.117.93-1.968-1.448-5.665-3.356-5.665" fill-rule="evenodd"/><path d="M64.209 56.154c3.447 0 4.808 6.2 3.261 9.476-1.2 2.542-3.327 4.384-6.052 4.384-4.812 0-4.21-6.56-2.332-10.538.518-1.096 2.287-3.484 3.67-3.484.51 0 .93.162 1.453.162z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M64.101 56.733c-.542 0-1.02.268-1.271.802-.528 1.119 2.106 2.25 1.728 3.051-.238.504-1.144.976-1.601.976-2.284 0-2.265-2.972-.903-4.908-.847.54-1.402 1.363-1.762 2.127-1.339 2.835-.277 6.735 2.778 6.735 1.687 0 3.631-1.517 4.387-3.117.93-1.968-1.448-5.666-3.356-5.666z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M79.875 66.36c-.901 1.908-2.58 2.955-4.47 2.955-5.997 0-7.187-5.469-4.587-10.975.613-1.3 1.62-2.737 3.159-2.737 4.818 0 8.174 5.933 5.897 10.757zM75.09 56.293c-.443 0-.83.16-1.043.61-.466.989 2.072 1.87 2.075 2.892-.265.314-1.007.665-1.33.665-1.828 0-3.208-2.478-1.647-4.32-.634.403-1.01 1.005-1.277 1.57-1.582 3.352.673 6.74 3.96 6.74 1.368 0 3.13-.76 3.841-2.266 1.006-2.13-2.576-5.89-4.58-5.89" fill-rule="evenodd"/><path d="M79.875 66.36c-.901 1.908-2.58 2.955-4.47 2.955-5.997 0-7.187-5.469-4.587-10.975.613-1.3 1.62-2.737 3.159-2.737 4.818 0 8.174 5.933 5.897 10.757z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M75.089 56.294c-.442 0-.83.16-1.043.61-.466.988 2.072 1.87 2.076 2.892-.265.313-1.008.665-1.331.665-1.828 0-3.208-2.478-1.647-4.32-.633.402-1.01 1.004-1.277 1.57-1.582 3.352.674 6.74 3.96 6.74 1.368 0 3.131-.76 3.842-2.266 1.005-2.13-2.576-5.89-4.58-5.89z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M86.077 56.262c5.168 0 7.795 9.484 5.485 14.376-.441.935-1.264 1.87-2.35 1.87-5.904 0-4.397-11.737-7.72-15.072.303-.323.594-.66.861-1 2.246 2.635 1.13 9.572 5.927 9.572 1.105 0 1.941-.967 2.387-1.912 1.191-2.523-1.013-6.906-3.426-6.906-.024 0-.37.014-.363.154.09 1.611 1.356.607.08 3.348-1.303-.26-2.684-2.353-1.971-3.863.21-.444.734-.567 1.09-.567"/><path d="M86.077 56.262c5.168 0 7.795 9.484 5.485 14.376-.441.935-1.264 1.87-2.35 1.87-5.904 0-4.397-11.737-7.72-15.072.303-.323.594-.66.861-1 2.246 2.635 1.13 9.572 5.927 9.572 1.105 0 1.941-.967 2.387-1.912 1.191-2.523-1.013-6.906-3.426-6.906-.024 0-.37.014-.363.154.09 1.611 1.356.607.08 3.348-1.303-.26-2.684-2.353-1.971-3.863.21-.444.734-.567 1.09-.567z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M98.927 56.154c.487.046 1.218.002 1.636.13.078.023.019.121.032.199.127.716.327 1.396.5 2.089.673 2.698 1.078 5.468 1.85 8.142.841 2.912 1.718 6.194.7 9.848-.1.357-.233.72-.405 1.085-1.154 2.445-4.12 4.772-6.716 4.772-.315 0-.655-.09-.806-.294 1.096-.696 1.78-1.41 2.27-2.446.587-1.243.578-2.407.5-3.478.208.12.873.422 1.15.422 1.122 0 2.085-1.085 2.536-2.04.827-1.751.685-3.539.542-5.031a23.224 23.224 0 00-.312-2.2l-.21-1.036-.027-.113-.026-.114c.126 0 .013.22.018.331.077 1.806.045 4.328-.926 6.384-.45.955-1.188 1.94-2.32 1.94-4.963 0-2.467-14.074-6.444-17.42.22-.363.417-.738.582-1.105 2.354 2.842 2.477 10.677 5.94 10.677.841 0 1.71-.788 2.067-1.545 1.54-3.26-1.017-7.057-2.13-9.197" fill-rule="evenodd"/><path d="M98.927 56.154c.487.046 1.218.002 1.636.13.078.023.019.121.032.199.127.716.327 1.396.5 2.089.673 2.698 1.078 5.468 1.85 8.142.841 2.912 1.718 6.194.7 9.848-.1.357-.233.72-.405 1.085-1.154 2.445-4.12 4.772-6.716 4.772-.315 0-.655-.09-.806-.294 1.096-.696 1.78-1.41 2.27-2.446.587-1.243.578-2.407.5-3.478.208.12.873.422 1.15.422 1.122 0 2.085-1.085 2.536-2.04.827-1.751.685-3.539.542-5.031a23.224 23.224 0 00-.312-2.2l-.21-1.036-.027-.113-.026-.114c.126 0 .013.22.018.331.077 1.806.045 4.328-.926 6.384-.45.955-1.188 1.94-2.32 1.94-4.963 0-2.467-14.074-6.444-17.42.22-.363.417-.738.582-1.105 2.354 2.842 2.477 10.677 5.94 10.677.841 0 1.71-.788 2.067-1.545 1.54-3.26-1.017-7.057-2.13-9.197z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><g fill="#fff"><path d="M37.804 44.66c3.413 0 1.424 8.528.21 11.1-1.04 2.201-3.38 5.377-6.153 5.377-3.327 0-3.228-3.727-1.904-6.532.717-1.52 1.82-3.222 3.338-4.474-.39 1.307.925 2.2.393 3.325-.363.769-1.114 1.609-1.504 2.436-.631 1.337-.39 3.71 1.135 3.71 1.365 0 2.578-1.692 3.075-2.745 1.019-2.158 3.566-11.366.719-11.366-3.28 0-8.93 7.99-10.113 10.497-2.112 4.474-.58 9.984 4.231 9.984 3.252 0 5.926-3.126 7.218-5.862a14.931 14.931 0 001.353-4.781l.632-.116c.139 4.21 4.592 11.18 2.697 15.196-2.427 5.14-9.681 5.094-13.824 6.918-.87-2.037-2.05-3.93-3.711-5.376 3.695-1.243 12.775-3.33 14.75-7.512.83-1.758.264-4.671-.694-5.659a10.916 10.916 0 01-.689 1.89c-1.69 3.58-5.31 6.357-9.041 6.357-5.196 0-7.398-3.733-4.953-8.913 1.467-3.109 8.96-13.455 12.835-13.455M46.681 57.002c.206.508.803 3.38 1.256 3.38.979 0 2.748-2.663 3.222-3.355.87.57.388 1.767 2 1.767.73 0 1.098-1.573 1.858-1.599.026.636.067 1.211-.28 1.946-.534 1.132-1.886 2.666-3.215 2.666-.953 0-2.279-1.146-2.54-1.146-.282 0-.802.132-.967.483-.693 1.467 1.158 6.363 3.014 6.363.992 0 2.175-.728 3.213-1.176-.27 1.764-.308 3.251.05 4.77a5.674 5.674 0 01-2.942.85c-4.56 0-2.045-10.605-6.25-12.865l1.58-2.084"/><path d="M64.209 56.154c3.447 0 4.808 6.2 3.261 9.476-1.2 2.542-3.327 4.384-6.052 4.384-4.812 0-4.21-6.56-2.332-10.538.518-1.096 2.287-3.484 3.67-3.484.51 0 .93.162 1.453.162zm-.107.579c-.542 0-1.02.268-1.27.802-.53 1.118 2.105 2.25 1.727 3.051-.238.504-1.144.976-1.601.976-2.284 0-2.265-2.972-.903-4.908-.847.539-1.402 1.363-1.762 2.127-1.338 2.835-.276 6.734 2.778 6.734 1.688 0 3.631-1.516 4.387-3.117.93-1.968-1.448-5.665-3.356-5.665M79.875 66.36c-.901 1.908-2.58 2.955-4.47 2.955-5.997 0-7.187-5.469-4.587-10.975.613-1.3 1.62-2.737 3.159-2.737 4.818 0 8.174 5.933 5.897 10.757zM75.09 56.293c-.443 0-.83.16-1.043.61-.466.989 2.072 1.87 2.075 2.892-.265.314-1.007.665-1.33.665-1.828 0-3.208-2.478-1.647-4.32-.634.403-1.01 1.005-1.277 1.57-1.582 3.352.673 6.74 3.96 6.74 1.368 0 3.13-.76 3.841-2.266 1.006-2.13-2.576-5.89-4.58-5.89" fill-rule="evenodd"/><path d="M86.077 56.262c5.168 0 7.795 9.484 5.485 14.376-.441.935-1.264 1.87-2.35 1.87-5.904 0-4.397-11.737-7.72-15.072.303-.323.594-.66.861-1 2.246 2.635 1.13 9.572 5.927 9.572 1.105 0 1.941-.967 2.387-1.912 1.191-2.523-1.013-6.906-3.426-6.906-.024 0-.37.014-.363.154.09 1.611 1.356.607.08 3.348-1.303-.26-2.684-2.353-1.971-3.863.21-.444.734-.567 1.09-.567"/><path d="M98.927 56.154c.487.046 1.218.002 1.636.13.078.023.019.121.032.199.127.716.327 1.396.5 2.089.673 2.698 1.078 5.468 1.85 8.142.841 2.912 1.718 6.194.7 9.848-.1.357-.233.72-.405 1.085-3.87 7.432-12.151 5.43-14.745 5.43-.315 0-.656-.09-.806-.295 1.094-.696 1.78-1.41 2.27-2.446.586-1.243.577-2.406.5-3.478.207.121.872.422 1.148.422 1.123 0 7.378 3.214 10.567-2.696.827-1.752.685-3.54.542-5.032a23.224 23.224 0 00-.312-2.2l-.21-1.036-.027-.113-.026-.113c.126 0 .013.22.018.33.077 1.807.045 4.328-.926 6.384-.45.955-1.188 1.94-2.32 1.94-4.963 0-2.467-14.074-6.444-17.42.22-.363.417-.738.582-1.105 2.354 2.842 2.477 10.677 5.94 10.677.841 0 1.71-.787 2.068-1.545 1.538-3.26-1.018-7.056-2.132-9.197" fill-rule="evenodd"/></g><path d="M103.493 95.913l-39.525-15.35-39.525 15.346 15.606-24.464L.013 56.463l49.172.23 14.781-24.605L78.75 56.694l49.172-.225-40.036 14.978 15.609 24.466"/><path d="M98.204 91.48l-34.17-13.244-34.168 13.242 13.491-21.11-34.61-12.926 42.506.198L64.03 36.41l12.78 21.23 42.509-.194L84.71 70.37l13.493 21.11" fill="#619cbc"/><path d="M37.804 44.66c3.413 0 1.424 8.528.21 11.1-1.04 2.201-3.38 5.377-6.153 5.377-3.327 0-3.228-3.727-1.904-6.532.717-1.52 1.82-3.222 3.338-4.474-.39 1.307.925 2.2.393 3.325-.363.769-1.114 1.609-1.504 2.436-.631 1.337-.39 3.71 1.135 3.71 1.365 0 2.578-1.692 3.075-2.745 1.019-2.158 3.566-11.366.719-11.366-3.28 0-8.93 7.99-10.113 10.497-2.112 4.474-.58 9.984 4.231 9.984 3.252 0 5.926-3.126 7.218-5.862a14.931 14.931 0 001.353-4.781l.632-.116c.139 4.21 4.592 11.18 2.697 15.196-2.427 5.14-9.681 5.094-13.824 6.918-.87-2.037-2.05-3.93-3.711-5.376 3.695-1.243 12.775-3.33 14.75-7.512.83-1.758.264-4.671-.694-5.659a10.916 10.916 0 01-.689 1.89c-1.69 3.58-5.31 6.357-9.041 6.357-5.196 0-7.398-3.733-4.953-8.913 1.467-3.109 8.96-13.455 12.835-13.455"/><path d="M37.804 44.66c3.413 0 1.424 8.528.21 11.1-1.04 2.201-3.38 5.377-6.153 5.377-3.327 0-3.228-3.727-1.904-6.532.717-1.52 1.82-3.222 3.338-4.474-.39 1.307.925 2.2.393 3.325-.363.769-1.114 1.609-1.504 2.436-.631 1.337-.39 3.71 1.135 3.71 1.365 0 2.578-1.692 3.075-2.745 1.019-2.158 3.566-11.366.719-11.366-3.28 0-8.93 7.99-10.113 10.497-2.112 4.474-.58 9.984 4.231 9.984 3.252 0 5.926-3.126 7.218-5.862a14.931 14.931 0 001.353-4.781l.632-.116c.139 4.21 4.592 11.18 2.697 15.196-2.427 5.14-9.681 5.094-13.824 6.918-.87-2.037-2.05-3.93-3.711-5.376 3.695-1.243 12.775-3.33 14.75-7.512.83-1.758.264-4.671-.694-5.659a10.916 10.916 0 01-.689 1.89c-1.69 3.58-5.31 6.357-9.041 6.357-5.196 0-7.398-3.733-4.953-8.913 1.467-3.109 8.96-13.455 12.835-13.455z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M46.681 57.002c.206.508.803 3.38 1.256 3.38.979 0 2.748-2.663 3.222-3.355.87.57.388 1.767 2 1.767.73 0 1.098-1.573 1.858-1.599.026.636.067 1.211-.28 1.946-.534 1.132-1.886 2.666-3.215 2.666-.953 0-2.279-1.146-2.54-1.146-.282 0-.802.132-.967.483-.693 1.467 1.158 6.363 3.014 6.363.992 0 2.175-.728 3.213-1.176-.27 1.764-.308 3.251.05 4.77a5.674 5.674 0 01-2.942.85c-4.56 0-2.045-10.605-6.25-12.865l1.58-2.084"/><path d="M46.681 57.002c.206.508.803 3.38 1.256 3.38.979 0 2.748-2.663 3.222-3.355.87.57.388 1.767 2 1.767.73 0 1.098-1.573 1.858-1.599.026.636.067 1.211-.28 1.946-.534 1.132-1.886 2.666-3.215 2.666-.953 0-2.279-1.146-2.54-1.146-.282 0-.802.132-.967.483-.693 1.467 1.158 6.363 3.014 6.363.992 0 2.175-.728 3.213-1.176-.27 1.764-.308 3.251.05 4.77a5.674 5.674 0 01-2.942.85c-4.56 0-2.045-10.605-6.25-12.865z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M64.209 56.154c3.447 0 4.808 6.2 3.261 9.476-1.2 2.542-3.327 4.384-6.052 4.384-4.812 0-4.21-6.56-2.332-10.538.518-1.096 2.287-3.484 3.67-3.484.51 0 .93.162 1.453.162zm-.107.579c-.542 0-1.02.268-1.27.802-.53 1.118 2.105 2.25 1.727 3.051-.238.504-1.144.976-1.601.976-2.284 0-2.265-2.972-.903-4.908-.847.539-1.402 1.363-1.762 2.127-1.338 2.835-.276 6.734 2.778 6.734 1.688 0 3.631-1.516 4.387-3.117.93-1.968-1.448-5.665-3.356-5.665" fill-rule="evenodd"/><path d="M64.209 56.154c3.447 0 4.808 6.2 3.261 9.476-1.2 2.542-3.327 4.384-6.052 4.384-4.812 0-4.21-6.56-2.332-10.538.518-1.096 2.287-3.484 3.67-3.484.51 0 .93.162 1.453.162z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M64.101 56.733c-.542 0-1.02.268-1.271.802-.528 1.119 2.106 2.25 1.728 3.051-.238.504-1.144.976-1.601.976-2.284 0-2.265-2.972-.903-4.908-.847.54-1.402 1.363-1.762 2.127-1.339 2.835-.277 6.735 2.778 6.735 1.687 0 3.631-1.517 4.387-3.117.93-1.968-1.448-5.666-3.356-5.666z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M79.875 66.36c-.901 1.908-2.58 2.955-4.47 2.955-5.997 0-7.187-5.469-4.587-10.975.613-1.3 1.62-2.737 3.159-2.737 4.818 0 8.174 5.933 5.897 10.757zM75.09 56.293c-.443 0-.83.16-1.043.61-.466.989 2.072 1.87 2.075 2.892-.265.314-1.007.665-1.33.665-1.828 0-3.208-2.478-1.647-4.32-.634.403-1.01 1.005-1.277 1.57-1.582 3.352.673 6.74 3.96 6.74 1.368 0 3.13-.76 3.841-2.266 1.006-2.13-2.576-5.89-4.58-5.89" fill-rule="evenodd"/><path d="M79.875 66.36c-.901 1.908-2.58 2.955-4.47 2.955-5.997 0-7.187-5.469-4.587-10.975.613-1.3 1.62-2.737 3.159-2.737 4.818 0 8.174 5.933 5.897 10.757z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M75.089 56.294c-.442 0-.83.16-1.043.61-.466.988 2.072 1.87 2.076 2.892-.265.313-1.008.665-1.331.665-1.828 0-3.208-2.478-1.647-4.32-.633.402-1.01 1.004-1.277 1.57-1.582 3.352.674 6.74 3.96 6.74 1.368 0 3.131-.76 3.842-2.266 1.005-2.13-2.576-5.89-4.58-5.89z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M86.077 56.262c5.168 0 7.795 9.484 5.485 14.376-.441.935-1.264 1.87-2.35 1.87-5.904 0-4.397-11.737-7.72-15.072.303-.323.594-.66.861-1 2.246 2.635 1.13 9.572 5.927 9.572 1.105 0 1.941-.967 2.387-1.912 1.191-2.523-1.013-6.906-3.426-6.906-.024 0-.37.014-.363.154.09 1.611 1.356.607.08 3.348-1.303-.26-2.684-2.353-1.971-3.863.21-.444.734-.567 1.09-.567"/><path d="M86.077 56.262c5.168 0 7.795 9.484 5.485 14.376-.441.935-1.264 1.87-2.35 1.87-5.904 0-4.397-11.737-7.72-15.072.303-.323.594-.66.861-1 2.246 2.635 1.13 9.572 5.927 9.572 1.105 0 1.941-.967 2.387-1.912 1.191-2.523-1.013-6.906-3.426-6.906-.024 0-.37.014-.363.154.09 1.611 1.356.607.08 3.348-1.303-.26-2.684-2.353-1.971-3.863.21-.444.734-.567 1.09-.567z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M98.927 56.154c.487.046 1.218.002 1.636.13.078.023.019.121.032.199.127.716.327 1.396.5 2.089.673 2.698 1.078 5.468 1.85 8.142.841 2.912 1.718 6.194.7 9.848-.1.357-.233.72-.405 1.085-1.154 2.445-11.091 5.262-13.686 5.262-.315 0-.655-.09-.805-.295 1.094-.696 1.78-1.41 2.27-2.446.585-1.242.577-2.406.5-3.477.207.12 7.842-.068 8.118-.068 1.123 0 2.086-1.085 2.536-2.04.827-1.751.686-3.539.543-5.031a23.224 23.224 0 00-.312-2.2l-.21-1.036-.027-.113-.026-.114c.125 0 .013.22.018.331.077 1.806.044 4.328-.926 6.384-.451.955-1.189 1.94-2.32 1.94-4.963 0-2.467-14.074-6.444-17.42.22-.363.417-.738.582-1.105 2.353 2.842 2.477 10.677 5.94 10.677.84 0 1.71-.788 2.067-1.545 1.539-3.26-1.017-7.057-2.13-9.197" fill-rule="evenodd"/><path d="M98.927 56.154c.487.046 1.218.002 1.636.13.078.023.019.121.032.199.127.716.327 1.396.5 2.089.673 2.698 1.078 5.468 1.85 8.142.841 2.912 1.718 6.194.7 9.848-.1.357-.233.72-.405 1.085-1.154 2.445-11.091 5.262-13.686 5.262-.315 0-.655-.09-.805-.295 1.094-.696 1.78-1.41 2.27-2.446.585-1.242.577-2.406.5-3.477.207.12 7.842-.068 8.118-.068 1.123 0 2.086-1.085 2.536-2.04.827-1.751.686-3.539.543-5.031a23.224 23.224 0 00-.312-2.2l-.21-1.036-.027-.113-.026-.114c.125 0 .013.22.018.331.077 1.806.044 4.328-.926 6.384-.451.955-1.189 1.94-2.32 1.94-4.963 0-2.467-14.074-6.444-17.42.22-.363.417-.738.582-1.105 2.353 2.842 2.477 10.677 5.94 10.677.84 0 1.71-.788 2.067-1.545 1.539-3.26-1.017-7.057-2.13-9.197z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M37.804 44.66c3.413 0 1.424 8.528.21 11.1-1.04 2.201-3.38 5.377-6.153 5.377-3.327 0-3.228-3.727-1.904-6.532.717-1.52 1.82-3.222 3.338-4.474-.39 1.307.925 2.2.393 3.325-.363.769-1.114 1.609-1.504 2.436-.631 1.337-.39 3.71 1.135 3.71 1.365 0 2.578-1.692 3.075-2.745 1.019-2.158 3.566-11.366.719-11.366-3.28 0-8.93 7.99-10.113 10.497-2.112 4.474-.58 9.984 4.231 9.984 3.252 0 5.926-3.126 7.218-5.862a14.931 14.931 0 001.353-4.781l.632-.116c.139 4.21 4.592 11.18 2.697 15.196-2.427 5.14-9.681 5.094-13.824 6.918-.87-2.037-2.05-3.93-3.711-5.376 3.695-1.243 12.775-3.33 14.75-7.512.83-1.758.264-4.671-.694-5.659a10.916 10.916 0 01-.689 1.89c-1.69 3.58-5.31 6.357-9.041 6.357-5.196 0-7.398-3.733-4.953-8.913 1.467-3.109 8.96-13.455 12.835-13.455"/><path d="M37.804 44.66c3.413 0 1.424 8.528.21 11.1-1.04 2.201-3.38 5.377-6.153 5.377-3.327 0-3.228-3.727-1.904-6.532.717-1.52 1.82-3.222 3.338-4.474-.39 1.307.925 2.2.393 3.325-.363.769-1.114 1.609-1.504 2.436-.631 1.337-.39 3.71 1.135 3.71 1.365 0 2.578-1.692 3.075-2.745 1.019-2.158 3.566-11.366.719-11.366-3.28 0-8.93 7.99-10.113 10.497-2.112 4.474-.58 9.984 4.231 9.984 3.252 0 5.926-3.126 7.218-5.862a14.931 14.931 0 001.353-4.781l.632-.116c.139 4.21 4.592 11.18 2.697 15.196-2.427 5.14-9.681 5.094-13.824 6.918-.87-2.037-2.05-3.93-3.711-5.376 3.695-1.243 12.775-3.33 14.75-7.512.83-1.758.264-4.671-.694-5.659a10.916 10.916 0 01-.689 1.89c-1.69 3.58-5.31 6.357-9.041 6.357-5.196 0-7.398-3.733-4.953-8.913 1.467-3.109 8.96-13.455 12.835-13.455z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M46.681 57.002c.206.508.803 3.38 1.256 3.38.979 0 2.748-2.663 3.222-3.355.87.57.388 1.767 2 1.767.73 0 1.098-1.573 1.858-1.599.026.636.067 1.211-.28 1.946-.534 1.132-1.886 2.666-3.215 2.666-.953 0-2.279-1.146-2.54-1.146-.282 0-.802.132-.967.483-.693 1.467 1.158 6.363 3.014 6.363.992 0 2.175-.728 3.213-1.176-.27 1.764-.308 3.251.05 4.77a5.674 5.674 0 01-2.942.85c-4.56 0-2.045-10.605-6.25-12.865l1.58-2.084"/><path d="M46.681 57.002c.206.508.803 3.38 1.256 3.38.979 0 2.748-2.663 3.222-3.355.87.57.388 1.767 2 1.767.73 0 1.098-1.573 1.858-1.599.026.636.067 1.211-.28 1.946-.534 1.132-1.886 2.666-3.215 2.666-.953 0-2.279-1.146-2.54-1.146-.282 0-.802.132-.967.483-.693 1.467 1.158 6.363 3.014 6.363.992 0 2.175-.728 3.213-1.176-.27 1.764-.308 3.251.05 4.77a5.674 5.674 0 01-2.942.85c-4.56 0-2.045-10.605-6.25-12.865z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M64.209 56.154c3.447 0 4.808 6.2 3.261 9.476-1.2 2.542-3.327 4.384-6.052 4.384-4.812 0-4.21-6.56-2.332-10.538.518-1.096 2.287-3.484 3.67-3.484.51 0 .93.162 1.453.162zm-.107.579c-.542 0-1.02.268-1.27.802-.53 1.118 2.105 2.25 1.727 3.051-.238.504-1.144.976-1.601.976-2.284 0-2.265-2.972-.903-4.908-.847.539-1.402 1.363-1.762 2.127-1.338 2.835-.276 6.734 2.778 6.734 1.688 0 3.631-1.516 4.387-3.117.93-1.968-1.448-5.665-3.356-5.665" fill-rule="evenodd"/><path d="M64.209 56.154c3.447 0 4.808 6.2 3.261 9.476-1.2 2.542-3.327 4.384-6.052 4.384-4.812 0-4.21-6.56-2.332-10.538.518-1.096 2.287-3.484 3.67-3.484.51 0 .93.162 1.453.162z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M64.101 56.733c-.542 0-1.02.268-1.271.802-.528 1.119 2.106 2.25 1.728 3.051-.238.504-1.144.976-1.601.976-2.284 0-2.265-2.972-.903-4.908-.847.54-1.402 1.363-1.762 2.127-1.339 2.835-.277 6.735 2.778 6.735 1.687 0 3.631-1.517 4.387-3.117.93-1.968-1.448-5.666-3.356-5.666z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M79.875 66.36c-.901 1.908-2.58 2.955-4.47 2.955-5.997 0-7.187-5.469-4.587-10.975.613-1.3 1.62-2.737 3.159-2.737 4.818 0 8.174 5.933 5.897 10.757zM75.09 56.293c-.443 0-.83.16-1.043.61-.466.989 2.072 1.87 2.075 2.892-.265.314-1.007.665-1.33.665-1.828 0-3.208-2.478-1.647-4.32-.634.403-1.01 1.005-1.277 1.57-1.582 3.352.673 6.74 3.96 6.74 1.368 0 3.13-.76 3.841-2.266 1.006-2.13-2.576-5.89-4.58-5.89" fill-rule="evenodd"/><path d="M79.875 66.36c-.901 1.908-2.58 2.955-4.47 2.955-5.997 0-7.187-5.469-4.587-10.975.613-1.3 1.62-2.737 3.159-2.737 4.818 0 8.174 5.933 5.897 10.757z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M75.089 56.294c-.442 0-.83.16-1.043.61-.466.988 2.072 1.87 2.076 2.892-.265.313-1.008.665-1.331.665-1.828 0-3.208-2.478-1.647-4.32-.633.402-1.01 1.004-1.277 1.57-1.582 3.352.674 6.74 3.96 6.74 1.368 0 3.131-.76 3.842-2.266 1.005-2.13-2.576-5.89-4.58-5.89z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M86.077 56.262c5.168 0 7.795 9.484 5.485 14.376-.441.935-1.264 1.87-2.35 1.87-5.904 0-4.397-11.737-7.72-15.072.303-.323.594-.66.861-1 2.246 2.635 1.13 9.572 5.927 9.572 1.105 0 1.941-.967 2.387-1.912 1.191-2.523-1.013-6.906-3.426-6.906-.024 0-.37.014-.363.154.09 1.611 1.356.607.08 3.348-1.303-.26-2.684-2.353-1.971-3.863.21-.444.734-.567 1.09-.567"/><path d="M86.077 56.262c5.168 0 7.795 9.484 5.485 14.376-.441.935-1.264 1.87-2.35 1.87-5.904 0-4.397-11.737-7.72-15.072.303-.323.594-.66.861-1 2.246 2.635 1.13 9.572 5.927 9.572 1.105 0 1.941-.967 2.387-1.912 1.191-2.523-1.013-6.906-3.426-6.906-.024 0-.37.014-.363.154.09 1.611 1.356.607.08 3.348-1.303-.26-2.684-2.353-1.971-3.863.21-.444.734-.567 1.09-.567z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M98.927 56.154c.487.046 1.218.002 1.636.13.078.023.019.121.032.199.127.716.327 1.396.5 2.089.673 2.698 1.078 5.468 1.85 8.142.841 2.912 1.718 6.194.7 9.848-.1.357-.233.72-.405 1.085-1.154 2.445-4.12 4.772-6.716 4.772-.315 0-.655-.09-.806-.294 1.096-.696 1.78-1.41 2.27-2.446.587-1.243.578-2.407.5-3.478.208.12.873.422 1.15.422 1.122 0 2.085-1.085 2.536-2.04.827-1.751.685-3.539.542-5.031a23.224 23.224 0 00-.312-2.2l-.21-1.036-.027-.113-.026-.114c.126 0 .013.22.018.331.077 1.806.045 4.328-.926 6.384-.45.955-1.188 1.94-2.32 1.94-4.963 0-2.467-14.074-6.444-17.42.22-.363.417-.738.582-1.105 2.354 2.842 2.477 10.677 5.94 10.677.841 0 1.71-.788 2.067-1.545 1.54-3.26-1.017-7.057-2.13-9.197" fill-rule="evenodd"/><path d="M98.927 56.154c.487.046 1.218.002 1.636.13.078.023.019.121.032.199.127.716.327 1.396.5 2.089.673 2.698 1.078 5.468 1.85 8.142.841 2.912 1.718 6.194.7 9.848-.1.357-.233.72-.405 1.085-1.154 2.445-4.12 4.772-6.716 4.772-.315 0-.655-.09-.806-.294 1.096-.696 1.78-1.41 2.27-2.446.587-1.243.578-2.407.5-3.478.208.12.873.422 1.15.422 1.122 0 2.085-1.085 2.536-2.04.827-1.751.685-3.539.542-5.031a23.224 23.224 0 00-.312-2.2l-.21-1.036-.027-.113-.026-.114c.126 0 .013.22.018.331.077 1.806.045 4.328-.926 6.384-.45.955-1.188 1.94-2.32 1.94-4.963 0-2.467-14.074-6.444-17.42.22-.363.417-.738.582-1.105 2.354 2.842 2.477 10.677 5.94 10.677.841 0 1.71-.788 2.067-1.545 1.54-3.26-1.017-7.057-2.13-9.197z" fill="none" stroke="#000" stroke-miterlimit="3.864" stroke-width=".47650595999999995"/><path d="M37.804 44.66c3.413 0 1.424 8.528.21 11.1-1.04 2.201-3.38 5.377-6.153 5.377-3.327 0-3.228-3.727-1.904-6.532.717-1.52 1.82-3.222 3.338-4.474-.39 1.307.925 2.2.393 3.325-.363.769-1.114 1.609-1.504 2.436-.631 1.337-.39 3.71 1.135 3.71 1.365 0 2.578-1.692 3.075-2.745 1.019-2.158 3.566-11.366.719-11.366-3.28 0-8.93 7.99-10.113 10.497-2.112 4.474-.58 9.984 4.231 9.984 3.252 0 5.926-3.126 7.218-5.862a14.931 14.931 0 001.353-4.781l.632-.116c.139 4.21 4.592 11.18 2.697 15.196-2.427 5.14-9.681 5.094-13.824 6.918-.87-2.037-2.05-3.93-3.711-5.376 3.695-1.243 12.775-3.33 14.75-7.512.83-1.758.264-4.671-.694-5.659a10.916 10.916 0 01-.689 1.89c-1.69 3.58-5.31 6.357-9.041 6.357-5.196 0-7.398-3.733-4.953-8.913 1.467-3.109 8.96-13.455 12.835-13.455"/><path d="M37.804 44.66c3.413 0 1.424 8.528.21 11.1-1.04 2.201-3.38 5.377-6.153 5.377-3.327 0-3.228-3.727-1.904-6.532.717-1.52 1.82-3.222 3.338-4.474-.39 1.307.925 2.2.393 3.325-.363.769-1.114 1.609-1.504 2.436-.631 1.337-.39 3.71 1.135 3.71 1.365 0 2.578-1.692 3.075-2.745 1.019-2.158 3.566-11.366.719-11.366-3.28 0-8.93 7.99-10.113 10.497-2.112 4.474-.58 9.984 4.231 9.984 3.252 0 5.926-3.126 7.218-5.862a14.931 14.931 0 001.353-4.781l.632-.116c.139 4.21 4.592 11.18 2.697 15.196-2.427 5.14-9.681 5.094-13.824 6.918-.87-2.037-2.05-3.93-3.711-5.376 3.695-1.243 12.775-3.33 14.75-7.512.83-1.758.264-4.671-.694-5.659a10.916 10.916 0 01-.689 1.89c-1.69 3.58-5.31 6.357-9.041 6.357-5.196 0-7.398-3.733-4.953-8.913 1.467-3.109 8.96-13.455 12.835-13.455z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M46.681 57.002c.206.508.803 3.38 1.256 3.38.979 0 2.748-2.663 3.222-3.355.87.57.388 1.767 2 1.767.73 0 1.098-1.573 1.858-1.599.026.636.067 1.211-.28 1.946-.534 1.132-1.886 2.666-3.215 2.666-.953 0-2.279-1.146-2.54-1.146-.282 0-.802.132-.967.483-.693 1.467 1.158 6.363 3.014 6.363.992 0 2.175-.728 3.213-1.176-.27 1.764-.308 3.251.05 4.77a5.674 5.674 0 01-2.942.85c-4.56 0-2.045-10.605-6.25-12.865l1.58-2.084"/><path d="M46.681 57.002c.206.508.803 3.38 1.256 3.38.979 0 2.748-2.663 3.222-3.355.87.57.388 1.767 2 1.767.73 0 1.098-1.573 1.858-1.599.026.636.067 1.211-.28 1.946-.534 1.132-1.886 2.666-3.215 2.666-.953 0-2.279-1.146-2.54-1.146-.282 0-.802.132-.967.483-.693 1.467 1.158 6.363 3.014 6.363.992 0 2.175-.728 3.213-1.176-.27 1.764-.308 3.251.05 4.77a5.674 5.674 0 01-2.942.85c-4.56 0-2.045-10.605-6.25-12.865z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M64.209 56.154c3.447 0 4.808 6.2 3.261 9.476-1.2 2.542-3.327 4.384-6.052 4.384-4.812 0-4.21-6.56-2.332-10.538.518-1.096 2.287-3.484 3.67-3.484.51 0 .93.162 1.453.162zm-.107.579c-.542 0-1.02.268-1.27.802-.53 1.118 2.105 2.25 1.727 3.051-.238.504-1.144.976-1.601.976-2.284 0-2.265-2.972-.903-4.908-.847.539-1.402 1.363-1.762 2.127-1.338 2.835-.276 6.734 2.778 6.734 1.688 0 3.631-1.516 4.387-3.117.93-1.968-1.448-5.665-3.356-5.665" fill-rule="evenodd"/><path d="M64.209 56.154c3.447 0 4.808 6.2 3.261 9.476-1.2 2.542-3.327 4.384-6.052 4.384-4.812 0-4.21-6.56-2.332-10.538.518-1.096 2.287-3.484 3.67-3.484.51 0 .93.162 1.453.162z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M64.101 56.733c-.542 0-1.02.268-1.271.802-.528 1.119 2.106 2.25 1.728 3.051-.238.504-1.144.976-1.601.976-2.284 0-2.265-2.972-.903-4.908-.847.54-1.402 1.363-1.762 2.127-1.339 2.835-.277 6.735 2.778 6.735 1.687 0 3.631-1.517 4.387-3.117.93-1.968-1.448-5.666-3.356-5.666z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M79.875 66.36c-.901 1.908-2.58 2.955-4.47 2.955-5.997 0-7.187-5.469-4.587-10.975.613-1.3 1.62-2.737 3.159-2.737 4.818 0 8.174 5.933 5.897 10.757zM75.09 56.293c-.443 0-.83.16-1.043.61-.466.989 2.072 1.87 2.075 2.892-.265.314-1.007.665-1.33.665-1.828 0-3.208-2.478-1.647-4.32-.634.403-1.01 1.005-1.277 1.57-1.582 3.352.673 6.74 3.96 6.74 1.368 0 3.13-.76 3.841-2.266 1.006-2.13-2.576-5.89-4.58-5.89" fill-rule="evenodd"/><path d="M79.875 66.36c-.901 1.908-2.58 2.955-4.47 2.955-5.997 0-7.187-5.469-4.587-10.975.613-1.3 1.62-2.737 3.159-2.737 4.818 0 8.174 5.933 5.897 10.757z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M75.089 56.294c-.442 0-.83.16-1.043.61-.466.988 2.072 1.87 2.076 2.892-.265.313-1.008.665-1.331.665-1.828 0-3.208-2.478-1.647-4.32-.633.402-1.01 1.004-1.277 1.57-1.582 3.352.674 6.74 3.96 6.74 1.368 0 3.131-.76 3.842-2.266 1.005-2.13-2.576-5.89-4.58-5.89z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M86.077 56.262c5.168 0 7.795 9.484 5.485 14.376-.441.935-1.264 1.87-2.35 1.87-5.904 0-4.397-11.737-7.72-15.072.303-.323.594-.66.861-1 2.246 2.635 1.13 9.572 5.927 9.572 1.105 0 1.941-.967 2.387-1.912 1.191-2.523-1.013-6.906-3.426-6.906-.024 0-.37.014-.363.154.09 1.611 1.356.607.08 3.348-1.303-.26-2.684-2.353-1.971-3.863.21-.444.734-.567 1.09-.567"/><path d="M86.077 56.262c5.168 0 7.795 9.484 5.485 14.376-.441.935-1.264 1.87-2.35 1.87-5.904 0-4.397-11.737-7.72-15.072.303-.323.594-.66.861-1 2.246 2.635 1.13 9.572 5.927 9.572 1.105 0 1.941-.967 2.387-1.912 1.191-2.523-1.013-6.906-3.426-6.906-.024 0-.37.014-.363.154.09 1.611 1.356.607.08 3.348-1.303-.26-2.684-2.353-1.971-3.863.21-.444.734-.567 1.09-.567z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><path d="M98.927 56.154c.487.046 1.218.002 1.636.13.078.023.019.121.032.199.127.716.327 1.396.5 2.089.673 2.698 1.078 5.468 1.85 8.142.841 2.912 1.718 6.194.7 9.848-.1.357-.233.72-.405 1.085-1.154 2.445-4.12 4.772-6.716 4.772-.315 0-.655-.09-.806-.294 1.096-.696 1.78-1.41 2.27-2.446.587-1.243.578-2.407.5-3.478.208.12.873.422 1.15.422 1.122 0 2.085-1.085 2.536-2.04.827-1.751.685-3.539.542-5.031a23.224 23.224 0 00-.312-2.2l-.21-1.036-.027-.113-.026-.114c.126 0 .013.22.018.331.077 1.806.045 4.328-.926 6.384-.45.955-1.188 1.94-2.32 1.94-4.963 0-2.467-14.074-6.444-17.42.22-.363.417-.738.582-1.105 2.354 2.842 2.477 10.677 5.94 10.677.841 0 1.71-.788 2.067-1.545 1.54-3.26-1.017-7.057-2.13-9.197" fill-rule="evenodd"/><path d="M98.927 56.154c.487.046 1.218.002 1.636.13.078.023.019.121.032.199.127.716.327 1.396.5 2.089.673 2.698 1.078 5.468 1.85 8.142.841 2.912 1.718 6.194.7 9.848-.1.357-.233.72-.405 1.085-1.154 2.445-4.12 4.772-6.716 4.772-.315 0-.655-.09-.806-.294 1.096-.696 1.78-1.41 2.27-2.446.587-1.243.578-2.407.5-3.478.208.12.873.422 1.15.422 1.122 0 2.085-1.085 2.536-2.04.827-1.751.685-3.539.542-5.031a23.224 23.224 0 00-.312-2.2l-.21-1.036-.027-.113-.026-.114c.126 0 .013.22.018.331.077 1.806.045 4.328-.926 6.384-.45.955-1.188 1.94-2.32 1.94-4.963 0-2.467-14.074-6.444-17.42.22-.363.417-.738.582-1.105 2.354 2.842 2.477 10.677 5.94 10.677.841 0 1.71-.788 2.067-1.545 1.54-3.26-1.017-7.057-2.13-9.197z" fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="3.864" stroke-width="5.7179996"/><g fill="#fff"><path d="M37.804 44.66c3.413 0 1.424 8.528.21 11.1-1.04 2.201-3.38 5.377-6.153 5.377-3.327 0-3.228-3.727-1.904-6.532.717-1.52 1.82-3.222 3.338-4.474-.39 1.307.925 2.2.393 3.325-.363.769-1.114 1.609-1.504 2.436-.631 1.337-.39 3.71 1.135 3.71 1.365 0 2.578-1.692 3.075-2.745 1.019-2.158 3.566-11.366.719-11.366-3.28 0-8.93 7.99-10.113 10.497-2.112 4.474-.58 9.984 4.231 9.984 3.252 0 5.926-3.126 7.218-5.862a14.931 14.931 0 001.353-4.781l.632-.116c.139 4.21 4.592 11.18 2.697 15.196-2.427 5.14-9.681 5.094-13.824 6.918-.87-2.037-2.05-3.93-3.711-5.376 3.695-1.243 12.775-3.33 14.75-7.512.83-1.758.264-4.671-.694-5.659a10.916 10.916 0 01-.689 1.89c-1.69 3.58-5.31 6.357-9.041 6.357-5.196 0-7.398-3.733-4.953-8.913 1.467-3.109 8.96-13.455 12.835-13.455M46.681 57.002c.206.508.803 3.38 1.256 3.38.979 0 2.748-2.663 3.222-3.355.87.57.388 1.767 2 1.767.73 0 1.098-1.573 1.858-1.599.026.636.067 1.211-.28 1.946-.534 1.132-1.886 2.666-3.215 2.666-.953 0-2.279-1.146-2.54-1.146-.282 0-.802.132-.967.483-.693 1.467 1.158 6.363 3.014 6.363.992 0 2.175-.728 3.213-1.176-.27 1.764-.308 3.251.05 4.77a5.674 5.674 0 01-2.942.85c-4.56 0-2.045-10.605-6.25-12.865l1.58-2.084"/><path d="M64.209 56.154c3.447 0 4.808 6.2 3.261 9.476-1.2 2.542-3.327 4.384-6.052 4.384-4.812 0-4.21-6.56-2.332-10.538.518-1.096 2.287-3.484 3.67-3.484.51 0 .93.162 1.453.162zm-.107.579c-.542 0-1.02.268-1.27.802-.53 1.118 2.105 2.25 1.727 3.051-.238.504-1.144.976-1.601.976-2.284 0-2.265-2.972-.903-4.908-.847.539-1.402 1.363-1.762 2.127-1.338 2.835-.276 6.734 2.778 6.734 1.688 0 3.631-1.516 4.387-3.117.93-1.968-1.448-5.665-3.356-5.665M79.875 66.36c-.901 1.908-2.58 2.955-4.47 2.955-5.997 0-7.187-5.469-4.587-10.975.613-1.3 1.62-2.737 3.159-2.737 4.818 0 8.174 5.933 5.897 10.757zM75.09 56.293c-.443 0-.83.16-1.043.61-.466.989 2.072 1.87 2.075 2.892-.265.314-1.007.665-1.33.665-1.828 0-3.208-2.478-1.647-4.32-.634.403-1.01 1.005-1.277 1.57-1.582 3.352.673 6.74 3.96 6.74 1.368 0 3.13-.76 3.841-2.266 1.006-2.13-2.576-5.89-4.58-5.89" fill-rule="evenodd"/><path d="M86.077 56.262c5.168 0 7.795 9.484 5.485 14.376-.441.935-1.264 1.87-2.35 1.87-5.904 0-4.397-11.737-7.72-15.072.303-.323.594-.66.861-1 2.246 2.635 1.13 9.572 5.927 9.572 1.105 0 1.941-.967 2.387-1.912 1.191-2.523-1.013-6.906-3.426-6.906-.024 0-.37.014-.363.154.09 1.611 1.356.607.08 3.348-1.303-.26-2.684-2.353-1.971-3.863.21-.444.734-.567 1.09-.567"/><path d="M98.927 56.154c.487.046 1.218.002 1.636.13.078.023.019.121.032.199.127.716.327 1.396.5 2.089.673 2.698 1.078 5.468 1.85 8.142.841 2.912 1.718 6.194.7 9.848-.1.357-.233.72-.405 1.085-3.87 7.432-12.151 5.43-14.745 5.43-.315 0-.656-.09-.806-.295 1.094-.696 1.78-1.41 2.27-2.446.586-1.243.577-2.406.5-3.478.207.121.872.422 1.148.422 1.123 0 7.378 3.214 10.567-2.696.827-1.752.685-3.54.542-5.032a23.224 23.224 0 00-.312-2.2l-.21-1.036-.027-.113-.026-.113c.126 0 .013.22.018.33.077 1.807.045 4.328-.926 6.384-.45.955-1.188 1.94-2.32 1.94-4.963 0-2.467-14.074-6.444-17.42.22-.363.417-.738.582-1.105 2.354 2.842 2.477 10.677 5.94 10.677.841 0 1.71-.787 2.068-1.545 1.538-3.26-1.018-7.056-2.132-9.197" fill-rule="evenodd"/></g></svg>', color: "#4298B8" },
+  gradle: { svg: '<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><path d="M103.93 17.205a20.294 20.294 0 00-11.092 5.268 1.98 1.98 0 00-.62 1.39 2.025 2.025 0 00.578 1.405l2.525 2.613a1.936 1.936 0 002.53.182 11.5 11.5 0 016.964-2.321 11.618 11.618 0 018.245 19.847c-16.11 16.112-37.616-29.024-86.423-5.803a6.637 6.637 0 00-2.956 9.291l8.365 14.476a6.637 6.637 0 008.973 2.467l.203-.114-.16.114 3.71-2.082a85.035 85.035 0 0011.676-8.724 2.055 2.055 0 012.675 0 1.892 1.892 0 01.73 1.478 1.951 1.951 0 01-.641 1.479 87.562 87.562 0 01-12.31 9.135h-.12l-3.712 2.071a10.347 10.347 0 01-5.142 1.338 10.672 10.672 0 01-9.209-5.273l-7.912-13.674C5.613 62.5-3.607 83.18 1.345 109.416a1.951 1.951 0 001.895 1.567h9.015a1.922 1.922 0 001.905-1.686 13.2 13.2 0 0126.193 0 1.936 1.936 0 001.916 1.686h8.786a1.922 1.922 0 001.905-1.686 13.214 13.214 0 0126.209 0 1.922 1.922 0 001.905 1.686h8.672a1.922 1.922 0 001.926-1.89c.207-12.223 3.503-26.267 12.904-33.303 32.562-24.359 24.007-45.24 16.469-52.823a20.294 20.294 0 00-17.115-5.762zM84.692 52.866a3.902 3.902 0 013.138 6.965v-.02l-6.21-3.119a3.902 3.902 0 013.072-3.826z" fill="#02303a"/></svg>', color: "#02303A" },
+  pl: { svg: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 128 128"><path d="M121.172 62.878c0-34.048-26.473-61.648-59.135-61.648C29.379 1.23 2.9 28.83 2.9 62.878s26.478 61.651 59.136 61.651c32.662 0 59.135-27.603 59.135-61.651z" fill="#fff"/><path d="M53.34 127.516c-13.91-2.461-25.842-8.812-35.703-19.006C9.25 99.842 3.477 88.928.853 76.763c-1.137-5.256-1.137-20.287 0-25.54C2.629 43 6.075 34.835 10.776 27.714 13.89 23 23.004 13.888 27.716 10.773c7.123-4.7 15.293-8.15 23.514-9.921 5.253-1.137 20.286-1.137 25.543 0C89.58 3.617 100.225 9.4 109.41 18.585c9.187 9.186 14.97 19.828 17.739 32.639 1.133 5.252 1.133 20.283 0 25.54-2.769 12.806-8.552 23.448-17.739 32.634-9.038 9.041-19.55 14.812-32.147 17.65-4.467 1.009-19.238 1.297-23.923.468zm11.567-12.772c0-4.194-.062-4.497-.907-4.497-.838 0-.904.288-.869 3.897.043 4.264.343 5.572 1.211 5.284.401-.132.565-1.491.565-4.684zm-6.757 1.445c1.192-1.196 1.542-1.92 1.542-3.209 0-1.316-.16-1.635-.763-1.519-.417.078-.919.76-1.114 1.507-.194.748-1 1.904-1.783 2.57-1.418 1.196-1.472 2.192-.125 2.192.386 0 1.394-.697 2.243-1.541zm14.943 1.047c.167-.269-.339-1.036-1.122-1.698-.786-.666-1.589-1.822-1.783-2.57-.199-.747-.701-1.429-1.118-1.507-.6-.116-.76.203-.76 1.519 0 2.609 3.743 5.942 4.783 4.256zm-20.66-8.146c0-.261-.634-.822-1.41-1.246-5.054-2.769-10.985-7.176-14.28-10.61-6.433-6.71-9.33-13.388-9.4-21.678-.048-5.54.665-8.43 3.364-13.605 2.609-5.004 5.631-8.78 13.95-17.421 9.287-9.653 11.425-12.2 13.038-15.533 1.148-2.367 1.3-3.231 1.46-8.235.199-6.215-.18-10.506-.927-10.506-.339 0-.401 1.612-.21 5.234.623 11.592-1.53 15.19-14.892 24.881-9.202 6.674-13.424 10.3-16.613 14.264-4.518 5.61-6.52 10.466-7.018 17.05-1.207 15.868 8.848 29.629 26.59 36.385 3.914 1.487 6.348 1.881 6.348 1.02zm30.7-1.285c6.098-2.543 10.736-5.615 15.11-10.007 6.667-6.701 9.439-12.967 9.856-22.242.362-8.134-1.402-13.515-6.437-19.61-3.45-4.173-7.162-7.16-17.174-13.81-13.47-8.953-16.633-12.516-16.633-18.746 0-1.658.3-4.006.662-5.217.623-2.068.608-3.493-.02-1.862-.591 1.546-1.947.837-2.675-1.41l-.7-2.152.264 2.04c.942 7.242 1.06 10.276.642 16.615-.564 8.57-1.616 14.427-4.51 25.076-2.87 10.572-3.387 14.404-3.029 22.476.3 6.825 1.254 11.93 3.474 18.593 2.06 6.183 2.445 6.654 6.235 7.624 2.083.533 4.058 1.433 5.627 2.566 1.476 1.067 2.952 1.76 3.781 1.775.748.012 3.237-.755 5.526-1.709zm-1.371-3.076c-.565-.565-.3-1.048 1.912-3.493 6.97-7.694 10.094-15.641 10.183-25.906.063-6.993-1.483-11.627-6.2-18.593-2.13-3.15-9.634-11.008-13.263-13.893-2.66-2.114-5.398-5.72-5.885-7.76-.494-2.068.892-1.523 2.496.98.787 1.227 2.493 3.03 3.79 4.004 1.296.977 5.132 3.835 8.524 6.355 11.664 8.671 16.859 16.066 18.023 25.672.678 5.556-.397 11.3-3.107 16.634-2.812 5.525-7.937 11.545-12.326 14.477-2.703 1.803-3.556 2.115-4.147 1.523zm-22.837.584c.133-.343-1.036-2.535-2.593-4.875-4.128-6.191-5.924-9.606-7.598-14.454-1.414-4.085-1.492-4.641-1.504-10.883-.015-9.431 1.005-12.422 8.49-24.85 7.057-11.718 8.015-16.258 7.22-34.286-.288-6.46-.611-11.838-.72-11.95-.744-.744-.904 1.172-.627 7.67.545 12.94-.292 20.147-3.018 26.062-1.858 4.026-3.938 7.075-9.53 14.002-7.788 9.637-9.985 14.75-9.946 23.126.031 5.743.806 9.275 3.127 14.185 2.512 5.32 7.135 10.689 12.93 15.011 2.667 1.994 3.391 2.231 3.77 1.242z" fill="#212178"/></svg>', color: "#39457E" },
+  lua: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill="#000080" d="M112.956.708c-7.912 0-14.335 6.424-14.335 14.336s6.424 14.335 14.335 14.335 14.335-6.41 14.335-14.335c0-7.912-6.424-14.336-14.335-14.336zM64 15.058c-27.02 0-48.956 21.935-48.956 48.955S36.979 112.97 64 112.97c27.02 0 48.956-21.935 48.956-48.956 0-27.02-21.936-48.956-48.956-48.956z"/><path fill="#fff" d="M84.285 29.392c-7.91 0-14.335 6.424-14.335 14.335s6.424 14.336 14.335 14.336 14.336-6.424 14.336-14.336-6.424-14.335-14.335-14.335zM30.773 56.36v32.119h19.961v-3.611H34.87V56.359Zm57.584 8.37c-3.354 0-6.126.975-7.668 2.692-1.055 1.19-1.488 2.516-1.582 4.801h3.705c.311-2.826 1.988-4.098 5.423-4.098 3.3 0 5.153 1.231 5.153 3.435v.974c0 1.542-.92 2.205-3.827 2.556-5.193.663-5.991.839-7.398 1.407-2.69 1.095-4.057 3.164-4.057 6.166 0 4.193 2.908 6.83 7.574 6.83 2.907 0 5.247-1.014 7.843-3.395.257 2.34 1.407 3.395 3.787 3.395.757 0 1.325-.081 2.515-.392v-2.773a2.917 2.917 0 0 1-.798.095c-1.284 0-1.988-.663-1.988-1.812V71.032c0-4.098-3.002-6.302-8.682-6.302zm-33.742.664V83.19c0 3.84 2.867 6.302 7.357 6.302 3.395 0 5.545-1.19 7.709-4.233v3.219h3.3V65.393h-3.652v13.09c0 4.72-2.475 7.804-6.302 7.804-2.907 0-4.76-1.772-4.76-4.544v-16.35Zm38.773 11.67v4.139c0 1.244-.365 1.988-1.46 3.002-1.502 1.366-3.3 2.07-5.464 2.07-2.867 0-4.544-1.367-4.544-3.706 0-2.42 1.636-3.665 5.558-4.233 3.881-.528 4.68-.703 5.91-1.271z"/><path fill="#808080" d="M61.733 0a64.06 64.06 0 0 0-5.57.436l.179 1.458a62.596 62.596 0 0 1 5.442-.426zm5.585.046-.075 1.468a62.432 62.432 0 0 1 5.433.52L72.88.578a63.91 63.91 0 0 0-5.561-.532Zm-16.665 1.31a63.301 63.301 0 0 0-5.409 1.398l.43 1.405a61.835 61.835 0 0 1 5.284-1.367Zm27.72.237-.33 1.431a62.536 62.536 0 0 1 5.262 1.455l.452-1.397a63.998 63.998 0 0 0-5.384-1.489ZM39.98 4.623a63.447 63.447 0 0 0-5.081 2.323l.668 1.308a61.98 61.98 0 0 1 4.964-2.27zm49.012.41-.573 1.353a62.539 62.539 0 0 1 4.929 2.346l.688-1.298a64.012 64.012 0 0 0-5.044-2.4ZM30.04 9.706a63.95 63.95 0 0 0-4.6 3.17l.886 1.173a62.484 62.484 0 0 1 4.494-3.098zm-8.906 6.728a64.247 64.247 0 0 0-3.983 3.918l1.075 1.001a62.774 62.774 0 0 1 3.891-3.827zm-7.61 8.165a64.04 64.04 0 0 0-3.247 4.546l1.231.8a62.571 62.571 0 0 1 3.172-4.44zm-6.086 9.357a63.459 63.459 0 0 0-2.408 5.042l1.352.574a61.99 61.99 0 0 1 2.352-4.925zm113.623.973-1.31.667a62.616 62.616 0 0 1 2.263 4.967l1.362-.55a64.073 64.073 0 0 0-2.315-5.083zM3.075 44.23a63.382 63.382 0 0 0-1.49 5.385l1.432.328a61.91 61.91 0 0 1 1.455-5.26Zm122.166 1.049-1.404.429a62.513 62.513 0 0 1 1.366 5.285l1.437-.306a63.983 63.983 0 0 0-1.399-5.409zM.574 55.108a64.093 64.093 0 0 0-.528 5.561l1.467.075a62.622 62.622 0 0 1 .516-5.434Zm126.988 1.088-1.458.179a62.465 62.465 0 0 1 .428 5.441l1.468-.05a63.916 63.916 0 0 0-.438-5.57zM1.468 66.205 0 66.255a64.082 64.082 0 0 0 .435 5.57l1.458-.179a62.61 62.61 0 0 1-.425-5.441Zm125.018 1.071a62.63 62.63 0 0 1-.518 5.434l1.455.203a64.16 64.16 0 0 0 .53-5.561zM2.79 77.031l-1.437.304a63.332 63.332 0 0 0 1.398 5.41l1.405-.43A61.864 61.864 0 0 1 2.79 77.03Zm122.188 1.046a61.966 61.966 0 0 1-1.457 5.26l1.397.454a63.43 63.43 0 0 0 1.492-5.384zM5.981 87.459l-1.362.551a63.434 63.434 0 0 0 2.323 5.082l1.307-.669a61.968 61.968 0 0 1-2.268-4.964Zm115.627.99a61.98 61.98 0 0 1-2.354 4.925l1.296.69a63.447 63.447 0 0 0 2.41-5.04zM10.944 97.17l-1.245.78a63.949 63.949 0 0 0 3.17 4.6l1.172-.885a62.481 62.481 0 0 1-3.097-4.495zm105.534.904a62.546 62.546 0 0 1-3.173 4.44l1.156.906a64.024 64.024 0 0 0 3.249-4.545zm-98.96 7.8-1.092.983a64.235 64.235 0 0 0 3.917 3.983l1.002-1.074a62.77 62.77 0 0 1-3.827-3.892zm92.24.79a62.76 62.76 0 0 1-3.893 3.826l.983 1.092a64.221 64.221 0 0 0 3.984-3.916zm-84.263 6.648-.906 1.157a64.026 64.026 0 0 0 4.546 3.248l.8-1.232a62.554 62.554 0 0 1-4.44-3.173zm76.16.654a62.475 62.475 0 0 1-4.495 3.096l.78 1.245a63.945 63.945 0 0 0 4.6-3.17zm-67.018 5.294-.691 1.296a63.45 63.45 0 0 0 5.04 2.409l.575-1.352a61.984 61.984 0 0 1-4.924-2.353zm57.775.496a61.956 61.956 0 0 1-4.964 2.268l.551 1.362a63.425 63.425 0 0 0 5.082-2.322zm-47.74 3.77-.453 1.396a63.419 63.419 0 0 0 5.385 1.49l.329-1.43a61.949 61.949 0 0 1-5.26-1.456zm37.632.322a62.05 62.05 0 0 1-5.284 1.365l.304 1.437a63.361 63.361 0 0 0 5.41-1.398zm-27.003 2.122-.203 1.455a64.093 64.093 0 0 0 5.561.529l.075-1.467a62.605 62.605 0 0 1-5.433-.517zm16.335.139a62.635 62.635 0 0 1-5.442.424l.05 1.468a64.114 64.114 0 0 0 5.57-.434z"/></svg>', color: "#000080" },
+  r: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><defs><linearGradient id="a" x1=".741" x2="590.86" y1="3.666" y2="593.79" gradientTransform="matrix(.2169 0 0 .14527 -.16 14.112)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#cbced0"/><stop offset="1" stop-color="#84838b"/></linearGradient><linearGradient id="b" x1="301.03" x2="703.07" y1="151.4" y2="553.44" gradientTransform="matrix(.17572 0 0 .17931 -.16 14.112)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#276dc3"/><stop offset="1" stop-color="#165caa"/></linearGradient></defs><path fill="url(#a)" fill-rule="evenodd" d="M64 100.38c-35.346 0-64-19.19-64-42.863 0-23.672 28.654-42.863 64-42.863s64 19.19 64 42.863c0 23.672-28.654 42.863-64 42.863zm9.796-68.967c-26.866 0-48.646 13.119-48.646 29.303 0 16.183 21.78 29.303 48.646 29.303s46.693-8.97 46.693-29.303c0-20.327-19.827-29.303-46.693-29.303z"/><path fill="url(#b)" fill-rule="evenodd" d="M97.469 81.033s3.874 1.169 6.124 2.308c.78.395 2.132 1.183 3.106 2.219a8.388 8.388 0 0 1 1.42 2.04l15.266 25.74-24.674.01-11.537-21.666s-2.363-4.06-3.817-5.237c-1.213-.982-1.73-1.331-2.929-1.331h-5.862l.004 28.219-21.833.009V41.26h43.844s19.97.36 19.97 19.359c0 18.999-19.082 20.413-19.082 20.413zm-9.497-24.137-13.218-.009-.006 12.258 13.224-.005s6.124-.019 6.124-6.235c0-6.34-6.124-6.009-6.124-6.009z"/></svg>', color: "#276DC3" },
+  dart: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill="#00c4b3" d="M35.2 34.9l-8.3-8.3v59.7l.1 2.8c0 1.3.2 2.8.7 4.3l65.6 23.1 16.3-7.2-74.4-74.4z"/><path d="M27.7 93.4zm81.9 15.9l-16.3 7.2-65.4-23.1c1.3 4.8 4 10.1 7 13.2l21.3 21.2 47.6.1 5.8-18.6z" fill="#22d3c5"/><path fill="#0075c9" d="M1.7 65.1C-.4 67.3.7 72 4 75.5l14.7 14.8 9.2 3.3c-.3-1.5-.7-3-.7-4.3l-.1-2.8-.2-59.8m82.7 82.6l7.2-16.4-23-65.6c-1.5-.3-3-.6-4.3-.7l-2.9-.1-59.6.1"/><path d="M93.6 27.3c.2 0 .2 0 0 0 .2 0 .2 0 0 0zm16 82l17.7-5.8V54.8l-20.4-20.5c-3-3-8.3-5.8-13.2-7l23.1 65.6" fill="#00a8e1"/><path fill="#00c4b3" d="M90.5 18.2L75.7 3.5c-3.4-3.4-8-4.4-10.4-2.3L26.9 26.6h59.5l2.9.1c1.3 0 2.8.2 4.3.7l-3.1-9.2z"/></svg>', color: "#0175C2" },
+  erl: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path d="M20.7 103.9C11 93.5 5.2 79.2 5.3 62.1 5.2 47 10 34 18.2 24.1H1v79.7l19.7.1zm90.4 0c4.2-4.5 8-9.8 11.4-15.9l-19-9.5c-6.7 10.8-16.4 20.8-29.9 20.9-19.6-.1-27.3-16.9-27.3-38.5h73.3c.1-2.4.1-3.6 0-4.7.5-12.9-2.9-23.7-9.1-32.1H127v79.7l-15.9.1zM47.5 42.4c.8-9.8 8.5-16.3 17.6-16.4 9.1 0 15.7 6.6 15.9 16.4H47.5z" fill="#A90533"/></svg>', color: "#A90533" },
+  ex: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><linearGradient id="elixir-original-a" gradientUnits="userSpaceOnUse" x1="835.592" y1="-36.546" x2="821.211" y2="553.414" gradientTransform="matrix(.1297 0 0 .2 -46.03 17.198)"><stop offset="0" stop-color="#d9d8dc"/><stop offset="1" stop-color="#fff" stop-opacity=".385"/></linearGradient><path fill-rule="evenodd" clip-rule="evenodd" fill="url(#elixir-original-a)" d="M64.4.5C36.7 13.9 1.9 83.4 30.9 113.9c26.8 33.5 85.4 1.3 68.4-40.5-21.5-36-35-37.9-34.9-72.9z"/><linearGradient id="elixir-original-b" gradientUnits="userSpaceOnUse" x1="942.357" y1="-40.593" x2="824.692" y2="472.243" gradientTransform="matrix(.1142 0 0 .2271 -47.053 17.229)"><stop offset="0" stop-color="#8d67af" stop-opacity=".672"/><stop offset="1" stop-color="#9f8daf"/></linearGradient><path fill-rule="evenodd" clip-rule="evenodd" fill="url(#elixir-original-b)" d="M64.4.2C36.8 13.6 1.9 82.9 31 113.5c10.7 12.4 28 16.5 37.7 9.1 26.4-18.8 7.4-53.1 10.4-78.5C68.1 33.9 64.2 11.3 64.4.2z"/><linearGradient id="elixir-original-c" gradientUnits="userSpaceOnUse" x1="924.646" y1="120.513" x2="924.646" y2="505.851" gradientTransform="matrix(.1227 0 0 .2115 -46.493 17.206)"><stop offset="0" stop-color="#26053d" stop-opacity=".762"/><stop offset="1" stop-color="#b7b4b4" stop-opacity=".278"/></linearGradient><path fill-rule="evenodd" clip-rule="evenodd" fill="url(#elixir-original-c)" d="M56.7 4.3c-22.3 15.9-28.2 75-24.1 94.2 8.2 48.1 75.2 28.3 69.6-16.5-6-29.2-48.8-39.2-45.5-77.7z"/><linearGradient id="elixir-original-d" gradientUnits="userSpaceOnUse" x1="428.034" y1="198.448" x2="607.325" y2="559.255" gradientTransform="matrix(.1848 0 0 .1404 -42.394 17.138)"><stop offset="0" stop-color="#91739f" stop-opacity=".46"/><stop offset="1" stop-color="#32054f" stop-opacity=".54"/></linearGradient><path fill-rule="evenodd" clip-rule="evenodd" fill="url(#elixir-original-d)" d="M78.8 49.8c10.4 13.4 12.7 22.6 6.8 27.9-27.7 19.4-61.3 7.4-54-37.3C22.1 63 4.5 96.8 43.3 101.6c20.8 3.6 54 2 58.9-16.1-.2-15.9-10.8-22.9-23.4-35.7z"/><linearGradient id="elixir-original-e" gradientUnits="userSpaceOnUse" x1="907.895" y1="540.636" x2="590.242" y2="201.281" gradientTransform="matrix(.1418 0 0 .1829 -45.23 17.18)"><stop offset="0" stop-color="#463d49" stop-opacity=".331"/><stop offset="1" stop-color="#340a50" stop-opacity=".821"/></linearGradient><path fill-rule="evenodd" clip-rule="evenodd" fill="url(#elixir-original-e)" d="M38.1 36.4c-2.9 21.2 35.1 77.9 58.3 71-17.7 35.6-56.9-21.2-64-41.7 1.5-11 2.2-16.4 5.7-29.3z"/><linearGradient id="elixir-original-f" gradientUnits="userSpaceOnUse" x1="1102.297" y1="100.542" x2="1008.071" y2="431.648" gradientTransform="matrix(.106 0 0 .2448 -47.595 17.242)"><stop offset="0" stop-color="#715383" stop-opacity=".145"/><stop offset="1" stop-color="#f4f4f4" stop-opacity=".234"/></linearGradient><path fill-rule="evenodd" clip-rule="evenodd" fill="url(#elixir-original-f)" d="M60.4 49.7c.8 7.9 3.9 20.5 0 28.8S38.7 102 43.6 115.3c11.4 24.8 37.1-4.4 36.9-19 1.1-11.8-6.6-38.7-1.8-52.5L76.5 41l-13.6-4c-2.2 3.2-3 7.5-2.5 12.7z"/><linearGradient id="elixir-original-g" gradientUnits="userSpaceOnUse" x1="1354.664" y1="140.06" x2="1059.233" y2="84.466" gradientTransform="matrix(.09173 0 0 .2828 -48.536 17.28)"><stop offset="0" stop-color="#a5a1a8" stop-opacity=".356"/><stop offset="1" stop-color="#370c50" stop-opacity=".582"/></linearGradient><path fill-rule="evenodd" clip-rule="evenodd" fill="url(#elixir-original-g)" d="M65.3 10.8C36 27.4 48 53.4 49.3 81.6l19.1-55.4c-1.4-5.7-2.3-9.5-3.1-15.4z"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#330A4C" fill-opacity=".316" d="M68.3 26.1c-14.8 11.7-14.1 31.3-18.6 54 8.1-21.3 4.1-38.2 18.6-54z"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#FFF" d="M45.8 119.7c8 1.1 12.1 2.2 12.5 3 .3 4.2-11.1 1.2-12.5-3z"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#EDEDED" fill-opacity=".603" d="M49.8 10.8c-6.9 7.7-14.4 21.8-18.2 29.7-1 6.5-.5 15.7.6 23.5.9-18.2 7.5-39.2 17.6-53.2z"/></svg>', color: "#4E2A8E" },
+  coffee: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path d="M50.3 29.6c11.7-1 15-8.5 28.7-9.8 6.7-.6 11 .8 11.4 3.1.4 2.2-2.9 3.7-7 4-5.6.6-8-1.5-8.4-3.4-4.1.4-4.8 2.2-4.6 3.5.4 2.4 5.5 4.7 14.1 3.9 9.8-.8 13-4.6 12.2-8.5-1-5-8.5-9.2-22-8-17.3 1.6-17.2 9.5-28.9 10.5-4.8.4-7.5-.7-8-2.6-.3-1.9 2-2.8 4.8-3 2.6-.2 5.7.2 7.2 1 1.1-.6 1.5-1.1 1.3-1.8-.4-1.8-4-2.6-8.5-2.2-8.7.8-8.7 4.7-8.4 6.4 1.1 4.7 7.8 7.7 16.1 6.9zm58.6 19.8c-10.8 2.5-24.6 4.1-41.2 4.1-16.9 0-30.7-1.8-41.5-4.1-9.6-2.5-14.8-5.2-16.6-8 .9 6.3 2.5 12.4 4.6 18.2-2.4 1.5-4.7 3.5-6.7 6C3.7 70.4 2 76 2.3 81.5c.3 5.5 3 10 7.3 13.5 4.5 3.5 9.3 4.5 14.8 3.5 2.1-.3 4.5-1.5 6.6-2.1-4.5 0-8.3-1.5-12.1-4.5-4.1-3-7-7.3-7.6-12.4-1-4.8 0-9.3 2.7-13.2.6-.8 1.2-1.4 1.9-2 1.5 3.8 3.3 7.4 5.2 10.9 4.1 6.3 8.3 11.8 12.4 17.7 1.8 3.5 3 7 3.8 10.4 2.7 3.8 6.6 6.5 11.4 7.9 5.9 2.1 12.1 2.9 18.4 2.9h.7c6.3 0 12.9-1 19-3 4.5-1.5 8.3-4 11.1-8h.3c.7-3 1.8-6.8 3.5-10.3 4.1-5.9 8.3-11.4 12.4-17.7 5.5-10 9.3-21.4 11.4-33.6-2.1 3-7.3 5.8-16.6 7.9zm-82.7-8.7c10.8 2.7 24.6 4.1 41.2 4.1 16.9 0 30.4-1.5 41.2-4.1 11.4-2.7 16.9-6.3 16.9-9.6 0-2.5-2.5-4.8-7-6.6 1 .7 1.8 1.8 1.8 3 0 3.5-5.2 6.3-15.6 8.6-9.6 2.1-22 3.6-37 3.6-14.5 0-27.4-1.5-36.7-3.5-10-2.5-15.3-5.2-15.3-8.6 0-1.5.7-2.7 2.7-4.1-6.3 2.5-9.6 4.5-9.6 7.6.3 3.5 5.9 7 17.4 9.6z" fill="#28334C"/></svg>', color: "#FFCC00" },
+  css: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill="#1572B6" d="M18.814 114.123L8.76 1.352h110.48l-10.064 112.754-45.243 12.543-45.119-12.526z"/><path fill="#33A9DC" d="M64.001 117.062l36.559-10.136 8.601-96.354h-45.16v106.49z"/><path fill="#fff" d="M64.001 51.429h18.302l1.264-14.163H64.001V23.435h34.682l-.332 3.711-3.4 38.114h-30.95V51.429z"/><path fill="#EBEBEB" d="M64.083 87.349l-.061.018-15.403-4.159-.985-11.031H33.752l1.937 21.717 28.331 7.863.063-.018v-14.39z"/><path fill="#fff" d="M81.127 64.675l-1.666 18.522-15.426 4.164v14.39l28.354-7.858.208-2.337 2.406-26.881H81.127z"/><path fill="#EBEBEB" d="M64.048 23.435v13.831H30.64l-.277-3.108-.63-7.012-.331-3.711h34.646zm-.047 27.996v13.831H48.792l-.277-3.108-.631-7.012-.33-3.711h16.447z"/></svg>', color: "#1572B6" },
+  scss: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill-rule="evenodd" clip-rule="evenodd" fill="#CB6699" d="M1.219 56.156c0 .703.207 1.167.323 1.618.756 2.933 2.381 5.45 4.309 7.746 2.746 3.272 6.109 5.906 9.554 8.383 2.988 2.148 6.037 4.248 9.037 6.38.515.366 1.002.787 1.561 1.236-.481.26-.881.489-1.297.7-3.959 2.008-7.768 4.259-11.279 6.986-2.116 1.644-4.162 3.391-5.607 5.674-2.325 3.672-3.148 7.584-1.415 11.761.506 1.22 1.278 2.274 2.367 3.053.353.252.749.502 1.162.6 1.058.249 2.136.412 3.207.609l3.033-.002c3.354-.299 6.407-1.448 9.166-3.352 4.312-2.976 7.217-6.966 8.466-12.087.908-3.722.945-7.448-.125-11.153a11.696 11.696 0 00-.354-1.014c-.13-.333-.283-.657-.463-1.072l6.876-3.954.103.088c-.125.409-.258.817-.371 1.23-.817 2.984-1.36 6.02-1.165 9.117.208 3.3 1.129 6.389 3.061 9.146 1.562 2.23 5.284 2.313 6.944.075.589-.795 1.16-1.626 1.589-2.513 1.121-2.315 2.159-4.671 3.23-7.011l.187-.428c-.077 1.108-.167 2.081-.208 3.055-.064 1.521.025 3.033.545 4.48.445 1.238 1.202 2.163 2.62 2.326.97.111 1.743-.333 2.456-.896a10.384 10.384 0 002.691-3.199c1.901-3.491 3.853-6.961 5.576-10.54 1.864-3.871 3.494-7.855 5.225-11.792l.286-.698c.409 1.607.694 3.181 1.219 4.671.61 1.729 1.365 3.417 2.187 5.058.389.775.344 1.278-.195 1.928-2.256 2.72-4.473 5.473-6.692 8.223-.491.607-.98 1.225-1.389 1.888a3.701 3.701 0 00-.48 1.364 1.737 1.737 0 001.383 1.971 9.661 9.661 0 002.708.193c3.097-.228 5.909-1.315 8.395-3.157 3.221-2.386 4.255-5.642 3.475-9.501-.211-1.047-.584-2.065-.947-3.074-.163-.455-.174-.774.123-1.198 2.575-3.677 4.775-7.578 6.821-11.569.081-.157.164-.314.306-.482.663 3.45 1.661 6.775 3.449 9.792-.912.879-1.815 1.676-2.632 2.554-1.799 1.934-3.359 4.034-4.173 6.595-.35 1.104-.619 2.226-.463 3.405.242 1.831 1.742 3.021 3.543 2.604 3.854-.892 7.181-2.708 9.612-5.925 1.636-2.166 1.785-4.582 1.1-7.113-.188-.688-.411-1.365-.651-2.154.951-.295 1.878-.649 2.837-.868 4.979-1.136 9.904-.938 14.702.86 2.801 1.05 5.064 2.807 6.406 5.571 1.639 3.379.733 6.585-2.452 8.721-.297.199-.637.356-.883.605a.869.869 0 00-.205.67c.021.123.346.277.533.275 1.047-.008 1.896-.557 2.711-1.121 2.042-1.413 3.532-3.314 3.853-5.817l.063-.188-.077-1.63c-.031-.094.023-.187.016-.258-.434-3.645-2.381-6.472-5.213-8.688-3.28-2.565-7.153-3.621-11.249-3.788a25.401 25.401 0 00-9.765 1.503c-.897.325-1.786.71-2.688 1.073-.121-.219-.251-.429-.358-.646-.926-1.896-2.048-3.708-2.296-5.882-.176-1.544-.392-3.086-.025-4.613.353-1.469.813-2.913 1.246-4.362.223-.746.066-1.164-.646-1.5a2.854 2.854 0 00-.786-.258c-1.75-.254-3.476-.109-5.171.384-.6.175-1.036.511-1.169 1.175-.076.381-.231.746-.339 1.122-.443 1.563-.757 3.156-1.473 4.645-1.794 3.735-3.842 7.329-5.938 10.897-.227.385-.466.763-.752 1.23-.736-1.54-1.521-2.922-1.759-4.542-.269-1.832-.481-3.661-.025-5.479.339-1.356.782-2.687 1.19-4.025.193-.636.104-.97-.472-1.305-.291-.169-.62-.319-.948-.368a11.643 11.643 0 00-5.354.438c-.543.176-.828.527-.994 1.087-.488 1.652-.904 3.344-1.589 4.915-2.774 6.36-5.628 12.687-8.479 19.013-.595 1.321-1.292 2.596-1.963 3.882-.17.326-.418.613-.63.919-.17-.201-.236-.339-.235-.477.005-.813-.092-1.65.063-2.436a172.189 172.189 0 011.578-7.099c.47-1.946 1.017-3.874 1.538-5.807.175-.647.178-1.252-.287-1.796-.781-.911-2.413-1.111-3.381-.409l-.428.242.083-.69c.204-1.479.245-2.953-.161-4.41-.506-1.816-1.802-2.861-3.686-2.803-.878.027-1.8.177-2.613.497-3.419 1.34-6.048 3.713-8.286 6.568a2.592 2.592 0 01-.757.654c-2.893 1.604-5.795 3.188-8.696 4.778l-3.229 1.769c-.866-.826-1.653-1.683-2.546-2.41-2.727-2.224-5.498-4.393-8.244-6.592-2.434-1.949-4.792-3.979-6.596-6.56-1.342-1.92-2.207-4.021-2.29-6.395-.105-3.025.753-5.789 2.293-8.362 1.97-3.292 4.657-5.934 7.611-8.327 3.125-2.53 6.505-4.678 10.008-6.639 4.901-2.743 9.942-5.171 15.347-6.774 5.542-1.644 11.165-2.585 16.965-1.929 2.28.258 4.494.78 6.527 1.895 1.557.853 2.834 1.97 3.428 3.716.586 1.718.568 3.459.162 5.204-.825 3.534-2.76 6.447-5.195 9.05-3.994 4.267-8.866 7.172-14.351 9.091a39.478 39.478 0 01-9.765 2.083c-2.729.229-5.401-.013-7.985-.962-1.711-.629-3.201-1.591-4.399-2.987-.214-.25-.488-.521-.887-.287-.391.23-.46.602-.329.979.219.626.421 1.278.762 1.838.857 1.405 2.107 2.424 3.483 3.298 2.643 1.681 5.597 2.246 8.66 2.377 4.648.201 9.183-.493 13.654-1.74 6.383-1.78 11.933-4.924 16.384-9.884 3.706-4.13 6.353-8.791 6.92-14.419.277-2.747-.018-5.438-1.304-7.944-1.395-2.715-3.613-4.734-6.265-6.125C68.756 18.179 64.588 17 60.286 17h-4.31c-5.21 0-10.247 1.493-15.143 3.274-3.706 1.349-7.34 2.941-10.868 4.703-7.683 3.839-14.838 8.468-20.715 14.833-2.928 3.171-5.407 6.67-6.833 10.79a40.494 40.494 0 00-1.111 3.746m27.839 36.013c-.333 4.459-2.354 8.074-5.657 11.002-1.858 1.646-3.989 2.818-6.471 3.23-.9.149-1.821.185-2.694-.188-1.245-.532-1.524-1.637-1.548-2.814-.037-1.876.62-3.572 1.521-5.186 1.176-2.104 2.9-3.708 4.741-5.206 2.9-2.361 6.046-4.359 9.268-6.245l.243-.1c.498 1.84.735 3.657.597 5.507zM54.303 70.98c-.235 1.424-.529 2.849-.945 4.229-1.438 4.777-3.285 9.406-5.282 13.973-.369.845-.906 1.616-1.373 2.417a1.689 1.689 0 01-.283.334c-.578.571-1.126.541-1.418-.206-.34-.868-.549-1.797-.729-2.716-.121-.617-.092-1.265-.13-1.897.039-4.494 1.41-8.578 3.736-12.38.959-1.568 2.003-3.062 3.598-4.054a6.27 6.27 0 011.595-.706c.85-.239 1.372.154 1.231 1.006zm17.164 21.868l6.169-7.203c.257 2.675-4.29 8.015-6.169 7.203zm19.703-4.847c-.436.25-.911.43-1.358.661-.409.212-.544-.002-.556-.354a2.385 2.385 0 01.093-.721c.833-2.938 2.366-5.446 4.647-7.486l.16-.082c1.085 3.035-.169 6.368-2.986 7.982z"/></svg>', color: "#CC6699" },
+  less: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" fill="#1D365D" rx="12"/><text x="64" y="80" text-anchor="middle" fill="#fff" font-size="52" font-family="sans-serif" font-weight="bold">less</text></svg>', color: "#1D365D" },
+  html: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill="#E44D26" d="M19.037 113.876L9.032 1.661h109.936l-10.016 112.198-45.019 12.48z"/><path fill="#F16529" d="M64 116.8l36.378-10.086 8.559-95.878H64z"/><path fill="#EBEBEB" d="M64 52.455H45.788L44.53 38.361H64V24.599H29.489l.33 3.692 3.382 37.927H64zm0 35.743l-.061.017-15.327-4.14-.979-10.975H33.816l1.928 21.609 28.193 7.826.063-.017z"/><path fill="#fff" d="M63.952 52.455v13.763h16.947l-1.597 17.849-15.35 4.143v14.319l28.215-7.82.207-2.325 3.234-36.233.335-3.696h-3.708zm0-27.856v13.762h33.244l.276-3.092.628-6.978.329-3.692z"/></svg>', color: "#E34F26" },
+  vue: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path d="M0 8.934l49.854.158 14.167 24.47 14.432-24.47L128 8.935l-63.834 110.14zm126.98.637l-24.36.02-38.476 66.053L25.691 9.592.942 9.572l63.211 107.89zm-25.149-.008l-22.745.168-15.053 24.647L49.216 9.73l-22.794-.168 37.731 64.476zm-75.834-.17l23.002.009m-23.002-.01l23.002.01" fill="none"/><path d="M25.997 9.393l23.002.009L64.035 34.36 79.018 9.404 102 9.398 64.15 75.053z" fill="#35495e"/><path d="M.91 9.569l25.067-.172 38.15 65.659L101.98 9.401l25.11.026-62.966 108.06z" fill="#41b883"/></svg>', color: "#4FC08D" },
+  sh: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill="#293138" d="M112.205 26.129 71.8 2.142A15.326 15.326 0 0 0 64.005 0c-2.688 0-5.386.717-7.796 2.152L15.795 26.14C10.976 28.999 8 34.289 8 40.018v47.975c0 5.729 2.967 11.019 7.796 13.878L56.2 125.858A15.193 15.193 0 0 0 63.995 128a15.32 15.32 0 0 0 7.796-2.142l40.414-23.987c4.819-2.86 7.796-8.16 7.796-13.878V40.007c0-5.718-2.967-11.019-7.796-13.878zm-31.29 74.907.063 3.448c0 .418-.267.889-.588 1.06l-2.046 1.178c-.321.16-.6-.032-.6-.45l-.032-3.394c-1.745.728-3.523.9-4.647.45-.214-.086-.31-.397-.225-.76l.739-3.117c.064-.246.193-.493.364-.643a.726.726 0 0 1 .193-.139c.117-.064.235-.075.332-.032 1.22.407 2.773.214 4.272-.535 1.907-.964 3.18-2.913 3.16-4.84-.022-1.757-.964-2.474-3.267-2.496-2.934.01-5.675-.567-5.718-4.894-.032-3.555 1.81-7.26 4.744-9.595l-.032-3.48c0-.428.257-.9.589-1.07l1.98-1.264c.322-.161.6.042.6.46l.033 3.48c1.456-.578 2.72-.738 3.865-.47.247.063.364.406.257.802l-.77 3.084a1.372 1.372 0 0 1-.354.622.825.825 0 0 1-.203.15c-.108.053-.204.064-.3.053-.525-.118-1.767-.385-3.727.6-2.056 1.038-2.773 2.827-2.763 4.155.022 1.585.825 2.066 3.63 2.11 3.738.063 5.344 1.691 5.387 5.45.053 3.684-1.917 7.657-4.937 10.077zm28.206-64.787L70.89 59.86c-4.765 2.784-8.278 5.911-8.288 11.662v47.107c0 3.437 1.392 5.665 3.523 6.318a12.81 12.81 0 0 1-2.12.204c-2.239 0-4.445-.61-6.383-1.757L17.219 99.408c-3.951-2.345-6.403-6.725-6.403-11.426V40.007c0-4.7 2.452-9.08 6.403-11.426L57.634 4.594a12.555 12.555 0 0 1 6.382-1.756c2.238 0 4.444.61 6.382 1.756l40.415 23.987c3.33 1.981 5.579 5.397 6.21 9.242-1.36-2.86-4.38-3.63-7.902-1.574z"/><path fill="#4fa847" d="m101.614 92.619-10.066 6.018c-.268.16-.46.332-.46.653v2.635c0 .32.214.46.481.3l10.216-6.212c.268-.16.31-.45.31-.77v-2.324c0-.322-.213-.45-.481-.3z"/></svg>', color: "#4EAA25" },
+  ps1: { svg: '<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" viewBox="0 0 128 128"><linearGradient id="a" x1="96.306" x2="25.454" y1="35.144" y2="98.431" gradientTransform="matrix(1 0 0 -1 0 128)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#a9c8ff"/><stop offset="1" stop-color="#c7e6ff"/></linearGradient><path fill="url(#a)" fill-rule="evenodd" d="M7.2 110.5c-1.7 0-3.1-.7-4.1-1.9-1-1.2-1.3-2.9-.9-4.6l18.6-80.5c.8-3.4 4-6 7.4-6h92.6c1.7 0 3.1.7 4.1 1.9 1 1.2 1.3 2.9.9 4.6l-18.6 80.5c-.8 3.4-4 6-7.4 6H7.2z" clip-rule="evenodd" opacity=".8"/><linearGradient id="b" x1="25.336" x2="94.569" y1="98.33" y2="36.847" gradientTransform="matrix(1 0 0 -1 0 128)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2d4664"/><stop offset=".169" stop-color="#29405b"/><stop offset=".445" stop-color="#1e2f43"/><stop offset=".79" stop-color="#0c131b"/><stop offset="1"/></linearGradient><path fill="url(#b)" fill-rule="evenodd" d="M120.3 18.5H28.5c-2.9 0-5.7 2.3-6.4 5.2L3.7 104.3c-.7 2.9 1.1 5.2 4 5.2h91.8c2.9 0 5.7-2.3 6.4-5.2l18.4-80.5c.7-2.9-1.1-5.3-4-5.3z" clip-rule="evenodd"/><path fill="#2C5591" fill-rule="evenodd" d="M64.2 88.3h22.3c2.6 0 4.7 2.2 4.7 4.9s-2.1 4.9-4.7 4.9H64.2c-2.6 0-4.7-2.2-4.7-4.9s2.1-4.9 4.7-4.9zM78.7 66.5c-.4.8-1.2 1.6-2.6 2.6L34.6 98.9c-2.3 1.6-5.5 1-7.3-1.4-1.7-2.4-1.3-5.7.9-7.3l37.4-27.1v-.6l-23.5-25c-1.9-2-1.7-5.3.4-7.4 2.2-2 5.5-2 7.4 0l28.2 30c1.7 1.9 1.8 4.5.6 6.4z" clip-rule="evenodd"/><path fill="#FFF" fill-rule="evenodd" d="M77.6 65.5c-.4.8-1.2 1.6-2.6 2.6L33.6 97.9c-2.3 1.6-5.5 1-7.3-1.4-1.7-2.4-1.3-5.7.9-7.3l37.4-27.1v-.6l-23.5-25c-1.9-2-1.7-5.3.4-7.4 2.2-2 5.5-2 7.4 0l28.2 30c1.7 1.8 1.8 4.4.5 6.4zM63.5 87.8h22.3c2.6 0 4.7 2.1 4.7 4.6 0 2.6-2.1 4.6-4.7 4.6H63.5c-2.6 0-4.7-2.1-4.7-4.6 0-2.6 2.1-4.6 4.7-4.6z" clip-rule="evenodd"/></svg>', color: "#5391FE" },
+  bat: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" fill="#0078D4" rx="12"/><text x="64" y="80" text-anchor="middle" fill="#fff" font-size="52" font-family="sans-serif" font-weight="bold">bat</text></svg>', color: "#0078D4" },
+  sql: { svg: '<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sqlite-original-a" x1="-15.615" x2="-6.741" y1="-9.108" y2="-9.108" gradientTransform="rotate(90 -90.486 64.634) scale(9.2712)" gradientUnits="userSpaceOnUse"><stop stop-color="#95d7f4" offset="0"/><stop stop-color="#0f7fcc" offset=".92"/><stop stop-color="#0f7fcc" offset="1"/></linearGradient></defs><path d="M69.5 99.176c-.059-.73-.094-1.2-.094-1.2S67.2 83.087 64.57 78.642c-.414-.707.043-3.594 1.207-7.88.68 1.169 3.54 6.192 4.118 7.81.648 1.824.78 2.347.78 2.347s-1.57-8.082-4.144-12.797a162.286 162.286 0 012.004-6.265c.973 1.71 3.313 5.859 3.828 7.3.102.293.192.543.27.774.023-.137.05-.274.074-.414-.59-2.504-1.75-6.86-3.336-10.082 3.52-18.328 15.531-42.824 27.84-53.754H16.9c-5.387 0-9.789 4.406-9.789 9.789v88.57c0 5.383 4.406 9.789 9.79 9.789h52.897a118.657 118.657 0 01-.297-14.652" fill="#0b7fcc"/><path d="M65.777 70.762c.68 1.168 3.54 6.188 4.117 7.809.649 1.824.781 2.347.781 2.347s-1.57-8.082-4.144-12.797a164.535 164.535 0 012.004-6.27c.887 1.567 2.922 5.169 3.652 6.872l.082-.961c-.648-2.496-1.633-5.766-2.898-8.328 3.242-16.871 13.68-38.97 24.926-50.898H16.899a6.94 6.94 0 00-6.934 6.933v82.11c17.527-6.731 38.664-12.88 56.855-12.614-.672-2.605-1.441-4.96-2.25-6.324-.414-.707.043-3.597 1.207-7.879" fill="url(#sqlite-original-a)"/><path d="M115.95 2.781c-5.5-4.906-12.164-2.933-18.734 2.899a44.347 44.347 0 00-2.914 2.859c-11.25 11.926-21.684 34.023-24.926 50.895 1.262 2.563 2.25 5.832 2.894 8.328.168.64.32 1.242.442 1.754.285 1.207.437 1.996.437 1.996s-.101-.383-.515-1.582c-.078-.23-.168-.484-.27-.773-.043-.125-.105-.274-.172-.434-.734-1.703-2.765-5.305-3.656-6.867-.762 2.25-1.437 4.36-2.004 6.265 2.578 4.715 4.149 12.797 4.149 12.797s-.137-.523-.782-2.347c-.578-1.621-3.441-6.64-4.117-7.809-1.164 4.281-1.625 7.172-1.207 7.88.809 1.362 1.574 3.722 2.25 6.323 1.524 5.867 2.586 13.012 2.586 13.012s.031.469.094 1.2a118.653 118.653 0 00.297 14.651c.504 6.11 1.453 11.363 2.664 14.172l.828-.449c-1.781-5.535-2.504-12.793-2.188-21.156.48-12.793 3.422-28.215 8.856-44.289 9.191-24.27 21.938-43.738 33.602-53.035-10.633 9.602-25.023 40.684-29.332 52.195-4.82 12.891-8.238 24.984-10.301 36.574 3.55-10.863 15.047-15.53 15.047-15.53s5.637-6.958 12.227-16.888c-3.95.903-10.43 2.442-12.598 3.352-3.2 1.344-4.067 1.8-4.067 1.8s10.371-6.312 19.27-9.171c12.234-19.27 25.562-46.648 12.141-58.621" fill="#003956"/></svg>', color: "#4479A1" },
+  json: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><linearGradient id="a" x1="-670.564" x2="-583.105" y1="-280.831" y2="-368.306" gradientTransform="matrix(.9988 0 0 -.9987 689.011 -259.008)" gradientUnits="userSpaceOnUse"><stop offset="0"/><stop offset="1" stop-color="#fff"/></linearGradient><path fill="url(#a)" fill-rule="evenodd" d="M63.895 94.303c27.433 37.398 54.281-10.438 54.241-39.205-.046-34.012-34.518-53.021-54.263-53.021C32.182 2.077 2 28.269 2 64.105 2 103.937 36.596 126 63.873 126c-6.172-.889-26.742-5.296-27.019-52.674-.186-32.044 10.453-44.846 26.974-39.214.37.137 18.223 7.18 18.223 30.187 0 22.908-18.156 30.004-18.156 30.004z" clip-rule="evenodd"/><linearGradient id="b" x1="-579.148" x2="-666.607" y1="-364.34" y2="-276.873" gradientTransform="matrix(.9988 0 0 -.9987 689.011 -259.008)" gradientUnits="userSpaceOnUse"><stop offset="0"/><stop offset="1" stop-color="#fff"/></linearGradient><path fill="url(#b)" fill-rule="evenodd" d="M63.863 34.086C45.736 27.838 23.53 42.778 23.53 72.703 23.53 121.565 59.739 126 64.128 126 95.818 126 126 99.808 126 63.972 126 24.14 91.404 2.077 64.127 2.077c7.555-1.046 40.719 8.176 40.719 53.504 0 29.559-24.764 45.651-40.87 38.776-.37-.137-18.223-7.18-18.223-30.187 0-22.91 18.11-30.085 18.11-30.084z" clip-rule="evenodd"/></svg>', color: "#F7DF1E" },
+  xml: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill="#ae007f" d="M118.759 49.397c.265-2.273.444-5.109 1.332-7.06.675 2.022.9 4.64 2.28 6.163 1.798-.42 3.785-.317 5.629.08-1.107 1.46-3.51 2.446-4.95 3.387 1.733 1.46 2.574 3.161 3.526 5.184-2.515-.048-4.806-2.234-6.742-3.412-1.67 1.889-2.844 3.725-5.292 4.403.882-1.892 2.948-3.518 3.209-5.477-1.96-.73-4.387-2.293-5.66-3.879 2.023.122 4.649.38 6.668.619"/><path fill="#97bd00" d="M120.845 63.79c.19-1.65.318-3.716.964-5.132.492 1.472.654 3.367 1.657 4.474 1.294-.305 2.749-.234 4.082.055-.802 1.051-2.542 1.781-3.581 2.46 1.261 1.055 1.875 2.292 2.554 3.764-1.825-.036-3.494-1.627-4.899-2.472-1.205 1.365-2.062 2.701-3.843 3.194.643-1.37 2.146-2.56 2.324-3.975-1.42-.532-3.18-1.665-4.105-2.816 1.456.091 3.371.278 4.836.448"/><path fill="#f07f00" d="M114.594 75.154c.132-1.147.222-2.566.666-3.546.337 1.015.453 2.324 1.147 3.086.896-.21 1.896-.159 2.823.04-.558.73-1.76 1.229-2.477 1.701.868.734 1.288 1.583 1.76 2.598-1.262-.024-2.408-1.119-3.387-1.714-.838.949-1.429 1.869-2.658 2.214.445-.948 1.48-1.762 1.606-2.742-.983-.368-2.201-1.149-2.836-1.95 1.016.059 2.337.19 3.344.308"/><path fill="#005fad" d="M21.148 74.424c-1.04 0-12.811 11.47-13.957 12.824-.96 1.066-1.48 3.026-3.126 3.248-1.75.233-2.15-.449-2.99-1.766-.798-1.249-1.762-3.474-.37-4.378 1.345-.865 18.023-16.163 18.543-16.785.647-.663-.064-2.301-.372-4.768-.397-3.173-.6-6.08-.354-9.218.246-3.225 1.016-7.2 1.852-10.324.512-1.912.215-5.684 2.876-5.798.539.13 4.633 2.962 3.53 6.694-1.594 5.351-3.125 11.367-2.653 17.1.087 1.106.535 2.065 1.237 1.558 7.552-5.406 19.375-11.265 22.398-12.308 1.455-.464 2.947-.83 4.457-1.015 1.084.122 1.904 1.142 2.762 1.864 4.28 3.669-4.034 16.683-4.74 20.645.663 0 1.385-1.007 2.654-2.154a252.59 252.59 0 0 0 5.013-4.673c2.372-1.785 4.446-3.422 7.457-3.807 7.242-.92 5.076 9.51 3.442 13.24.932 0 3.212-2.626 5.041-4.36.917-.868 1.935-1.788 2.863-2.645 1.104-1.015 1.615-1.543 2.447-1.134.56.158 2.98 1.626 3.115 3.867.114 1.817-.631 3.597-.991 5.338-.306 1.46-.23 6.207 1.736 6.216.778-.564 1.793-.802 2.717-.96 1.492-.25 1.42.238 2.65.694 1.927.713.186 3.45-.83 4.462-1.36 1.357-3.308 2.253-5.26 2.22-2.145-.035-3.83-1.356-4.798-3.212-.528-1.015-1.209-4.775-1.472-5.89-.261-1.095-.035-2.408-1.197-1.297-3.28 3.165-6.663 6.105-10 9.222-3.675 3.432-7.186-1.282-6.52-5.132.655-3.764 3.903-8.361 4.487-12.093-1.552 0-4.165 2.708-5.153 3.827-1.607 1.817-3.388 3.828-5.2 5.735-1.825 1.916-3.387 3.68-5.22 5.588-1.32 1.377-2.832 3.336-5.06 3.463-1.1-.174-2.848-2.002-3.145-4.327-.251-1.943.241-4.077.982-5.862 2.151-5.16 8.032-16.06 9.409-21.482-2.824.275-14.79 5.807-22.711 12.407-2.293 1.892-.175 5.351.782 7.655 1.026 2.463 4.056 6.917 4.961 7.674 2.372 1.972.476 3.714-1.876 3.59-1-.706-2.209-1.472-3.145-2.408-1.02-1.018-1.9-2.18-2.698-3.37-1.626-2.407-3.176-5.19-3.597-8.112m85.134-30.74c-.67-2.494-3.789 1.314-5.351 3.33-4.324 5.564-8.265 16.891-8.901 18.978-1.935 6.398-2.685 14.283 1.503 19.914 2.436 3.285 6.728 3.534 10.935 2.325 2.17-.623 4.343-2.182 5.085-3.875.615-1.412.932-4.037-2.166-2.035-1.198.774-3.395 1.627-7.334 1.564-1.32-.025-3.49-1.92-4.072-3.88-1.024-3.193-.587-7.457-.587-7.457.891-5.505 3.446-11.47 5.687-16.476.87-1.932 3.518-6.747 4.51-8.282 0 .004 1.27-1.998.7-4.124zm0 0"/></svg>', color: "#FF6600" },
+  yaml: { svg: '<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"> <polygon transform="matrix(.24805 0 0 .24805 .5 5.6287)" points="87.702 137.67 0 0 63.25 0 119.02 88.646 175.24 0 235.79 0 143.98 137.67 143.98 224.95 87.702 224.95"/> <path d="m82.428 49.149h-25.266l-5.1388 12.408h-11.188l23.659-55.798h11.444l22.699 55.798h-11.956l-4.2525-12.408zm-4.197-11.14-7.7455-20.476-8.6412 20.476z" fill="#cb171e"/> <polygon transform="matrix(.24805 0 0 .24805 .5 5.6287)" points="87.701 250.18 87.701 470.65 135 470.65 135 318.57 184.51 420.79 221.74 420.79 272.94 314.98 272.94 470.6 318.32 470.6 318.32 250.18 256.36 250.18 201.38 349.88 149.02 250.18"/> <polygon transform="matrix(.24805 0 0 .24805 .5 5.6287)" points="512 422.74 512 422.74 395.64 422.74 395.64 250.12 347.44 250.12 347.44 469.65 512 469.65"/> </svg>', color: "#CB171E" },
+  toml: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" fill="#8B4513" rx="12"/><text x="64" y="80" text-anchor="middle" fill="#fff" font-size="52" font-family="sans-serif" font-weight="bold">toml</text></svg>', color: "#8B4513" },
+  ini: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" fill="#3D3D3D" rx="12"/><text x="64" y="80" text-anchor="middle" fill="#fff" font-size="52" font-family="sans-serif" font-weight="bold">ini</text></svg>', color: "#3D3D3D" },
+  properties: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" fill="#3D3D3D" rx="12"/><text x="64" y="80" text-anchor="middle" fill="#fff" font-size="52" font-family="sans-serif" font-weight="bold">properties</text></svg>', color: "#3D3D3D" },
+  tex: { svg: '<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"> <path d="m78.157 29.987v1.8266c4.1529 0 5.5117 0.15618 7.1818 2.5039l14.586 21.423-13.154 19.216c-3.2453 4.6992-8.1583 4.7817-9.6035 4.7817v1.8264c1.1903-0.0991 2.9161-0.12788 4.4738-0.13747-1.5036 9.5974-3.2903 14.783-15.554 14.783h-10.495c-3.0203 0-3.1629-0.38121-3.1629-2.9827v-21.136h7.1333c7.1332 0 7.8133 2.6139 7.8133 8.9958h1.215v-19.671h-1.215c0 6.2744-0.68131 8.8397-7.8133 8.8397h-7.1345v-18.739c0-2.5528 0.14386-2.9341 3.1629-2.9341h10.338c11.701 0 13.063 4.6504 14.123 14.648h1.3624l-1.8139-16.724h-32.943l-1.2194-16.412h-43.663l-1.2765 16.723h1.359c0.9776-12.525 2.0513-14.718 13.777-14.718h4.1742c1.4439 0.22627 1.444 1.1451 1.444 2.8853v41.162c0 2.7328-0.22893 3.5668-6.5983 3.5668h-2.1464v1.8264c3.6278-0.07 7.4082-0.14381 11.117-0.14381 3.6979 0 7.4895 0.0738 11.115 0.14381v-1.8264h-2.1101c-6.2744 0-6.5006-0.83399-6.5006-3.5668v-41.16c0-1.6702-1.3e-4 -2.5765 1.3612-2.8853h4.1493c11.471 0 12.682 2.1492 13.654 14.405h-3.9804v2.0764c5.3555 0 6.2132 1.2e-4 6.2132 3.3992v40.806c0 3.3991-0.84647 3.399-6.2132 3.399v1.8264h39.349l2.3596-16.592c0.18342-1.1e-4 0.39496-7.5e-4 0.56207-7.5e-4 2.0402 0 5.5943-2.5e-4 7.4783 0.14357v-1.8263c-2.339-0.22628-3.0166-1.7402-3.0166-2.959 0-0.9776 0.37001-1.5139 0.75129-2.0515l12.095-17.652 13.154 19.334c0.59506 0.83633 0.59503 1.0624 0.59503 1.2887 0 0.59506-0.67752 1.8964-3.3253 2.0515v1.8266c2.4215-0.14376 6.1192-0.14381 8.6107-0.14381 1.9577 0 5.7368 5e-5 7.572 0.14381v-1.8266c-4.843 0-5.6055-0.36995-7.1081-2.5039l-16.625-24.322 11.187-16.174c1.1201-1.5877 3.3991-4.8555 9.6035-4.938v-1.8254c-1.7314 0.14377-4.6042 0.14382-6.4181 0.14382-2.4915 0-5.5943-5e-5 -7.4783-0.14382v1.8266c2.4215 0.22627 3.0164 1.7402 3.0164 2.959 0 0.90384-0.37003 1.5138-0.90633 2.2651l-9.9822 14.479-11.187-16.375c-0.52505-0.82383-0.59869-1.0627-0.59869-1.289 0-0.68132 0.82372-1.9687 3.3277-2.04v-1.8254c-2.4215 0.14377-6.1192 0.14382-8.6107 0.14382-1.9577 0-5.7368-5e-5 -7.5632-0.14382z"/> </svg>', color: "#008080" },
+  dockerfile: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill-rule="evenodd" clip-rule="evenodd" fill="#3A4D54" d="M73.8 50.8h11.3v11.5h5.7c2.6 0 5.3-.5 7.8-1.3 1.2-.4 2.6-1 3.8-1.7-1.6-2.1-2.4-4.7-2.6-7.3-.3-3.5.4-8.1 2.8-10.8l1.2-1.4 1.4 1.1c3.6 2.9 6.5 6.8 7.1 11.4 4.3-1.3 9.3-1 13.1 1.2l1.5.9-.8 1.6c-3.2 6.2-9.9 8.2-16.4 7.8-9.8 24.3-31 35.8-56.8 35.8-13.3 0-25.5-5-32.5-16.8l-.1-.2-1-2.1c-2.4-5.2-3.1-10.9-2.6-16.6l.2-1.7h9.6V50.8h11.3V39.6h22.5V28.3h13.5v22.5z"/><path fill="#00AADA" d="M110.4 55.1c.8-5.9-3.6-10.5-6.4-12.7-3.1 3.6-3.6 13.2 1.3 17.2-2.8 2.4-8.5 4.7-14.5 4.7H18.6c-.6 6.2.5 11.9 3 16.8l.8 1.5c.5.9 1.1 1.7 1.7 2.6 3 .2 5.7.3 8.2.2 4.9-.1 8.9-.7 12-1.7.5-.2.9.1 1.1.5.2.5-.1.9-.5 1.1-.4.1-.8.3-1.3.4-2.4.7-5 1.1-8.3 1.3h-.6c-1.3.1-2.7.1-4.2.1-1.6 0-3.1 0-4.9-.1 6 6.8 15.4 10.8 27.2 10.8 25 0 46.2-11.1 55.5-35.9 6.7.7 13.1-1 16-6.7-4.5-2.7-10.5-1.8-13.9-.1z"/><path fill="#28B8EB" d="M110.4 55.1c.8-5.9-3.6-10.5-6.4-12.7-3.1 3.6-3.6 13.2 1.3 17.2-2.8 2.4-8.5 4.7-14.5 4.7h-68c-.3 9.5 3.2 16.7 9.5 21 4.9-.1 8.9-.7 12-1.7.5-.2.9.1 1.1.5.2.5-.1.9-.5 1.1-.4.1-.8.3-1.3.4-2.4.7-5.2 1.2-8.5 1.4l-.1-.1c8.5 4.4 20.8 4.3 35-1.1 15.8-6.1 30.6-17.7 40.9-30.9-.2.1-.4.1-.5.2z"/><path fill="#028BB8" d="M18.7 71.8c.4 3.3 1.4 6.4 2.9 9.3l.8 1.5c.5.9 1.1 1.7 1.7 2.6 3 .2 5.7.3 8.2.2 4.9-.1 8.9-.7 12-1.7.5-.2.9.1 1.1.5.2.5-.1.9-.5 1.1-.4.1-.8.3-1.3.4-2.4.7-5.2 1.2-8.5 1.4h-.4c-1.3.1-2.7.1-4.1.1-1.6 0-3.2 0-4.9-.1 6 6.8 15.5 10.8 27.3 10.8 21.4 0 40-8.1 50.8-26H18.7v-.1z"/><path fill="#019BC6" d="M23.5 71.8c1.3 5.8 4.3 10.4 8.8 13.5 4.9-.1 8.9-.7 12-1.7.5-.2.9.1 1.1.5.2.5-.1.9-.5 1.1-.4.1-.8.3-1.3.4-2.4.7-5.2 1.2-8.6 1.4 8.5 4.4 20.8 4.3 34.9-1.1 8.5-3.3 16.8-8.2 24.2-14.1H23.5z"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#00ACD3" d="M28.4 52.7h9.8v9.8h-9.8v-9.8zm.8.8h.8v8.1h-.8v-8.1zm1.4 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm3-12h9.8v9.8h-9.8v-9.8zm.9.8h.8v8.1h-.8v-8.1zm1.4 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.4 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1z"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#23C2EE" d="M39.6 52.7h9.8v9.8h-9.8v-9.8zm.9.8h.8v8.1h-.8v-8.1zm1.4 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.4 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1z"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#00ACD3" d="M50.9 52.7h9.8v9.8h-9.8v-9.8zm.8.8h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.4 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1z"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#23C2EE" d="M50.9 41.5h9.8v9.8h-9.8v-9.8zm.8.8h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.4 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm3.1 10.4H72v9.8h-9.8v-9.8zm.8.8h.8v8.1H63v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.4 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1z"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#00ACD3" d="M62.2 41.5H72v9.8h-9.8v-9.8zm.8.8h.8v8.1H63v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.4 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1z"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#23C2EE" d="M62.2 30.2H72V40h-9.8v-9.8zm.8.8h.8v8.1H63V31zm1.5 0h.8v8.1h-.8V31zm1.4 0h.8v8.1h-.8V31zm1.5 0h.8v8.1h-.8V31zm1.5 0h.8v8.1h-.8V31zm1.5 0h.8v8.1h-.8V31z"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#00ACD3" d="M73.5 52.7h9.8v9.8h-9.8v-9.8zm.8.8h.8v8.1h-.8v-8.1zm1.4 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1zm1.5 0h.8v8.1h-.8v-8.1z"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#D4EEF1" d="M48.8 78.3c1.5 0 2.7 1.2 2.7 2.7 0 1.5-1.2 2.7-2.7 2.7-1.5 0-2.7-1.2-2.7-2.7 0-1.5 1.2-2.7 2.7-2.7"/><path fill-rule="evenodd" clip-rule="evenodd" fill="#3A4D54" d="M48.8 79.1c.2 0 .5 0 .7.1-.2.1-.4.4-.4.7 0 .4.4.8.8.8.3 0 .6-.2.7-.4.1.2.1.5.1.7 0 1.1-.9 1.9-1.9 1.9-1.1 0-1.9-.9-1.9-1.9 0-1 .8-1.9 1.9-1.9M1.1 72.8h125.4c-2.7-.7-8.6-1.6-7.7-5.2-5 5.7-16.9 4-20 1.2-3.4 4.9-23 3-24.3-.8-4.2 5-17.3 5-21.5 0-1.4 3.8-21 5.7-24.3.8-3 2.8-15 4.5-20-1.2 1.1 3.5-4.9 4.5-7.6 5.2"/><path fill="#BFDBE0" d="M56 97.8c-6.7-3.2-10.3-7.5-12.4-12.2-2.5.7-5.5 1.2-8.9 1.4-1.3.1-2.7.1-4.1.1-1.7 0-3.4 0-5.2-.1 6 6 13.6 10.7 27.5 10.8H56z"/><path fill="#D4EEF1" d="M46.1 89.9c-.9-1.3-1.8-2.8-2.5-4.3-2.5.7-5.5 1.2-8.9 1.4 2.3 1.2 5.7 2.4 11.4 2.9z"/></svg>', color: "#2496ED" }
+};
+function getFileIcon(extension) {
+  var _a;
+  if (!extension) return null;
+  const key = extension.toLowerCase();
+  return (_a = FILE_ICONS[key]) != null ? _a : null;
+}
 
 // src/views/VaultViewerView.ts
 var VIEW_TYPE_VAULT_VIEWER = "vault-viewer-view";
@@ -3545,9 +5163,22 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       row.style.setProperty("padding-left", `${depth * 12 + 4}px`);
       row.dataset.path = file.path;
       const fileIcon = row.createSpan({ cls: "vault-viewer-file-icon" });
-      const iconName = this.getFileIcon(file);
-      setLucideIcon(fileIcon, iconName);
-      row.dataset.iconName = iconName;
+      const deviconIcon = getFileIcon(file.extension);
+      if (deviconIcon) {
+        fileIcon.innerHTML = deviconIcon.svg;
+        fileIcon.style.color = deviconIcon.color;
+        fileIcon.addClass("vv-file-icon--devicon");
+        const svg = fileIcon.querySelector("svg");
+        if (svg) {
+          svg.setAttribute("width", "16");
+          svg.setAttribute("height", "16");
+        }
+        row.dataset.iconName = "devicon";
+      } else {
+        const iconName = this.getFileIcon(file);
+        setLucideIcon(fileIcon, iconName);
+        row.dataset.iconName = iconName;
+      }
       row.createSpan({ cls: "vault-viewer-tree-name", text: file.name });
       row.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -3594,9 +5225,10 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
   applyFilledIcon(row) {
     const iconName = row.dataset.iconName;
     if (!iconName) return;
+    if (iconName === "devicon") return;
     const filledName = this.getFilledIconName(iconName);
     const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon");
-    if (!iconEl || !iconEl.instanceOf(HTMLElement)) return;
+    if (!iconEl || !(iconEl instanceof HTMLElement)) return;
     iconEl.empty();
     setLucideIconFilled(iconEl, filledName, 16);
   }
@@ -3604,8 +5236,9 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
   restoreOutlineIcon(row) {
     const iconName = row.dataset.iconName;
     if (!iconName) return;
+    if (iconName === "devicon") return;
     const iconEl = row.querySelector(".vault-viewer-file-icon, .vault-viewer-folder-icon, .vault-viewer-list-icon");
-    if (!iconEl || !iconEl.instanceOf(HTMLElement)) return;
+    if (!iconEl || !(iconEl instanceof HTMLElement)) return;
     iconEl.empty();
     setLucideIcon(iconEl, iconName, 16);
   }
@@ -3717,9 +5350,22 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       if (file.path === this.selectedListPath) row.addClass("vault-viewer-highlighted");
       const nameTd = row.createEl("td", { cls: "vault-viewer-list-name" });
       const iconSpan = nameTd.createSpan({ cls: "vault-viewer-list-icon" });
-      const iconName = this.getFileIcon(file);
-      setLucideIcon(iconSpan, iconName);
-      row.dataset.iconName = iconName;
+      const deviconIcon = getFileIcon(file.extension);
+      if (deviconIcon) {
+        iconSpan.innerHTML = deviconIcon.svg;
+        iconSpan.style.color = deviconIcon.color;
+        iconSpan.addClass("vv-file-icon--devicon");
+        const svg = iconSpan.querySelector("svg");
+        if (svg) {
+          svg.setAttribute("width", "16");
+          svg.setAttribute("height", "16");
+        }
+        row.dataset.iconName = "devicon";
+      } else {
+        const iconName = this.getFileIcon(file);
+        setLucideIcon(iconSpan, iconName);
+        row.dataset.iconName = iconName;
+      }
       nameTd.createSpan({ text: file.name });
       const timeTd = row.createEl("td", { cls: "vault-viewer-list-time" });
       timeTd.setText(this.formatTime(file.stat.mtime));
@@ -3774,15 +5420,27 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       row.dataset.path = link.file.path;
       const nameTd = row.createEl("td", { cls: "vault-viewer-list-name" });
       const iconSpan = nameTd.createSpan({ cls: "vault-viewer-list-icon" });
-      let iconName;
       if (link.linkType === "embed") {
-        iconName = "Image";
         setLucideIcon(iconSpan, "Image");
+        row.dataset.iconName = "Image";
       } else {
-        iconName = this.getFileIcon(link.file);
-        setLucideIcon(iconSpan, iconName);
+        const deviconIcon = getFileIcon(link.file.extension);
+        if (deviconIcon) {
+          iconSpan.innerHTML = deviconIcon.svg;
+          iconSpan.style.color = deviconIcon.color;
+          iconSpan.addClass("vv-file-icon--devicon");
+          const svg = iconSpan.querySelector("svg");
+          if (svg) {
+            svg.setAttribute("width", "16");
+            svg.setAttribute("height", "16");
+          }
+          row.dataset.iconName = "devicon";
+        } else {
+          const iconName = this.getFileIcon(link.file);
+          setLucideIcon(iconSpan, iconName);
+          row.dataset.iconName = iconName;
+        }
       }
-      row.dataset.iconName = iconName;
       nameTd.createSpan({ text: link.file.name });
       const badgeTd = row.createEl("td", { cls: "vault-viewer-list-badge-cell" });
       if (link.linkType === "embed") {
@@ -3831,6 +5489,12 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
     if ([".docx", ".xlsx", ".pptx", ".sql"].includes(ext)) {
       if (this.plugin.openOfficeFile) {
         void this.plugin.openOfficeFile(link.file);
+        return;
+      }
+    }
+    if (isCodeExtension(link.file.name)) {
+      if (this.plugin.openCodeFile) {
+        void this.plugin.openCodeFile(link.file);
         return;
       }
     }
@@ -4337,16 +6001,4213 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       if (this.plugin.openOfficeFile) {
         void this.plugin.openOfficeFile(file);
       }
+    } else if (isCodeExtension(file.name)) {
+      if (this.plugin.openCodeFile) {
+        void this.plugin.openCodeFile(file);
+      }
     } else {
       void this.app.workspace.openLinkText(file.path, "/", false);
     }
   }
 };
 
-// src/views/OfficeView.ts
+// src/views/CodeView.ts
 var import_obsidian5 = require("obsidian");
+
+// src/services/CodeRenderer.ts
+var Prism2 = __toESM(require_prism());
+
+// node_modules/prismjs/components/prism-java.js
+(function(Prism3) {
+  var keywords = /\b(?:abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|exports|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|module|native|new|non-sealed|null|open|opens|package|permits|private|protected|provides|public|record(?!\s*[(){}[\]<>=%~.:,;?+\-*/&|^])|requires|return|sealed|short|static|strictfp|super|switch|synchronized|this|throw|throws|to|transient|transitive|try|uses|var|void|volatile|while|with|yield)\b/;
+  var classNamePrefix = /(?:[a-z]\w*\s*\.\s*)*(?:[A-Z]\w*\s*\.\s*)*/.source;
+  var className = {
+    pattern: RegExp(/(^|[^\w.])/.source + classNamePrefix + /[A-Z](?:[\d_A-Z]*[a-z]\w*)?\b/.source),
+    lookbehind: true,
+    inside: {
+      "namespace": {
+        pattern: /^[a-z]\w*(?:\s*\.\s*[a-z]\w*)*(?:\s*\.)?/,
+        inside: {
+          "punctuation": /\./
+        }
+      },
+      "punctuation": /\./
+    }
+  };
+  Prism3.languages.java = Prism3.languages.extend("clike", {
+    "string": {
+      pattern: /(^|[^\\])"(?:\\.|[^"\\\r\n])*"/,
+      lookbehind: true,
+      greedy: true
+    },
+    "class-name": [
+      className,
+      {
+        // variables, parameters, and constructor references
+        // this to support class names (or generic parameters) which do not contain a lower case letter (also works for methods)
+        pattern: RegExp(/(^|[^\w.])/.source + classNamePrefix + /[A-Z]\w*(?=\s+\w+\s*[;,=()]|\s*(?:\[[\s,]*\]\s*)?::\s*new\b)/.source),
+        lookbehind: true,
+        inside: className.inside
+      },
+      {
+        // class names based on keyword
+        // this to support class names (or generic parameters) which do not contain a lower case letter (also works for methods)
+        pattern: RegExp(/(\b(?:class|enum|extends|implements|instanceof|interface|new|record|throws)\s+)/.source + classNamePrefix + /[A-Z]\w*\b/.source),
+        lookbehind: true,
+        inside: className.inside
+      }
+    ],
+    "keyword": keywords,
+    "function": [
+      Prism3.languages.clike.function,
+      {
+        pattern: /(::\s*)[a-z_]\w*/,
+        lookbehind: true
+      }
+    ],
+    "number": /\b0b[01][01_]*L?\b|\b0x(?:\.[\da-f_p+-]+|[\da-f_]+(?:\.[\da-f_p+-]+)?)\b|(?:\b\d[\d_]*(?:\.[\d_]*)?|\B\.\d[\d_]*)(?:e[+-]?\d[\d_]*)?[dfl]?/i,
+    "operator": {
+      pattern: /(^|[^.])(?:<<=?|>>>?=?|->|--|\+\+|&&|\|\||::|[?:~]|[-+*/%&|^!=<>]=?)/m,
+      lookbehind: true
+    },
+    "constant": /\b[A-Z][A-Z_\d]+\b/
+  });
+  Prism3.languages.insertBefore("java", "string", {
+    "triple-quoted-string": {
+      // http://openjdk.java.net/jeps/355#Description
+      pattern: /"""[ \t]*[\r\n](?:(?:"|"")?(?:\\.|[^"\\]))*"""/,
+      greedy: true,
+      alias: "string"
+    },
+    "char": {
+      pattern: /'(?:\\.|[^'\\\r\n]){1,6}'/,
+      greedy: true
+    }
+  });
+  Prism3.languages.insertBefore("java", "class-name", {
+    "annotation": {
+      pattern: /(^|[^.])@\w+(?:\s*\.\s*\w+)*/,
+      lookbehind: true,
+      alias: "punctuation"
+    },
+    "generics": {
+      pattern: /<(?:[\w\s,.?]|&(?!&)|<(?:[\w\s,.?]|&(?!&)|<(?:[\w\s,.?]|&(?!&)|<(?:[\w\s,.?]|&(?!&))*>)*>)*>)*>/,
+      inside: {
+        "class-name": className,
+        "keyword": keywords,
+        "punctuation": /[<>(),.:]/,
+        "operator": /[?&|]/
+      }
+    },
+    "import": [
+      {
+        pattern: RegExp(/(\bimport\s+)/.source + classNamePrefix + /(?:[A-Z]\w*|\*)(?=\s*;)/.source),
+        lookbehind: true,
+        inside: {
+          "namespace": className.inside.namespace,
+          "punctuation": /\./,
+          "operator": /\*/,
+          "class-name": /\w+/
+        }
+      },
+      {
+        pattern: RegExp(/(\bimport\s+static\s+)/.source + classNamePrefix + /(?:\w+|\*)(?=\s*;)/.source),
+        lookbehind: true,
+        alias: "static",
+        inside: {
+          "namespace": className.inside.namespace,
+          "static": /\b\w+$/,
+          "punctuation": /\./,
+          "operator": /\*/,
+          "class-name": /\w+/
+        }
+      }
+    ],
+    "namespace": {
+      pattern: RegExp(
+        /(\b(?:exports|import(?:\s+static)?|module|open|opens|package|provides|requires|to|transitive|uses|with)\s+)(?!<keyword>)[a-z]\w*(?:\.[a-z]\w*)*\.?/.source.replace(/<keyword>/g, function() {
+          return keywords.source;
+        })
+      ),
+      lookbehind: true,
+      inside: {
+        "punctuation": /\./
+      }
+    }
+  });
+})(Prism);
+
+// node_modules/prismjs/components/prism-python.js
+Prism.languages.python = {
+  "comment": {
+    pattern: /(^|[^\\])#.*/,
+    lookbehind: true,
+    greedy: true
+  },
+  "string-interpolation": {
+    pattern: /(?:f|fr|rf)(?:("""|''')[\s\S]*?\1|("|')(?:\\.|(?!\2)[^\\\r\n])*\2)/i,
+    greedy: true,
+    inside: {
+      "interpolation": {
+        // "{" <expression> <optional "!s", "!r", or "!a"> <optional ":" format specifier> "}"
+        pattern: /((?:^|[^{])(?:\{\{)*)\{(?!\{)(?:[^{}]|\{(?!\{)(?:[^{}]|\{(?!\{)(?:[^{}])+\})+\})+\}/,
+        lookbehind: true,
+        inside: {
+          "format-spec": {
+            pattern: /(:)[^:(){}]+(?=\}$)/,
+            lookbehind: true
+          },
+          "conversion-option": {
+            pattern: /![sra](?=[:}]$)/,
+            alias: "punctuation"
+          },
+          rest: null
+        }
+      },
+      "string": /[\s\S]+/
+    }
+  },
+  "triple-quoted-string": {
+    pattern: /(?:[rub]|br|rb)?("""|''')[\s\S]*?\1/i,
+    greedy: true,
+    alias: "string"
+  },
+  "string": {
+    pattern: /(?:[rub]|br|rb)?("|')(?:\\.|(?!\1)[^\\\r\n])*\1/i,
+    greedy: true
+  },
+  "function": {
+    pattern: /((?:^|\s)def[ \t]+)[a-zA-Z_]\w*(?=\s*\()/g,
+    lookbehind: true
+  },
+  "class-name": {
+    pattern: /(\bclass\s+)\w+/i,
+    lookbehind: true
+  },
+  "decorator": {
+    pattern: /(^[\t ]*)@\w+(?:\.\w+)*/m,
+    lookbehind: true,
+    alias: ["annotation", "punctuation"],
+    inside: {
+      "punctuation": /\./
+    }
+  },
+  "keyword": /\b(?:_(?=\s*:)|and|as|assert|async|await|break|case|class|continue|def|del|elif|else|except|exec|finally|for|from|global|if|import|in|is|lambda|match|nonlocal|not|or|pass|print|raise|return|try|while|with|yield)\b/,
+  "builtin": /\b(?:__import__|abs|all|any|apply|ascii|basestring|bin|bool|buffer|bytearray|bytes|callable|chr|classmethod|cmp|coerce|compile|complex|delattr|dict|dir|divmod|enumerate|eval|execfile|file|filter|float|format|frozenset|getattr|globals|hasattr|hash|help|hex|id|input|int|intern|isinstance|issubclass|iter|len|list|locals|long|map|max|memoryview|min|next|object|oct|open|ord|pow|property|range|raw_input|reduce|reload|repr|reversed|round|set|setattr|slice|sorted|staticmethod|str|sum|super|tuple|type|unichr|unicode|vars|xrange|zip)\b/,
+  "boolean": /\b(?:False|None|True)\b/,
+  "number": /\b0(?:b(?:_?[01])+|o(?:_?[0-7])+|x(?:_?[a-f0-9])+)\b|(?:\b\d+(?:_\d+)*(?:\.(?:\d+(?:_\d+)*)?)?|\B\.\d+(?:_\d+)*)(?:e[+-]?\d+(?:_\d+)*)?j?(?!\w)/i,
+  "operator": /[-+%=]=?|!=|:=|\*\*?=?|\/\/?=?|<[<=>]?|>[=>]?|[&|^~]/,
+  "punctuation": /[{}[\];(),.:]/
+};
+Prism.languages.python["string-interpolation"].inside["interpolation"].inside.rest = Prism.languages.python;
+Prism.languages.py = Prism.languages.python;
+
+// node_modules/prismjs/components/prism-javascript.js
+Prism.languages.javascript = Prism.languages.extend("clike", {
+  "class-name": [
+    Prism.languages.clike["class-name"],
+    {
+      pattern: /(^|[^$\w\xA0-\uFFFF])(?!\s)[_$A-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\.(?:constructor|prototype))/,
+      lookbehind: true
+    }
+  ],
+  "keyword": [
+    {
+      pattern: /((?:^|\})\s*)catch\b/,
+      lookbehind: true
+    },
+    {
+      pattern: /(^|[^.]|\.\.\.\s*)\b(?:as|assert(?=\s*\{)|async(?=\s*(?:function\b|\(|[$\w\xA0-\uFFFF]|$))|await|break|case|class|const|continue|debugger|default|delete|do|else|enum|export|extends|finally(?=\s*(?:\{|$))|for|from(?=\s*(?:['"]|$))|function|(?:get|set)(?=\s*(?:[#\[$\w\xA0-\uFFFF]|$))|if|implements|import|in|instanceof|interface|let|new|null|of|package|private|protected|public|return|static|super|switch|this|throw|try|typeof|undefined|var|void|while|with|yield)\b/,
+      lookbehind: true
+    }
+  ],
+  // Allow for all non-ASCII characters (See http://stackoverflow.com/a/2008444)
+  "function": /#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*(?:\.\s*(?:apply|bind|call)\s*)?\()/,
+  "number": {
+    pattern: RegExp(
+      /(^|[^\w$])/.source + "(?:" + // constant
+      (/NaN|Infinity/.source + "|" + // binary integer
+      /0[bB][01]+(?:_[01]+)*n?/.source + "|" + // octal integer
+      /0[oO][0-7]+(?:_[0-7]+)*n?/.source + "|" + // hexadecimal integer
+      /0[xX][\dA-Fa-f]+(?:_[\dA-Fa-f]+)*n?/.source + "|" + // decimal bigint
+      /\d+(?:_\d+)*n/.source + "|" + // decimal number (integer or float) but no bigint
+      /(?:\d+(?:_\d+)*(?:\.(?:\d+(?:_\d+)*)?)?|\.\d+(?:_\d+)*)(?:[Ee][+-]?\d+(?:_\d+)*)?/.source) + ")" + /(?![\w$])/.source
+    ),
+    lookbehind: true
+  },
+  "operator": /--|\+\+|\*\*=?|=>|&&=?|\|\|=?|[!=]==|<<=?|>>>?=?|[-+*/%&|^!=<>]=?|\.{3}|\?\?=?|\?\.?|[~:]/
+});
+Prism.languages.javascript["class-name"][0].pattern = /(\b(?:class|extends|implements|instanceof|interface|new)\s+)[\w.\\]+/;
+Prism.languages.insertBefore("javascript", "keyword", {
+  "regex": {
+    pattern: RegExp(
+      // lookbehind
+      // eslint-disable-next-line regexp/no-dupe-characters-character-class
+      /((?:^|[^$\w\xA0-\uFFFF."'\])\s]|\b(?:return|yield))\s*)/.source + // Regex pattern:
+      // There are 2 regex patterns here. The RegExp set notation proposal added support for nested character
+      // classes if the `v` flag is present. Unfortunately, nested CCs are both context-free and incompatible
+      // with the only syntax, so we have to define 2 different regex patterns.
+      /\//.source + "(?:" + /(?:\[(?:[^\]\\\r\n]|\\.)*\]|\\.|[^/\\\[\r\n])+\/[dgimyus]{0,7}/.source + "|" + // `v` flag syntax. This supports 3 levels of nested character classes.
+      /(?:\[(?:[^[\]\\\r\n]|\\.|\[(?:[^[\]\\\r\n]|\\.|\[(?:[^[\]\\\r\n]|\\.)*\])*\])*\]|\\.|[^/\\\[\r\n])+\/[dgimyus]{0,7}v[dgimyus]{0,7}/.source + ")" + // lookahead
+      /(?=(?:\s|\/\*(?:[^*]|\*(?!\/))*\*\/)*(?:$|[\r\n,.;:})\]]|\/\/))/.source
+    ),
+    lookbehind: true,
+    greedy: true,
+    inside: {
+      "regex-source": {
+        pattern: /^(\/)[\s\S]+(?=\/[a-z]*$)/,
+        lookbehind: true,
+        alias: "language-regex",
+        inside: Prism.languages.regex
+      },
+      "regex-delimiter": /^\/|\/$/,
+      "regex-flags": /^[a-z]+$/
+    }
+  },
+  // This must be declared before keyword because we use "function" inside the look-forward
+  "function-variable": {
+    pattern: /#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*[=:]\s*(?:async\s*)?(?:\bfunction\b|(?:\((?:[^()]|\([^()]*\))*\)|(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*)\s*=>))/,
+    alias: "function"
+  },
+  "parameter": [
+    {
+      pattern: /(function(?:\s+(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*)?\s*\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\))/,
+      lookbehind: true,
+      inside: Prism.languages.javascript
+    },
+    {
+      pattern: /(^|[^$\w\xA0-\uFFFF])(?!\s)[_$a-z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*=>)/i,
+      lookbehind: true,
+      inside: Prism.languages.javascript
+    },
+    {
+      pattern: /(\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\)\s*=>)/,
+      lookbehind: true,
+      inside: Prism.languages.javascript
+    },
+    {
+      pattern: /((?:\b|\s|^)(?!(?:as|async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|finally|for|from|function|get|if|implements|import|in|instanceof|interface|let|new|null|of|package|private|protected|public|return|set|static|super|switch|this|throw|try|typeof|undefined|var|void|while|with|yield)(?![$\w\xA0-\uFFFF]))(?:(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*\s*)\(\s*|\]\s*\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\)\s*\{)/,
+      lookbehind: true,
+      inside: Prism.languages.javascript
+    }
+  ],
+  "constant": /\b[A-Z](?:[A-Z_]|\dx?)*\b/
+});
+Prism.languages.insertBefore("javascript", "string", {
+  "hashbang": {
+    pattern: /^#!.*/,
+    greedy: true,
+    alias: "comment"
+  },
+  "template-string": {
+    pattern: /`(?:\\[\s\S]|\$\{(?:[^{}]|\{(?:[^{}]|\{[^}]*\})*\})+\}|(?!\$\{)[^\\`])*`/,
+    greedy: true,
+    inside: {
+      "template-punctuation": {
+        pattern: /^`|`$/,
+        alias: "string"
+      },
+      "interpolation": {
+        pattern: /((?:^|[^\\])(?:\\{2})*)\$\{(?:[^{}]|\{(?:[^{}]|\{[^}]*\})*\})+\}/,
+        lookbehind: true,
+        inside: {
+          "interpolation-punctuation": {
+            pattern: /^\$\{|\}$/,
+            alias: "punctuation"
+          },
+          rest: Prism.languages.javascript
+        }
+      },
+      "string": /[\s\S]+/
+    }
+  },
+  "string-property": {
+    pattern: /((?:^|[,{])[ \t]*)(["'])(?:\\(?:\r\n|[\s\S])|(?!\2)[^\\\r\n])*\2(?=\s*:)/m,
+    lookbehind: true,
+    greedy: true,
+    alias: "property"
+  }
+});
+Prism.languages.insertBefore("javascript", "operator", {
+  "literal-property": {
+    pattern: /((?:^|[,{])[ \t]*)(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*:)/m,
+    lookbehind: true,
+    alias: "property"
+  }
+});
+if (Prism.languages.markup) {
+  Prism.languages.markup.tag.addInlined("script", "javascript");
+  Prism.languages.markup.tag.addAttribute(
+    /on(?:abort|blur|change|click|composition(?:end|start|update)|dblclick|error|focus(?:in|out)?|key(?:down|up)|load|mouse(?:down|enter|leave|move|out|over|up)|reset|resize|scroll|select|slotchange|submit|unload|wheel)/.source,
+    "javascript"
+  );
+}
+Prism.languages.js = Prism.languages.javascript;
+
+// node_modules/prismjs/components/prism-typescript.js
+(function(Prism3) {
+  Prism3.languages.typescript = Prism3.languages.extend("javascript", {
+    "class-name": {
+      pattern: /(\b(?:class|extends|implements|instanceof|interface|new|type)\s+)(?!keyof\b)(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?:\s*<(?:[^<>]|<(?:[^<>]|<[^<>]*>)*>)*>)?/,
+      lookbehind: true,
+      greedy: true,
+      inside: null
+      // see below
+    },
+    "builtin": /\b(?:Array|Function|Promise|any|boolean|console|never|number|string|symbol|unknown)\b/
+  });
+  Prism3.languages.typescript.keyword.push(
+    /\b(?:abstract|declare|is|keyof|readonly|require)\b/,
+    // keywords that have to be followed by an identifier
+    /\b(?:asserts|infer|interface|module|namespace|type)\b(?=\s*(?:[{_$a-zA-Z\xA0-\uFFFF]|$))/,
+    // This is for `import type *, {}`
+    /\btype\b(?=\s*(?:[\{*]|$))/
+  );
+  delete Prism3.languages.typescript["parameter"];
+  delete Prism3.languages.typescript["literal-property"];
+  var typeInside = Prism3.languages.extend("typescript", {});
+  delete typeInside["class-name"];
+  Prism3.languages.typescript["class-name"].inside = typeInside;
+  Prism3.languages.insertBefore("typescript", "function", {
+    "decorator": {
+      pattern: /@[$\w\xA0-\uFFFF]+/,
+      inside: {
+        "at": {
+          pattern: /^@/,
+          alias: "operator"
+        },
+        "function": /^[\s\S]+/
+      }
+    },
+    "generic-function": {
+      // e.g. foo<T extends "bar" | "baz">( ...
+      pattern: /#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*\s*<(?:[^<>]|<(?:[^<>]|<[^<>]*>)*>)*>(?=\s*\()/,
+      greedy: true,
+      inside: {
+        "function": /^#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*/,
+        "generic": {
+          pattern: /<[\s\S]+/,
+          // everything after the first <
+          alias: "class-name",
+          inside: typeInside
+        }
+      }
+    }
+  });
+  Prism3.languages.ts = Prism3.languages.typescript;
+})(Prism);
+
+// node_modules/prismjs/components/prism-jsx.js
+(function(Prism3) {
+  var javascript = Prism3.util.clone(Prism3.languages.javascript);
+  var space = /(?:\s|\/\/.*(?!.)|\/\*(?:[^*]|\*(?!\/))\*\/)/.source;
+  var braces = /(?:\{(?:\{(?:\{[^{}]*\}|[^{}])*\}|[^{}])*\})/.source;
+  var spread = /(?:\{<S>*\.{3}(?:[^{}]|<BRACES>)*\})/.source;
+  function re(source, flags) {
+    source = source.replace(/<S>/g, function() {
+      return space;
+    }).replace(/<BRACES>/g, function() {
+      return braces;
+    }).replace(/<SPREAD>/g, function() {
+      return spread;
+    });
+    return RegExp(source, flags);
+  }
+  spread = re(spread).source;
+  Prism3.languages.jsx = Prism3.languages.extend("markup", javascript);
+  Prism3.languages.jsx.tag.pattern = re(
+    /<\/?(?:[\w.:-]+(?:<S>+(?:[\w.:$-]+(?:=(?:"(?:\\[\s\S]|[^\\"])*"|'(?:\\[\s\S]|[^\\'])*'|[^\s{'"/>=]+|<BRACES>))?|<SPREAD>))*<S>*\/?)?>/.source
+  );
+  Prism3.languages.jsx.tag.inside["tag"].pattern = /^<\/?[^\s>\/]*/;
+  Prism3.languages.jsx.tag.inside["attr-value"].pattern = /=(?!\{)(?:"(?:\\[\s\S]|[^\\"])*"|'(?:\\[\s\S]|[^\\'])*'|[^\s'">]+)/;
+  Prism3.languages.jsx.tag.inside["tag"].inside["class-name"] = /^[A-Z]\w*(?:\.[A-Z]\w*)*$/;
+  Prism3.languages.jsx.tag.inside["comment"] = javascript["comment"];
+  Prism3.languages.insertBefore("inside", "attr-name", {
+    "spread": {
+      pattern: re(/<SPREAD>/.source),
+      inside: Prism3.languages.jsx
+    }
+  }, Prism3.languages.jsx.tag);
+  Prism3.languages.insertBefore("inside", "special-attr", {
+    "script": {
+      // Allow for two levels of nesting
+      pattern: re(/=<BRACES>/.source),
+      alias: "language-javascript",
+      inside: {
+        "script-punctuation": {
+          pattern: /^=(?=\{)/,
+          alias: "punctuation"
+        },
+        rest: Prism3.languages.jsx
+      }
+    }
+  }, Prism3.languages.jsx.tag);
+  var stringifyToken = function(token) {
+    if (!token) {
+      return "";
+    }
+    if (typeof token === "string") {
+      return token;
+    }
+    if (typeof token.content === "string") {
+      return token.content;
+    }
+    return token.content.map(stringifyToken).join("");
+  };
+  var walkTokens = function(tokens) {
+    var openedTags = [];
+    for (var i = 0; i < tokens.length; i++) {
+      var token = tokens[i];
+      var notTagNorBrace = false;
+      if (typeof token !== "string") {
+        if (token.type === "tag" && token.content[0] && token.content[0].type === "tag") {
+          if (token.content[0].content[0].content === "</") {
+            if (openedTags.length > 0 && openedTags[openedTags.length - 1].tagName === stringifyToken(token.content[0].content[1])) {
+              openedTags.pop();
+            }
+          } else {
+            if (token.content[token.content.length - 1].content === "/>") {
+            } else {
+              openedTags.push({
+                tagName: stringifyToken(token.content[0].content[1]),
+                openedBraces: 0
+              });
+            }
+          }
+        } else if (openedTags.length > 0 && token.type === "punctuation" && token.content === "{") {
+          openedTags[openedTags.length - 1].openedBraces++;
+        } else if (openedTags.length > 0 && openedTags[openedTags.length - 1].openedBraces > 0 && token.type === "punctuation" && token.content === "}") {
+          openedTags[openedTags.length - 1].openedBraces--;
+        } else {
+          notTagNorBrace = true;
+        }
+      }
+      if (notTagNorBrace || typeof token === "string") {
+        if (openedTags.length > 0 && openedTags[openedTags.length - 1].openedBraces === 0) {
+          var plainText = stringifyToken(token);
+          if (i < tokens.length - 1 && (typeof tokens[i + 1] === "string" || tokens[i + 1].type === "plain-text")) {
+            plainText += stringifyToken(tokens[i + 1]);
+            tokens.splice(i + 1, 1);
+          }
+          if (i > 0 && (typeof tokens[i - 1] === "string" || tokens[i - 1].type === "plain-text")) {
+            plainText = stringifyToken(tokens[i - 1]) + plainText;
+            tokens.splice(i - 1, 1);
+            i--;
+          }
+          tokens[i] = new Prism3.Token("plain-text", plainText, null, plainText);
+        }
+      }
+      if (token.content && typeof token.content !== "string") {
+        walkTokens(token.content);
+      }
+    }
+  };
+  Prism3.hooks.add("after-tokenize", function(env) {
+    if (env.language !== "jsx" && env.language !== "tsx") {
+      return;
+    }
+    walkTokens(env.tokens);
+  });
+})(Prism);
+
+// node_modules/prismjs/components/prism-json.js
+Prism.languages.json = {
+  "property": {
+    pattern: /(^|[^\\])"(?:\\.|[^\\"\r\n])*"(?=\s*:)/,
+    lookbehind: true,
+    greedy: true
+  },
+  "string": {
+    pattern: /(^|[^\\])"(?:\\.|[^\\"\r\n])*"(?!\s*:)/,
+    lookbehind: true,
+    greedy: true
+  },
+  "comment": {
+    pattern: /\/\/.*|\/\*[\s\S]*?(?:\*\/|$)/,
+    greedy: true
+  },
+  "number": /-?\b\d+(?:\.\d+)?(?:e[+-]?\d+)?\b/i,
+  "punctuation": /[{}[\],]/,
+  "operator": /:/,
+  "boolean": /\b(?:false|true)\b/,
+  "null": {
+    pattern: /\bnull\b/,
+    alias: "keyword"
+  }
+};
+Prism.languages.webmanifest = Prism.languages.json;
+
+// node_modules/prismjs/components/prism-markup.js
+Prism.languages.markup = {
+  "comment": {
+    pattern: /<!--(?:(?!<!--)[\s\S])*?-->/,
+    greedy: true
+  },
+  "prolog": {
+    pattern: /<\?[\s\S]+?\?>/,
+    greedy: true
+  },
+  "doctype": {
+    // https://www.w3.org/TR/xml/#NT-doctypedecl
+    pattern: /<!DOCTYPE(?:[^>"'[\]]|"[^"]*"|'[^']*')+(?:\[(?:[^<"'\]]|"[^"]*"|'[^']*'|<(?!!--)|<!--(?:[^-]|-(?!->))*-->)*\]\s*)?>/i,
+    greedy: true,
+    inside: {
+      "internal-subset": {
+        pattern: /(^[^\[]*\[)[\s\S]+(?=\]>$)/,
+        lookbehind: true,
+        greedy: true,
+        inside: null
+        // see below
+      },
+      "string": {
+        pattern: /"[^"]*"|'[^']*'/,
+        greedy: true
+      },
+      "punctuation": /^<!|>$|[[\]]/,
+      "doctype-tag": /^DOCTYPE/i,
+      "name": /[^\s<>'"]+/
+    }
+  },
+  "cdata": {
+    pattern: /<!\[CDATA\[[\s\S]*?\]\]>/i,
+    greedy: true
+  },
+  "tag": {
+    pattern: /<\/?(?!\d)[^\s>\/=$<%]+(?:\s(?:\s*[^\s>\/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+(?=[\s>]))|(?=[\s/>])))+)?\s*\/?>/,
+    greedy: true,
+    inside: {
+      "tag": {
+        pattern: /^<\/?[^\s>\/]+/,
+        inside: {
+          "punctuation": /^<\/?/,
+          "namespace": /^[^\s>\/:]+:/
+        }
+      },
+      "special-attr": [],
+      "attr-value": {
+        pattern: /=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+)/,
+        inside: {
+          "punctuation": [
+            {
+              pattern: /^=/,
+              alias: "attr-equals"
+            },
+            {
+              pattern: /^(\s*)["']|["']$/,
+              lookbehind: true
+            }
+          ]
+        }
+      },
+      "punctuation": /\/?>/,
+      "attr-name": {
+        pattern: /[^\s>\/]+/,
+        inside: {
+          "namespace": /^[^\s>\/:]+:/
+        }
+      }
+    }
+  },
+  "entity": [
+    {
+      pattern: /&[\da-z]{1,8};/i,
+      alias: "named-entity"
+    },
+    /&#x?[\da-f]{1,8};/i
+  ]
+};
+Prism.languages.markup["tag"].inside["attr-value"].inside["entity"] = Prism.languages.markup["entity"];
+Prism.languages.markup["doctype"].inside["internal-subset"].inside = Prism.languages.markup;
+Prism.hooks.add("wrap", function(env) {
+  if (env.type === "entity") {
+    env.attributes["title"] = env.content.replace(/&amp;/, "&");
+  }
+});
+Object.defineProperty(Prism.languages.markup.tag, "addInlined", {
+  /**
+   * Adds an inlined language to markup.
+   *
+   * An example of an inlined language is CSS with `<style>` tags.
+   *
+   * @param {string} tagName The name of the tag that contains the inlined language. This name will be treated as
+   * case insensitive.
+   * @param {string} lang The language key.
+   * @example
+   * addInlined('style', 'css');
+   */
+  value: function addInlined(tagName, lang) {
+    var includedCdataInside = {};
+    includedCdataInside["language-" + lang] = {
+      pattern: /(^<!\[CDATA\[)[\s\S]+?(?=\]\]>$)/i,
+      lookbehind: true,
+      inside: Prism.languages[lang]
+    };
+    includedCdataInside["cdata"] = /^<!\[CDATA\[|\]\]>$/i;
+    var inside = {
+      "included-cdata": {
+        pattern: /<!\[CDATA\[[\s\S]*?\]\]>/i,
+        inside: includedCdataInside
+      }
+    };
+    inside["language-" + lang] = {
+      pattern: /[\s\S]+/,
+      inside: Prism.languages[lang]
+    };
+    var def = {};
+    def[tagName] = {
+      pattern: RegExp(/(<__[^>]*>)(?:<!\[CDATA\[(?:[^\]]|\](?!\]>))*\]\]>|(?!<!\[CDATA\[)[\s\S])*?(?=<\/__>)/.source.replace(/__/g, function() {
+        return tagName;
+      }), "i"),
+      lookbehind: true,
+      greedy: true,
+      inside
+    };
+    Prism.languages.insertBefore("markup", "cdata", def);
+  }
+});
+Object.defineProperty(Prism.languages.markup.tag, "addAttribute", {
+  /**
+   * Adds an pattern to highlight languages embedded in HTML attributes.
+   *
+   * An example of an inlined language is CSS with `style` attributes.
+   *
+   * @param {string} attrName The name of the tag that contains the inlined language. This name will be treated as
+   * case insensitive.
+   * @param {string} lang The language key.
+   * @example
+   * addAttribute('style', 'css');
+   */
+  value: function(attrName, lang) {
+    Prism.languages.markup.tag.inside["special-attr"].push({
+      pattern: RegExp(
+        /(^|["'\s])/.source + "(?:" + attrName + ")" + /\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+(?=[\s>]))/.source,
+        "i"
+      ),
+      lookbehind: true,
+      inside: {
+        "attr-name": /^[^\s=]+/,
+        "attr-value": {
+          pattern: /=[\s\S]+/,
+          inside: {
+            "value": {
+              pattern: /(^=\s*(["']|(?!["'])))\S[\s\S]*(?=\2$)/,
+              lookbehind: true,
+              alias: [lang, "language-" + lang],
+              inside: Prism.languages[lang]
+            },
+            "punctuation": [
+              {
+                pattern: /^=/,
+                alias: "attr-equals"
+              },
+              /"|'/
+            ]
+          }
+        }
+      }
+    });
+  }
+});
+Prism.languages.html = Prism.languages.markup;
+Prism.languages.mathml = Prism.languages.markup;
+Prism.languages.svg = Prism.languages.markup;
+Prism.languages.xml = Prism.languages.extend("markup", {});
+Prism.languages.ssml = Prism.languages.xml;
+Prism.languages.atom = Prism.languages.xml;
+Prism.languages.rss = Prism.languages.xml;
+
+// node_modules/prismjs/components/prism-yaml.js
+(function(Prism3) {
+  var anchorOrAlias = /[*&][^\s[\]{},]+/;
+  var tag = /!(?:<[\w\-%#;/?:@&=+$,.!~*'()[\]]+>|(?:[a-zA-Z\d-]*!)?[\w\-%#;/?:@&=+$.~*'()]+)?/;
+  var properties = "(?:" + tag.source + "(?:[ 	]+" + anchorOrAlias.source + ")?|" + anchorOrAlias.source + "(?:[ 	]+" + tag.source + ")?)";
+  var plainKey = /(?:[^\s\x00-\x08\x0e-\x1f!"#%&'*,\-:>?@[\]`{|}\x7f-\x84\x86-\x9f\ud800-\udfff\ufffe\uffff]|[?:-]<PLAIN>)(?:[ \t]*(?:(?![#:])<PLAIN>|:<PLAIN>))*/.source.replace(/<PLAIN>/g, function() {
+    return /[^\s\x00-\x08\x0e-\x1f,[\]{}\x7f-\x84\x86-\x9f\ud800-\udfff\ufffe\uffff]/.source;
+  });
+  var string = /"(?:[^"\\\r\n]|\\.)*"|'(?:[^'\\\r\n]|\\.)*'/.source;
+  function createValuePattern(value, flags) {
+    flags = (flags || "").replace(/m/g, "") + "m";
+    var pattern = /([:\-,[{]\s*(?:\s<<prop>>[ \t]+)?)(?:<<value>>)(?=[ \t]*(?:$|,|\]|\}|(?:[\r\n]\s*)?#))/.source.replace(/<<prop>>/g, function() {
+      return properties;
+    }).replace(/<<value>>/g, function() {
+      return value;
+    });
+    return RegExp(pattern, flags);
+  }
+  Prism3.languages.yaml = {
+    "scalar": {
+      pattern: RegExp(/([\-:]\s*(?:\s<<prop>>[ \t]+)?[|>])[ \t]*(?:((?:\r?\n|\r)[ \t]+)\S[^\r\n]*(?:\2[^\r\n]+)*)/.source.replace(/<<prop>>/g, function() {
+        return properties;
+      })),
+      lookbehind: true,
+      alias: "string"
+    },
+    "comment": /#.*/,
+    "key": {
+      pattern: RegExp(/((?:^|[:\-,[{\r\n?])[ \t]*(?:<<prop>>[ \t]+)?)<<key>>(?=\s*:\s)/.source.replace(/<<prop>>/g, function() {
+        return properties;
+      }).replace(/<<key>>/g, function() {
+        return "(?:" + plainKey + "|" + string + ")";
+      })),
+      lookbehind: true,
+      greedy: true,
+      alias: "atrule"
+    },
+    "directive": {
+      pattern: /(^[ \t]*)%.+/m,
+      lookbehind: true,
+      alias: "important"
+    },
+    "datetime": {
+      pattern: createValuePattern(/\d{4}-\d\d?-\d\d?(?:[tT]|[ \t]+)\d\d?:\d{2}:\d{2}(?:\.\d*)?(?:[ \t]*(?:Z|[-+]\d\d?(?::\d{2})?))?|\d{4}-\d{2}-\d{2}|\d\d?:\d{2}(?::\d{2}(?:\.\d*)?)?/.source),
+      lookbehind: true,
+      alias: "number"
+    },
+    "boolean": {
+      pattern: createValuePattern(/false|true/.source, "i"),
+      lookbehind: true,
+      alias: "important"
+    },
+    "null": {
+      pattern: createValuePattern(/null|~/.source, "i"),
+      lookbehind: true,
+      alias: "important"
+    },
+    "string": {
+      pattern: createValuePattern(string),
+      lookbehind: true,
+      greedy: true
+    },
+    "number": {
+      pattern: createValuePattern(/[+-]?(?:0x[\da-f]+|0o[0-7]+|(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?|\.inf|\.nan)/.source, "i"),
+      lookbehind: true
+    },
+    "tag": tag,
+    "important": anchorOrAlias,
+    "punctuation": /---|[:[\]{}\-,|>?]|\.\.\./
+  };
+  Prism3.languages.yml = Prism3.languages.yaml;
+})(Prism);
+
+// node_modules/prismjs/components/prism-css.js
+(function(Prism3) {
+  var string = /(?:"(?:\\(?:\r\n|[\s\S])|[^"\\\r\n])*"|'(?:\\(?:\r\n|[\s\S])|[^'\\\r\n])*')/;
+  Prism3.languages.css = {
+    "comment": /\/\*[\s\S]*?\*\//,
+    "atrule": {
+      pattern: RegExp("@[\\w-](?:" + /[^;{\s"']|\s+(?!\s)/.source + "|" + string.source + ")*?" + /(?:;|(?=\s*\{))/.source),
+      inside: {
+        "rule": /^@[\w-]+/,
+        "selector-function-argument": {
+          pattern: /(\bselector\s*\(\s*(?![\s)]))(?:[^()\s]|\s+(?![\s)])|\((?:[^()]|\([^()]*\))*\))+(?=\s*\))/,
+          lookbehind: true,
+          alias: "selector"
+        },
+        "keyword": {
+          pattern: /(^|[^\w-])(?:and|not|only|or)(?![\w-])/,
+          lookbehind: true
+        }
+        // See rest below
+      }
+    },
+    "url": {
+      // https://drafts.csswg.org/css-values-3/#urls
+      pattern: RegExp("\\burl\\((?:" + string.source + "|" + /(?:[^\\\r\n()"']|\\[\s\S])*/.source + ")\\)", "i"),
+      greedy: true,
+      inside: {
+        "function": /^url/i,
+        "punctuation": /^\(|\)$/,
+        "string": {
+          pattern: RegExp("^" + string.source + "$"),
+          alias: "url"
+        }
+      }
+    },
+    "selector": {
+      pattern: RegExp(`(^|[{}\\s])[^{}\\s](?:[^{};"'\\s]|\\s+(?![\\s{])|` + string.source + ")*(?=\\s*\\{)"),
+      lookbehind: true
+    },
+    "string": {
+      pattern: string,
+      greedy: true
+    },
+    "property": {
+      pattern: /(^|[^-\w\xA0-\uFFFF])(?!\s)[-_a-z\xA0-\uFFFF](?:(?!\s)[-\w\xA0-\uFFFF])*(?=\s*:)/i,
+      lookbehind: true
+    },
+    "important": /!important\b/i,
+    "function": {
+      pattern: /(^|[^-a-z0-9])[-a-z0-9]+(?=\()/i,
+      lookbehind: true
+    },
+    "punctuation": /[(){};:,]/
+  };
+  Prism3.languages.css["atrule"].inside.rest = Prism3.languages.css;
+  var markup = Prism3.languages.markup;
+  if (markup) {
+    markup.tag.addInlined("style", "css");
+    markup.tag.addAttribute("style", "css");
+  }
+})(Prism);
+
+// node_modules/prismjs/components/prism-scss.js
+Prism.languages.scss = Prism.languages.extend("css", {
+  "comment": {
+    pattern: /(^|[^\\])(?:\/\*[\s\S]*?\*\/|\/\/.*)/,
+    lookbehind: true
+  },
+  "atrule": {
+    pattern: /@[\w-](?:\([^()]+\)|[^()\s]|\s+(?!\s))*?(?=\s+[{;])/,
+    inside: {
+      "rule": /@[\w-]+/
+      // See rest below
+    }
+  },
+  // url, compassified
+  "url": /(?:[-a-z]+-)?url(?=\()/i,
+  // CSS selector regex is not appropriate for Sass
+  // since there can be lot more things (var, @ directive, nesting..)
+  // a selector must start at the end of a property or after a brace (end of other rules or nesting)
+  // it can contain some characters that aren't used for defining rules or end of selector, & (parent selector), or interpolated variable
+  // the end of a selector is found when there is no rules in it ( {} or {\s}) or if there is a property (because an interpolated var
+  // can "pass" as a selector- e.g: proper#{$erty})
+  // this one was hard to do, so please be careful if you edit this one :)
+  "selector": {
+    // Initial look-ahead is used to prevent matching of blank selectors
+    pattern: /(?=\S)[^@;{}()]?(?:[^@;{}()\s]|\s+(?!\s)|#\{\$[-\w]+\})+(?=\s*\{(?:\}|\s|[^}][^:{}]*[:{][^}]))/,
+    inside: {
+      "parent": {
+        pattern: /&/,
+        alias: "important"
+      },
+      "placeholder": /%[-\w]+/,
+      "variable": /\$[-\w]+|#\{\$[-\w]+\}/
+    }
+  },
+  "property": {
+    pattern: /(?:[-\w]|\$[-\w]|#\{\$[-\w]+\})+(?=\s*:)/,
+    inside: {
+      "variable": /\$[-\w]+|#\{\$[-\w]+\}/
+    }
+  }
+});
+Prism.languages.insertBefore("scss", "atrule", {
+  "keyword": [
+    /@(?:content|debug|each|else(?: if)?|extend|for|forward|function|if|import|include|mixin|return|use|warn|while)\b/i,
+    {
+      pattern: /( )(?:from|through)(?= )/,
+      lookbehind: true
+    }
+  ]
+});
+Prism.languages.insertBefore("scss", "important", {
+  // var and interpolated vars
+  "variable": /\$[-\w]+|#\{\$[-\w]+\}/
+});
+Prism.languages.insertBefore("scss", "function", {
+  "module-modifier": {
+    pattern: /\b(?:as|hide|show|with)\b/i,
+    alias: "keyword"
+  },
+  "placeholder": {
+    pattern: /%[-\w]+/,
+    alias: "selector"
+  },
+  "statement": {
+    pattern: /\B!(?:default|optional)\b/i,
+    alias: "keyword"
+  },
+  "boolean": /\b(?:false|true)\b/,
+  "null": {
+    pattern: /\bnull\b/,
+    alias: "keyword"
+  },
+  "operator": {
+    pattern: /(\s)(?:[-+*\/%]|[=!]=|<=?|>=?|and|not|or)(?=\s)/,
+    lookbehind: true
+  }
+});
+Prism.languages.scss["atrule"].inside.rest = Prism.languages.scss;
+
+// node_modules/prismjs/components/prism-less.js
+Prism.languages.less = Prism.languages.extend("css", {
+  "comment": [
+    /\/\*[\s\S]*?\*\//,
+    {
+      pattern: /(^|[^\\])\/\/.*/,
+      lookbehind: true
+    }
+  ],
+  "atrule": {
+    pattern: /@[\w-](?:\((?:[^(){}]|\([^(){}]*\))*\)|[^(){};\s]|\s+(?!\s))*?(?=\s*\{)/,
+    inside: {
+      "punctuation": /[:()]/
+    }
+  },
+  // selectors and mixins are considered the same
+  "selector": {
+    pattern: /(?:@\{[\w-]+\}|[^{};\s@])(?:@\{[\w-]+\}|\((?:[^(){}]|\([^(){}]*\))*\)|[^(){};@\s]|\s+(?!\s))*?(?=\s*\{)/,
+    inside: {
+      // mixin parameters
+      "variable": /@+[\w-]+/
+    }
+  },
+  "property": /(?:@\{[\w-]+\}|[\w-])+(?:\+_?)?(?=\s*:)/,
+  "operator": /[+\-*\/]/
+});
+Prism.languages.insertBefore("less", "property", {
+  "variable": [
+    // Variable declaration (the colon must be consumed!)
+    {
+      pattern: /@[\w-]+\s*:/,
+      inside: {
+        "punctuation": /:/
+      }
+    },
+    // Variable usage
+    /@@?[\w-]+/
+  ],
+  "mixin-usage": {
+    pattern: /([{;]\s*)[.#](?!\d)[\w-].*?(?=[(;])/,
+    lookbehind: true,
+    alias: "function"
+  }
+});
+
+// node_modules/prismjs/components/prism-stylus.js
+(function(Prism3) {
+  var unit = {
+    pattern: /(\b\d+)(?:%|[a-z]+)/,
+    lookbehind: true
+  };
+  var number = {
+    pattern: /(^|[^\w.-])-?(?:\d+(?:\.\d+)?|\.\d+)/,
+    lookbehind: true
+  };
+  var inside = {
+    "comment": {
+      pattern: /(^|[^\\])(?:\/\*[\s\S]*?\*\/|\/\/.*)/,
+      lookbehind: true
+    },
+    "url": {
+      pattern: /\burl\((["']?).*?\1\)/i,
+      greedy: true
+    },
+    "string": {
+      pattern: /("|')(?:(?!\1)[^\\\r\n]|\\(?:\r\n|[\s\S]))*\1/,
+      greedy: true
+    },
+    "interpolation": null,
+    // See below
+    "func": null,
+    // See below
+    "important": /\B!(?:important|optional)\b/i,
+    "keyword": {
+      pattern: /(^|\s+)(?:(?:else|for|if|return|unless)(?=\s|$)|@[\w-]+)/,
+      lookbehind: true
+    },
+    "hexcode": /#[\da-f]{3,6}/i,
+    "color": [
+      /\b(?:AliceBlue|AntiqueWhite|Aqua|Aquamarine|Azure|Beige|Bisque|Black|BlanchedAlmond|Blue|BlueViolet|Brown|BurlyWood|CadetBlue|Chartreuse|Chocolate|Coral|CornflowerBlue|Cornsilk|Crimson|Cyan|DarkBlue|DarkCyan|DarkGoldenRod|DarkGr[ae]y|DarkGreen|DarkKhaki|DarkMagenta|DarkOliveGreen|DarkOrange|DarkOrchid|DarkRed|DarkSalmon|DarkSeaGreen|DarkSlateBlue|DarkSlateGr[ae]y|DarkTurquoise|DarkViolet|DeepPink|DeepSkyBlue|DimGr[ae]y|DodgerBlue|FireBrick|FloralWhite|ForestGreen|Fuchsia|Gainsboro|GhostWhite|Gold|GoldenRod|Gr[ae]y|Green|GreenYellow|HoneyDew|HotPink|IndianRed|Indigo|Ivory|Khaki|Lavender|LavenderBlush|LawnGreen|LemonChiffon|LightBlue|LightCoral|LightCyan|LightGoldenRodYellow|LightGr[ae]y|LightGreen|LightPink|LightSalmon|LightSeaGreen|LightSkyBlue|LightSlateGr[ae]y|LightSteelBlue|LightYellow|Lime|LimeGreen|Linen|Magenta|Maroon|MediumAquaMarine|MediumBlue|MediumOrchid|MediumPurple|MediumSeaGreen|MediumSlateBlue|MediumSpringGreen|MediumTurquoise|MediumVioletRed|MidnightBlue|MintCream|MistyRose|Moccasin|NavajoWhite|Navy|OldLace|Olive|OliveDrab|Orange|OrangeRed|Orchid|PaleGoldenRod|PaleGreen|PaleTurquoise|PaleVioletRed|PapayaWhip|PeachPuff|Peru|Pink|Plum|PowderBlue|Purple|Red|RosyBrown|RoyalBlue|SaddleBrown|Salmon|SandyBrown|SeaGreen|SeaShell|Sienna|Silver|SkyBlue|SlateBlue|SlateGr[ae]y|Snow|SpringGreen|SteelBlue|Tan|Teal|Thistle|Tomato|Transparent|Turquoise|Violet|Wheat|White|WhiteSmoke|Yellow|YellowGreen)\b/i,
+      {
+        pattern: /\b(?:hsl|rgb)\(\s*\d{1,3}\s*,\s*\d{1,3}%?\s*,\s*\d{1,3}%?\s*\)\B|\b(?:hsl|rgb)a\(\s*\d{1,3}\s*,\s*\d{1,3}%?\s*,\s*\d{1,3}%?\s*,\s*(?:0|0?\.\d+|1)\s*\)\B/i,
+        inside: {
+          "unit": unit,
+          "number": number,
+          "function": /[\w-]+(?=\()/,
+          "punctuation": /[(),]/
+        }
+      }
+    ],
+    "entity": /\\[\da-f]{1,8}/i,
+    "unit": unit,
+    "boolean": /\b(?:false|true)\b/,
+    "operator": [
+      // We want non-word chars around "-" because it is
+      // accepted in property names.
+      /~|[+!\/%<>?=]=?|[-:]=|\*[*=]?|\.{2,3}|&&|\|\||\B-\B|\b(?:and|in|is(?: a| defined| not|nt)?|not|or)\b/
+    ],
+    "number": number,
+    "punctuation": /[{}()\[\];:,]/
+  };
+  inside["interpolation"] = {
+    pattern: /\{[^\r\n}:]+\}/,
+    alias: "variable",
+    inside: {
+      "delimiter": {
+        pattern: /^\{|\}$/,
+        alias: "punctuation"
+      },
+      rest: inside
+    }
+  };
+  inside["func"] = {
+    pattern: /[\w-]+\([^)]*\).*/,
+    inside: {
+      "function": /^[^(]+/,
+      rest: inside
+    }
+  };
+  Prism3.languages.stylus = {
+    "atrule-declaration": {
+      pattern: /(^[ \t]*)@.+/m,
+      lookbehind: true,
+      inside: {
+        "atrule": /^@[\w-]+/,
+        rest: inside
+      }
+    },
+    "variable-declaration": {
+      pattern: /(^[ \t]*)[\w$-]+\s*.?=[ \t]*(?:\{[^{}]*\}|\S.*|$)/m,
+      lookbehind: true,
+      inside: {
+        "variable": /^\S+/,
+        rest: inside
+      }
+    },
+    "statement": {
+      pattern: /(^[ \t]*)(?:else|for|if|return|unless)[ \t].+/m,
+      lookbehind: true,
+      inside: {
+        "keyword": /^\S+/,
+        rest: inside
+      }
+    },
+    // A property/value pair cannot end with a comma or a brace
+    // It cannot have indented content unless it ended with a semicolon
+    "property-declaration": {
+      pattern: /((?:^|\{)([ \t]*))(?:[\w-]|\{[^}\r\n]+\})+(?:\s*:\s*|[ \t]+)(?!\s)[^{\r\n]*(?:;|[^{\r\n,]$(?!(?:\r?\n|\r)(?:\{|\2[ \t])))/m,
+      lookbehind: true,
+      inside: {
+        "property": {
+          pattern: /^[^\s:]+/,
+          inside: {
+            "interpolation": inside.interpolation
+          }
+        },
+        rest: inside
+      }
+    },
+    // A selector can contain parentheses only as part of a pseudo-element
+    // It can span multiple lines.
+    // It must end with a comma or an accolade or have indented content.
+    "selector": {
+      pattern: /(^[ \t]*)(?:(?=\S)(?:[^{}\r\n:()]|::?[\w-]+(?:\([^)\r\n]*\)|(?![\w-]))|\{[^}\r\n]+\})+)(?:(?:\r?\n|\r)(?:\1(?:(?=\S)(?:[^{}\r\n:()]|::?[\w-]+(?:\([^)\r\n]*\)|(?![\w-]))|\{[^}\r\n]+\})+)))*(?:,$|\{|(?=(?:\r?\n|\r)(?:\{|\1[ \t])))/m,
+      lookbehind: true,
+      inside: {
+        "interpolation": inside.interpolation,
+        "comment": inside.comment,
+        "punctuation": /[{},]/
+      }
+    },
+    "func": inside.func,
+    "string": inside.string,
+    "comment": {
+      pattern: /(^|[^\\])(?:\/\*[\s\S]*?\*\/|\/\/.*)/,
+      lookbehind: true,
+      greedy: true
+    },
+    "interpolation": inside.interpolation,
+    "punctuation": /[{}()\[\];:.]/
+  };
+})(Prism);
+
+// node_modules/prismjs/components/prism-sql.js
+Prism.languages.sql = {
+  "comment": {
+    pattern: /(^|[^\\])(?:\/\*[\s\S]*?\*\/|(?:--|\/\/|#).*)/,
+    lookbehind: true
+  },
+  "variable": [
+    {
+      pattern: /@(["'`])(?:\\[\s\S]|(?!\1)[^\\])+\1/,
+      greedy: true
+    },
+    /@[\w.$]+/
+  ],
+  "string": {
+    pattern: /(^|[^@\\])("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2/,
+    greedy: true,
+    lookbehind: true
+  },
+  "identifier": {
+    pattern: /(^|[^@\\])`(?:\\[\s\S]|[^`\\]|``)*`/,
+    greedy: true,
+    lookbehind: true,
+    inside: {
+      "punctuation": /^`|`$/
+    }
+  },
+  "function": /\b(?:AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE)(?=\s*\()/i,
+  // Should we highlight user defined functions too?
+  "keyword": /\b(?:ACTION|ADD|AFTER|ALGORITHM|ALL|ALTER|ANALYZE|ANY|APPLY|AS|ASC|AUTHORIZATION|AUTO_INCREMENT|BACKUP|BDB|BEGIN|BERKELEYDB|BIGINT|BINARY|BIT|BLOB|BOOL|BOOLEAN|BREAK|BROWSE|BTREE|BULK|BY|CALL|CASCADED?|CASE|CHAIN|CHAR(?:ACTER|SET)?|CHECK(?:POINT)?|CLOSE|CLUSTERED|COALESCE|COLLATE|COLUMNS?|COMMENT|COMMIT(?:TED)?|COMPUTE|CONNECT|CONSISTENT|CONSTRAINT|CONTAINS(?:TABLE)?|CONTINUE|CONVERT|CREATE|CROSS|CURRENT(?:_DATE|_TIME|_TIMESTAMP|_USER)?|CURSOR|CYCLE|DATA(?:BASES?)?|DATE(?:TIME)?|DAY|DBCC|DEALLOCATE|DEC|DECIMAL|DECLARE|DEFAULT|DEFINER|DELAYED|DELETE|DELIMITERS?|DENY|DESC|DESCRIBE|DETERMINISTIC|DISABLE|DISCARD|DISK|DISTINCT|DISTINCTROW|DISTRIBUTED|DO|DOUBLE|DROP|DUMMY|DUMP(?:FILE)?|DUPLICATE|ELSE(?:IF)?|ENABLE|ENCLOSED|END|ENGINE|ENUM|ERRLVL|ERRORS|ESCAPED?|EXCEPT|EXEC(?:UTE)?|EXISTS|EXIT|EXPLAIN|EXTENDED|FETCH|FIELDS|FILE|FILLFACTOR|FIRST|FIXED|FLOAT|FOLLOWING|FOR(?: EACH ROW)?|FORCE|FOREIGN|FREETEXT(?:TABLE)?|FROM|FULL|FUNCTION|GEOMETRY(?:COLLECTION)?|GLOBAL|GOTO|GRANT|GROUP|HANDLER|HASH|HAVING|HOLDLOCK|HOUR|IDENTITY(?:COL|_INSERT)?|IF|IGNORE|IMPORT|INDEX|INFILE|INNER|INNODB|INOUT|INSERT|INT|INTEGER|INTERSECT|INTERVAL|INTO|INVOKER|ISOLATION|ITERATE|JOIN|KEYS?|KILL|LANGUAGE|LAST|LEAVE|LEFT|LEVEL|LIMIT|LINENO|LINES|LINESTRING|LOAD|LOCAL|LOCK|LONG(?:BLOB|TEXT)|LOOP|MATCH(?:ED)?|MEDIUM(?:BLOB|INT|TEXT)|MERGE|MIDDLEINT|MINUTE|MODE|MODIFIES|MODIFY|MONTH|MULTI(?:LINESTRING|POINT|POLYGON)|NATIONAL|NATURAL|NCHAR|NEXT|NO|NONCLUSTERED|NULLIF|NUMERIC|OFF?|OFFSETS?|ON|OPEN(?:DATASOURCE|QUERY|ROWSET)?|OPTIMIZE|OPTION(?:ALLY)?|ORDER|OUT(?:ER|FILE)?|OVER|PARTIAL|PARTITION|PERCENT|PIVOT|PLAN|POINT|POLYGON|PRECEDING|PRECISION|PREPARE|PREV|PRIMARY|PRINT|PRIVILEGES|PROC(?:EDURE)?|PUBLIC|PURGE|QUICK|RAISERROR|READS?|REAL|RECONFIGURE|REFERENCES|RELEASE|RENAME|REPEAT(?:ABLE)?|REPLACE|REPLICATION|REQUIRE|RESIGNAL|RESTORE|RESTRICT|RETURN(?:ING|S)?|REVOKE|RIGHT|ROLLBACK|ROUTINE|ROW(?:COUNT|GUIDCOL|S)?|RTREE|RULE|SAVE(?:POINT)?|SCHEMA|SECOND|SELECT|SERIAL(?:IZABLE)?|SESSION(?:_USER)?|SET(?:USER)?|SHARE|SHOW|SHUTDOWN|SIMPLE|SMALLINT|SNAPSHOT|SOME|SONAME|SQL|START(?:ING)?|STATISTICS|STATUS|STRIPED|SYSTEM_USER|TABLES?|TABLESPACE|TEMP(?:ORARY|TABLE)?|TERMINATED|TEXT(?:SIZE)?|THEN|TIME(?:STAMP)?|TINY(?:BLOB|INT|TEXT)|TOP?|TRAN(?:SACTIONS?)?|TRIGGER|TRUNCATE|TSEQUAL|TYPES?|UNBOUNDED|UNCOMMITTED|UNDEFINED|UNION|UNIQUE|UNLOCK|UNPIVOT|UNSIGNED|UPDATE(?:TEXT)?|USAGE|USE|USER|USING|VALUES?|VAR(?:BINARY|CHAR|CHARACTER|YING)|VIEW|WAITFOR|WARNINGS|WHEN|WHERE|WHILE|WITH(?: ROLLUP|IN)?|WORK|WRITE(?:TEXT)?|YEAR)\b/i,
+  "boolean": /\b(?:FALSE|NULL|TRUE)\b/i,
+  "number": /\b0x[\da-f]+\b|\b\d+(?:\.\d*)?|\B\.\d+\b/i,
+  "operator": /[-+*\/=%^~]|&&?|\|\|?|!=?|<(?:=>?|<|>)?|>[>=]?|\b(?:AND|BETWEEN|DIV|ILIKE|IN|IS|LIKE|NOT|OR|REGEXP|RLIKE|SOUNDS LIKE|XOR)\b/i,
+  "punctuation": /[;[\]()`,.]/
+};
+
+// node_modules/prismjs/components/prism-bash.js
+(function(Prism3) {
+  var envVars = "\\b(?:BASH|BASHOPTS|BASH_ALIASES|BASH_ARGC|BASH_ARGV|BASH_CMDS|BASH_COMPLETION_COMPAT_DIR|BASH_LINENO|BASH_REMATCH|BASH_SOURCE|BASH_VERSINFO|BASH_VERSION|COLORTERM|COLUMNS|COMP_WORDBREAKS|DBUS_SESSION_BUS_ADDRESS|DEFAULTS_PATH|DESKTOP_SESSION|DIRSTACK|DISPLAY|EUID|GDMSESSION|GDM_LANG|GNOME_KEYRING_CONTROL|GNOME_KEYRING_PID|GPG_AGENT_INFO|GROUPS|HISTCONTROL|HISTFILE|HISTFILESIZE|HISTSIZE|HOME|HOSTNAME|HOSTTYPE|IFS|INSTANCE|JOB|LANG|LANGUAGE|LC_ADDRESS|LC_ALL|LC_IDENTIFICATION|LC_MEASUREMENT|LC_MONETARY|LC_NAME|LC_NUMERIC|LC_PAPER|LC_TELEPHONE|LC_TIME|LESSCLOSE|LESSOPEN|LINES|LOGNAME|LS_COLORS|MACHTYPE|MAILCHECK|MANDATORY_PATH|NO_AT_BRIDGE|OLDPWD|OPTERR|OPTIND|ORBIT_SOCKETDIR|OSTYPE|PAPERSIZE|PATH|PIPESTATUS|PPID|PS1|PS2|PS3|PS4|PWD|RANDOM|REPLY|SECONDS|SELINUX_INIT|SESSION|SESSIONTYPE|SESSION_MANAGER|SHELL|SHELLOPTS|SHLVL|SSH_AUTH_SOCK|TERM|UID|UPSTART_EVENTS|UPSTART_INSTANCE|UPSTART_JOB|UPSTART_SESSION|USER|WINDOWID|XAUTHORITY|XDG_CONFIG_DIRS|XDG_CURRENT_DESKTOP|XDG_DATA_DIRS|XDG_GREETER_DATA_DIR|XDG_MENU_PREFIX|XDG_RUNTIME_DIR|XDG_SEAT|XDG_SEAT_PATH|XDG_SESSION_DESKTOP|XDG_SESSION_ID|XDG_SESSION_PATH|XDG_SESSION_TYPE|XDG_VTNR|XMODIFIERS)\\b";
+  var commandAfterHeredoc = {
+    pattern: /(^(["']?)\w+\2)[ \t]+\S.*/,
+    lookbehind: true,
+    alias: "punctuation",
+    // this looks reasonably well in all themes
+    inside: null
+    // see below
+  };
+  var insideString = {
+    "bash": commandAfterHeredoc,
+    "environment": {
+      pattern: RegExp("\\$" + envVars),
+      alias: "constant"
+    },
+    "variable": [
+      // [0]: Arithmetic Environment
+      {
+        pattern: /\$?\(\([\s\S]+?\)\)/,
+        greedy: true,
+        inside: {
+          // If there is a $ sign at the beginning highlight $(( and )) as variable
+          "variable": [
+            {
+              pattern: /(^\$\(\([\s\S]+)\)\)/,
+              lookbehind: true
+            },
+            /^\$\(\(/
+          ],
+          "number": /\b0x[\dA-Fa-f]+\b|(?:\b\d+(?:\.\d*)?|\B\.\d+)(?:[Ee]-?\d+)?/,
+          // Operators according to https://www.gnu.org/software/bash/manual/bashref.html#Shell-Arithmetic
+          "operator": /--|\+\+|\*\*=?|<<=?|>>=?|&&|\|\||[=!+\-*/%<>^&|]=?|[?~:]/,
+          // If there is no $ sign at the beginning highlight (( and )) as punctuation
+          "punctuation": /\(\(?|\)\)?|,|;/
+        }
+      },
+      // [1]: Command Substitution
+      {
+        pattern: /\$\((?:\([^)]+\)|[^()])+\)|`[^`]+`/,
+        greedy: true,
+        inside: {
+          "variable": /^\$\(|^`|\)$|`$/
+        }
+      },
+      // [2]: Brace expansion
+      {
+        pattern: /\$\{[^}]+\}/,
+        greedy: true,
+        inside: {
+          "operator": /:[-=?+]?|[!\/]|##?|%%?|\^\^?|,,?/,
+          "punctuation": /[\[\]]/,
+          "environment": {
+            pattern: RegExp("(\\{)" + envVars),
+            lookbehind: true,
+            alias: "constant"
+          }
+        }
+      },
+      /\$(?:\w+|[#?*!@$])/
+    ],
+    // Escape sequences from echo and printf's manuals, and escaped quotes.
+    "entity": /\\(?:[abceEfnrtv\\"]|O?[0-7]{1,3}|U[0-9a-fA-F]{8}|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{1,2})/
+  };
+  Prism3.languages.bash = {
+    "shebang": {
+      pattern: /^#!\s*\/.*/,
+      alias: "important"
+    },
+    "comment": {
+      pattern: /(^|[^"{\\$])#.*/,
+      lookbehind: true
+    },
+    "function-name": [
+      // a) function foo {
+      // b) foo() {
+      // c) function foo() {
+      // but not “foo {”
+      {
+        // a) and c)
+        pattern: /(\bfunction\s+)[\w-]+(?=(?:\s*\(?:\s*\))?\s*\{)/,
+        lookbehind: true,
+        alias: "function"
+      },
+      {
+        // b)
+        pattern: /\b[\w-]+(?=\s*\(\s*\)\s*\{)/,
+        alias: "function"
+      }
+    ],
+    // Highlight variable names as variables in for and select beginnings.
+    "for-or-select": {
+      pattern: /(\b(?:for|select)\s+)\w+(?=\s+in\s)/,
+      alias: "variable",
+      lookbehind: true
+    },
+    // Highlight variable names as variables in the left-hand part
+    // of assignments (“=” and “+=”).
+    "assign-left": {
+      pattern: /(^|[\s;|&]|[<>]\()\w+(?:\.\w+)*(?=\+?=)/,
+      inside: {
+        "environment": {
+          pattern: RegExp("(^|[\\s;|&]|[<>]\\()" + envVars),
+          lookbehind: true,
+          alias: "constant"
+        }
+      },
+      alias: "variable",
+      lookbehind: true
+    },
+    // Highlight parameter names as variables
+    "parameter": {
+      pattern: /(^|\s)-{1,2}(?:\w+:[+-]?)?\w+(?:\.\w+)*(?=[=\s]|$)/,
+      alias: "variable",
+      lookbehind: true
+    },
+    "string": [
+      // Support for Here-documents https://en.wikipedia.org/wiki/Here_document
+      {
+        pattern: /((?:^|[^<])<<-?\s*)(\w+)\s[\s\S]*?(?:\r?\n|\r)\2/,
+        lookbehind: true,
+        greedy: true,
+        inside: insideString
+      },
+      // Here-document with quotes around the tag
+      // → No expansion (so no “inside”).
+      {
+        pattern: /((?:^|[^<])<<-?\s*)(["'])(\w+)\2\s[\s\S]*?(?:\r?\n|\r)\3/,
+        lookbehind: true,
+        greedy: true,
+        inside: {
+          "bash": commandAfterHeredoc
+        }
+      },
+      // “Normal” string
+      {
+        // https://www.gnu.org/software/bash/manual/html_node/Double-Quotes.html
+        pattern: /(^|[^\\](?:\\\\)*)"(?:\\[\s\S]|\$\([^)]+\)|\$(?!\()|`[^`]+`|[^"\\`$])*"/,
+        lookbehind: true,
+        greedy: true,
+        inside: insideString
+      },
+      {
+        // https://www.gnu.org/software/bash/manual/html_node/Single-Quotes.html
+        pattern: /(^|[^$\\])'[^']*'/,
+        lookbehind: true,
+        greedy: true
+      },
+      {
+        // https://www.gnu.org/software/bash/manual/html_node/ANSI_002dC-Quoting.html
+        pattern: /\$'(?:[^'\\]|\\[\s\S])*'/,
+        greedy: true,
+        inside: {
+          "entity": insideString.entity
+        }
+      }
+    ],
+    "environment": {
+      pattern: RegExp("\\$?" + envVars),
+      alias: "constant"
+    },
+    "variable": insideString.variable,
+    "function": {
+      pattern: /(^|[\s;|&]|[<>]\()(?:add|apropos|apt|apt-cache|apt-get|aptitude|aspell|automysqlbackup|awk|basename|bash|bc|bconsole|bg|bzip2|cal|cargo|cat|cfdisk|chgrp|chkconfig|chmod|chown|chroot|cksum|clear|cmp|column|comm|composer|cp|cron|crontab|csplit|curl|cut|date|dc|dd|ddrescue|debootstrap|df|diff|diff3|dig|dir|dircolors|dirname|dirs|dmesg|docker|docker-compose|du|egrep|eject|env|ethtool|expand|expect|expr|fdformat|fdisk|fg|fgrep|file|find|fmt|fold|format|free|fsck|ftp|fuser|gawk|git|gparted|grep|groupadd|groupdel|groupmod|groups|grub-mkconfig|gzip|halt|head|hg|history|host|hostname|htop|iconv|id|ifconfig|ifdown|ifup|import|install|ip|java|jobs|join|kill|killall|less|link|ln|locate|logname|logrotate|look|lpc|lpr|lprint|lprintd|lprintq|lprm|ls|lsof|lynx|make|man|mc|mdadm|mkconfig|mkdir|mke2fs|mkfifo|mkfs|mkisofs|mknod|mkswap|mmv|more|most|mount|mtools|mtr|mutt|mv|nano|nc|netstat|nice|nl|node|nohup|notify-send|npm|nslookup|op|open|parted|passwd|paste|pathchk|ping|pkill|pnpm|podman|podman-compose|popd|pr|printcap|printenv|ps|pushd|pv|quota|quotacheck|quotactl|ram|rar|rcp|reboot|remsync|rename|renice|rev|rm|rmdir|rpm|rsync|scp|screen|sdiff|sed|sendmail|seq|service|sftp|sh|shellcheck|shuf|shutdown|sleep|slocate|sort|split|ssh|stat|strace|su|sudo|sum|suspend|swapon|sync|sysctl|tac|tail|tar|tee|time|timeout|top|touch|tr|traceroute|tsort|tty|umount|uname|unexpand|uniq|units|unrar|unshar|unzip|update-grub|uptime|useradd|userdel|usermod|users|uudecode|uuencode|v|vcpkg|vdir|vi|vim|virsh|vmstat|wait|watch|wc|wget|whereis|which|who|whoami|write|xargs|xdg-open|yarn|yes|zenity|zip|zsh|zypper)(?=$|[)\s;|&])/,
+      lookbehind: true
+    },
+    "keyword": {
+      pattern: /(^|[\s;|&]|[<>]\()(?:case|do|done|elif|else|esac|fi|for|function|if|in|select|then|until|while)(?=$|[)\s;|&])/,
+      lookbehind: true
+    },
+    // https://www.gnu.org/software/bash/manual/html_node/Shell-Builtin-Commands.html
+    "builtin": {
+      pattern: /(^|[\s;|&]|[<>]\()(?:\.|:|alias|bind|break|builtin|caller|cd|command|continue|declare|echo|enable|eval|exec|exit|export|getopts|hash|help|let|local|logout|mapfile|printf|pwd|read|readarray|readonly|return|set|shift|shopt|source|test|times|trap|type|typeset|ulimit|umask|unalias|unset)(?=$|[)\s;|&])/,
+      lookbehind: true,
+      // Alias added to make those easier to distinguish from strings.
+      alias: "class-name"
+    },
+    "boolean": {
+      pattern: /(^|[\s;|&]|[<>]\()(?:false|true)(?=$|[)\s;|&])/,
+      lookbehind: true
+    },
+    "file-descriptor": {
+      pattern: /\B&\d\b/,
+      alias: "important"
+    },
+    "operator": {
+      // Lots of redirections here, but not just that.
+      pattern: /\d?<>|>\||\+=|=[=~]?|!=?|<<[<-]?|[&\d]?>>|\d[<>]&?|[<>][&=]?|&[>&]?|\|[&|]?/,
+      inside: {
+        "file-descriptor": {
+          pattern: /^\d/,
+          alias: "important"
+        }
+      }
+    },
+    "punctuation": /\$?\(\(?|\)\)?|\.\.|[{}[\];\\]/,
+    "number": {
+      pattern: /(^|\s)(?:[1-9]\d*|0)(?:[.,]\d+)?\b/,
+      lookbehind: true
+    }
+  };
+  commandAfterHeredoc.inside = Prism3.languages.bash;
+  var toBeCopied = [
+    "comment",
+    "function-name",
+    "for-or-select",
+    "assign-left",
+    "parameter",
+    "string",
+    "environment",
+    "function",
+    "keyword",
+    "builtin",
+    "boolean",
+    "file-descriptor",
+    "operator",
+    "punctuation",
+    "number"
+  ];
+  var inside = insideString.variable[1].inside;
+  for (var i = 0; i < toBeCopied.length; i++) {
+    inside[toBeCopied[i]] = Prism3.languages.bash[toBeCopied[i]];
+  }
+  Prism3.languages.sh = Prism3.languages.bash;
+  Prism3.languages.shell = Prism3.languages.bash;
+})(Prism);
+
+// node_modules/prismjs/components/prism-powershell.js
+(function(Prism3) {
+  var powershell = Prism3.languages.powershell = {
+    "comment": [
+      {
+        pattern: /(^|[^`])<#[\s\S]*?#>/,
+        lookbehind: true
+      },
+      {
+        pattern: /(^|[^`])#.*/,
+        lookbehind: true
+      }
+    ],
+    "string": [
+      {
+        pattern: /"(?:`[\s\S]|[^`"])*"/,
+        greedy: true,
+        inside: null
+        // see below
+      },
+      {
+        pattern: /'(?:[^']|'')*'/,
+        greedy: true
+      }
+    ],
+    // Matches name spaces as well as casts, attribute decorators. Force starting with letter to avoid matching array indices
+    // Supports two levels of nested brackets (e.g. `[OutputType([System.Collections.Generic.List[int]])]`)
+    "namespace": /\[[a-z](?:\[(?:\[[^\]]*\]|[^\[\]])*\]|[^\[\]])*\]/i,
+    "boolean": /\$(?:false|true)\b/i,
+    "variable": /\$\w+\b/,
+    // Cmdlets and aliases. Aliases should come last, otherwise "write" gets preferred over "write-host" for example
+    // Get-Command | ?{ $_.ModuleName -match "Microsoft.PowerShell.(Util|Core|Management)" }
+    // Get-Alias | ?{ $_.ReferencedCommand.Module.Name -match "Microsoft.PowerShell.(Util|Core|Management)" }
+    "function": [
+      /\b(?:Add|Approve|Assert|Backup|Block|Checkpoint|Clear|Close|Compare|Complete|Compress|Confirm|Connect|Convert|ConvertFrom|ConvertTo|Copy|Debug|Deny|Disable|Disconnect|Dismount|Edit|Enable|Enter|Exit|Expand|Export|Find|ForEach|Format|Get|Grant|Group|Hide|Import|Initialize|Install|Invoke|Join|Limit|Lock|Measure|Merge|Move|New|Open|Optimize|Out|Ping|Pop|Protect|Publish|Push|Read|Receive|Redo|Register|Remove|Rename|Repair|Request|Reset|Resize|Resolve|Restart|Restore|Resume|Revoke|Save|Search|Select|Send|Set|Show|Skip|Sort|Split|Start|Step|Stop|Submit|Suspend|Switch|Sync|Tee|Test|Trace|Unblock|Undo|Uninstall|Unlock|Unprotect|Unpublish|Unregister|Update|Use|Wait|Watch|Where|Write)-[a-z]+\b/i,
+      /\b(?:ac|cat|chdir|clc|cli|clp|clv|compare|copy|cp|cpi|cpp|cvpa|dbp|del|diff|dir|ebp|echo|epal|epcsv|epsn|erase|fc|fl|ft|fw|gal|gbp|gc|gci|gcs|gdr|gi|gl|gm|gp|gps|group|gsv|gu|gv|gwmi|iex|ii|ipal|ipcsv|ipsn|irm|iwmi|iwr|kill|lp|ls|measure|mi|mount|move|mp|mv|nal|ndr|ni|nv|ogv|popd|ps|pushd|pwd|rbp|rd|rdr|ren|ri|rm|rmdir|rni|rnp|rp|rv|rvpa|rwmi|sal|saps|sasv|sbp|sc|select|set|shcm|si|sl|sleep|sls|sort|sp|spps|spsv|start|sv|swmi|tee|trcm|type|write)\b/i
+    ],
+    // per http://technet.microsoft.com/en-us/library/hh847744.aspx
+    "keyword": /\b(?:Begin|Break|Catch|Class|Continue|Data|Define|Do|DynamicParam|Else|ElseIf|End|Exit|Filter|Finally|For|ForEach|From|Function|If|InlineScript|Parallel|Param|Process|Return|Sequence|Switch|Throw|Trap|Try|Until|Using|Var|While|Workflow)\b/i,
+    "operator": {
+      pattern: /(^|\W)(?:!|-(?:b?(?:and|x?or)|as|(?:Not)?(?:Contains|In|Like|Match)|eq|ge|gt|is(?:Not)?|Join|le|lt|ne|not|Replace|sh[lr])\b|-[-=]?|\+[+=]?|[*\/%]=?)/i,
+      lookbehind: true
+    },
+    "punctuation": /[|{}[\];(),.]/
+  };
+  powershell.string[0].inside = {
+    "function": {
+      // Allow for one level of nesting
+      pattern: /(^|[^`])\$\((?:\$\([^\r\n()]*\)|(?!\$\()[^\r\n)])*\)/,
+      lookbehind: true,
+      inside: powershell
+    },
+    "boolean": powershell.boolean,
+    "variable": powershell.variable
+  };
+})(Prism);
+
+// node_modules/prismjs/components/prism-batch.js
+(function(Prism3) {
+  var variable = /%%?[~:\w]+%?|!\S+!/;
+  var parameter = {
+    pattern: /\/[a-z?]+(?=[ :]|$):?|-[a-z]\b|--[a-z-]+\b/im,
+    alias: "attr-name",
+    inside: {
+      "punctuation": /:/
+    }
+  };
+  var string = /"(?:[\\"]"|[^"])*"(?!")/;
+  var number = /(?:\b|-)\d+\b/;
+  Prism3.languages.batch = {
+    "comment": [
+      /^::.*/m,
+      {
+        pattern: /((?:^|[&(])[ \t]*)rem\b(?:[^^&)\r\n]|\^(?:\r\n|[\s\S]))*/im,
+        lookbehind: true
+      }
+    ],
+    "label": {
+      pattern: /^:.*/m,
+      alias: "property"
+    },
+    "command": [
+      {
+        // FOR command
+        pattern: /((?:^|[&(])[ \t]*)for(?: \/[a-z?](?:[ :](?:"[^"]*"|[^\s"/]\S*))?)* \S+ in \([^)]+\) do/im,
+        lookbehind: true,
+        inside: {
+          "keyword": /\b(?:do|in)\b|^for\b/i,
+          "string": string,
+          "parameter": parameter,
+          "variable": variable,
+          "number": number,
+          "punctuation": /[()',]/
+        }
+      },
+      {
+        // IF command
+        pattern: /((?:^|[&(])[ \t]*)if(?: \/[a-z?](?:[ :](?:"[^"]*"|[^\s"/]\S*))?)* (?:not )?(?:cmdextversion \d+|defined \w+|errorlevel \d+|exist \S+|(?:"[^"]*"|(?!")(?:(?!==)\S)+)?(?:==| (?:equ|geq|gtr|leq|lss|neq) )(?:"[^"]*"|[^\s"]\S*))/im,
+        lookbehind: true,
+        inside: {
+          "keyword": /\b(?:cmdextversion|defined|errorlevel|exist|not)\b|^if\b/i,
+          "string": string,
+          "parameter": parameter,
+          "variable": variable,
+          "number": number,
+          "operator": /\^|==|\b(?:equ|geq|gtr|leq|lss|neq)\b/i
+        }
+      },
+      {
+        // ELSE command
+        pattern: /((?:^|[&()])[ \t]*)else\b/im,
+        lookbehind: true,
+        inside: {
+          "keyword": /^else\b/i
+        }
+      },
+      {
+        // SET command
+        pattern: /((?:^|[&(])[ \t]*)set(?: \/[a-z](?:[ :](?:"[^"]*"|[^\s"/]\S*))?)* (?:[^^&)\r\n]|\^(?:\r\n|[\s\S]))*/im,
+        lookbehind: true,
+        inside: {
+          "keyword": /^set\b/i,
+          "string": string,
+          "parameter": parameter,
+          "variable": [
+            variable,
+            /\w+(?=(?:[*\/%+\-&^|]|<<|>>)?=)/
+          ],
+          "number": number,
+          "operator": /[*\/%+\-&^|]=?|<<=?|>>=?|[!~_=]/,
+          "punctuation": /[()',]/
+        }
+      },
+      {
+        // Other commands
+        pattern: /((?:^|[&(])[ \t]*@?)\w+\b(?:"(?:[\\"]"|[^"])*"(?!")|[^"^&)\r\n]|\^(?:\r\n|[\s\S]))*/m,
+        lookbehind: true,
+        inside: {
+          "keyword": /^\w+\b/,
+          "string": string,
+          "parameter": parameter,
+          "label": {
+            pattern: /(^\s*):\S+/m,
+            lookbehind: true,
+            alias: "property"
+          },
+          "variable": variable,
+          "number": number,
+          "operator": /\^/
+        }
+      }
+    ],
+    "operator": /[&@]/,
+    "punctuation": /[()']/
+  };
+})(Prism);
+
+// node_modules/prismjs/components/prism-markup-templating.js
+(function(Prism3) {
+  function getPlaceholder(language, index) {
+    return "___" + language.toUpperCase() + index + "___";
+  }
+  Object.defineProperties(Prism3.languages["markup-templating"] = {}, {
+    buildPlaceholders: {
+      /**
+       * Tokenize all inline templating expressions matching `placeholderPattern`.
+       *
+       * If `replaceFilter` is provided, only matches of `placeholderPattern` for which `replaceFilter` returns
+       * `true` will be replaced.
+       *
+       * @param {object} env The environment of the `before-tokenize` hook.
+       * @param {string} language The language id.
+       * @param {RegExp} placeholderPattern The matches of this pattern will be replaced by placeholders.
+       * @param {(match: string) => boolean} [replaceFilter]
+       */
+      value: function(env, language, placeholderPattern, replaceFilter) {
+        if (env.language !== language) {
+          return;
+        }
+        var tokenStack = env.tokenStack = [];
+        env.code = env.code.replace(placeholderPattern, function(match) {
+          if (typeof replaceFilter === "function" && !replaceFilter(match)) {
+            return match;
+          }
+          var i = tokenStack.length;
+          var placeholder;
+          while (env.code.indexOf(placeholder = getPlaceholder(language, i)) !== -1) {
+            ++i;
+          }
+          tokenStack[i] = match;
+          return placeholder;
+        });
+        env.grammar = Prism3.languages.markup;
+      }
+    },
+    tokenizePlaceholders: {
+      /**
+       * Replace placeholders with proper tokens after tokenizing.
+       *
+       * @param {object} env The environment of the `after-tokenize` hook.
+       * @param {string} language The language id.
+       */
+      value: function(env, language) {
+        if (env.language !== language || !env.tokenStack) {
+          return;
+        }
+        env.grammar = Prism3.languages[language];
+        var j = 0;
+        var keys = Object.keys(env.tokenStack);
+        function walkTokens(tokens) {
+          for (var i = 0; i < tokens.length; i++) {
+            if (j >= keys.length) {
+              break;
+            }
+            var token = tokens[i];
+            if (typeof token === "string" || token.content && typeof token.content === "string") {
+              var k = keys[j];
+              var t2 = env.tokenStack[k];
+              var s = typeof token === "string" ? token : token.content;
+              var placeholder = getPlaceholder(language, k);
+              var index = s.indexOf(placeholder);
+              if (index > -1) {
+                ++j;
+                var before = s.substring(0, index);
+                var middle = new Prism3.Token(language, Prism3.tokenize(t2, env.grammar), "language-" + language, t2);
+                var after = s.substring(index + placeholder.length);
+                var replacement = [];
+                if (before) {
+                  replacement.push.apply(replacement, walkTokens([before]));
+                }
+                replacement.push(middle);
+                if (after) {
+                  replacement.push.apply(replacement, walkTokens([after]));
+                }
+                if (typeof token === "string") {
+                  tokens.splice.apply(tokens, [i, 1].concat(replacement));
+                } else {
+                  token.content = replacement;
+                }
+              }
+            } else if (token.content) {
+              walkTokens(token.content);
+            }
+          }
+          return tokens;
+        }
+        walkTokens(env.tokens);
+      }
+    }
+  });
+})(Prism);
+
+// node_modules/prismjs/components/prism-php.js
+(function(Prism3) {
+  var comment = /\/\*[\s\S]*?\*\/|\/\/.*|#(?!\[).*/;
+  var constant = [
+    {
+      pattern: /\b(?:false|true)\b/i,
+      alias: "boolean"
+    },
+    {
+      pattern: /(::\s*)\b[a-z_]\w*\b(?!\s*\()/i,
+      greedy: true,
+      lookbehind: true
+    },
+    {
+      pattern: /(\b(?:case|const)\s+)\b[a-z_]\w*(?=\s*[;=])/i,
+      greedy: true,
+      lookbehind: true
+    },
+    /\b(?:null)\b/i,
+    /\b[A-Z_][A-Z0-9_]*\b(?!\s*\()/
+  ];
+  var number = /\b0b[01]+(?:_[01]+)*\b|\b0o[0-7]+(?:_[0-7]+)*\b|\b0x[\da-f]+(?:_[\da-f]+)*\b|(?:\b\d+(?:_\d+)*\.?(?:\d+(?:_\d+)*)?|\B\.\d+)(?:e[+-]?\d+)?/i;
+  var operator = /<?=>|\?\?=?|\.{3}|\??->|[!=]=?=?|::|\*\*=?|--|\+\+|&&|\|\||<<|>>|[?~]|[/^|%*&<>.+-]=?/;
+  var punctuation = /[{}\[\](),:;]/;
+  Prism3.languages.php = {
+    "delimiter": {
+      pattern: /\?>$|^<\?(?:php(?=\s)|=)?/i,
+      alias: "important"
+    },
+    "comment": comment,
+    "variable": /\$+(?:\w+\b|(?=\{))/,
+    "package": {
+      pattern: /(namespace\s+|use\s+(?:function\s+)?)(?:\\?\b[a-z_]\w*)+\b(?!\\)/i,
+      lookbehind: true,
+      inside: {
+        "punctuation": /\\/
+      }
+    },
+    "class-name-definition": {
+      pattern: /(\b(?:class|enum|interface|trait)\s+)\b[a-z_]\w*(?!\\)\b/i,
+      lookbehind: true,
+      alias: "class-name"
+    },
+    "function-definition": {
+      pattern: /(\bfunction\s+)[a-z_]\w*(?=\s*\()/i,
+      lookbehind: true,
+      alias: "function"
+    },
+    "keyword": [
+      {
+        pattern: /(\(\s*)\b(?:array|bool|boolean|float|int|integer|object|string)\b(?=\s*\))/i,
+        alias: "type-casting",
+        greedy: true,
+        lookbehind: true
+      },
+      {
+        pattern: /([(,?]\s*)\b(?:array(?!\s*\()|bool|callable|(?:false|null)(?=\s*\|)|float|int|iterable|mixed|object|self|static|string)\b(?=\s*\$)/i,
+        alias: "type-hint",
+        greedy: true,
+        lookbehind: true
+      },
+      {
+        pattern: /(\)\s*:\s*(?:\?\s*)?)\b(?:array(?!\s*\()|bool|callable|(?:false|null)(?=\s*\|)|float|int|iterable|mixed|never|object|self|static|string|void)\b/i,
+        alias: "return-type",
+        greedy: true,
+        lookbehind: true
+      },
+      {
+        pattern: /\b(?:array(?!\s*\()|bool|float|int|iterable|mixed|object|string|void)\b/i,
+        alias: "type-declaration",
+        greedy: true
+      },
+      {
+        pattern: /(\|\s*)(?:false|null)\b|\b(?:false|null)(?=\s*\|)/i,
+        alias: "type-declaration",
+        greedy: true,
+        lookbehind: true
+      },
+      {
+        pattern: /\b(?:parent|self|static)(?=\s*::)/i,
+        alias: "static-context",
+        greedy: true
+      },
+      {
+        // yield from
+        pattern: /(\byield\s+)from\b/i,
+        lookbehind: true
+      },
+      // `class` is always a keyword unlike other keywords
+      /\bclass\b/i,
+      {
+        // https://www.php.net/manual/en/reserved.keywords.php
+        //
+        // keywords cannot be preceded by "->"
+        // the complex lookbehind means `(?<!(?:->|::)\s*)`
+        pattern: /((?:^|[^\s>:]|(?:^|[^-])>|(?:^|[^:]):)\s*)\b(?:abstract|and|array|as|break|callable|case|catch|clone|const|continue|declare|default|die|do|echo|else|elseif|empty|enddeclare|endfor|endforeach|endif|endswitch|endwhile|enum|eval|exit|extends|final|finally|fn|for|foreach|function|global|goto|if|implements|include|include_once|instanceof|insteadof|interface|isset|list|match|namespace|never|new|or|parent|print|private|protected|public|readonly|require|require_once|return|self|static|switch|throw|trait|try|unset|use|var|while|xor|yield|__halt_compiler)\b/i,
+        lookbehind: true
+      }
+    ],
+    "argument-name": {
+      pattern: /([(,]\s*)\b[a-z_]\w*(?=\s*:(?!:))/i,
+      lookbehind: true
+    },
+    "class-name": [
+      {
+        pattern: /(\b(?:extends|implements|instanceof|new(?!\s+self|\s+static))\s+|\bcatch\s*\()\b[a-z_]\w*(?!\\)\b/i,
+        greedy: true,
+        lookbehind: true
+      },
+      {
+        pattern: /(\|\s*)\b[a-z_]\w*(?!\\)\b/i,
+        greedy: true,
+        lookbehind: true
+      },
+      {
+        pattern: /\b[a-z_]\w*(?!\\)\b(?=\s*\|)/i,
+        greedy: true
+      },
+      {
+        pattern: /(\|\s*)(?:\\?\b[a-z_]\w*)+\b/i,
+        alias: "class-name-fully-qualified",
+        greedy: true,
+        lookbehind: true,
+        inside: {
+          "punctuation": /\\/
+        }
+      },
+      {
+        pattern: /(?:\\?\b[a-z_]\w*)+\b(?=\s*\|)/i,
+        alias: "class-name-fully-qualified",
+        greedy: true,
+        inside: {
+          "punctuation": /\\/
+        }
+      },
+      {
+        pattern: /(\b(?:extends|implements|instanceof|new(?!\s+self\b|\s+static\b))\s+|\bcatch\s*\()(?:\\?\b[a-z_]\w*)+\b(?!\\)/i,
+        alias: "class-name-fully-qualified",
+        greedy: true,
+        lookbehind: true,
+        inside: {
+          "punctuation": /\\/
+        }
+      },
+      {
+        pattern: /\b[a-z_]\w*(?=\s*\$)/i,
+        alias: "type-declaration",
+        greedy: true
+      },
+      {
+        pattern: /(?:\\?\b[a-z_]\w*)+(?=\s*\$)/i,
+        alias: ["class-name-fully-qualified", "type-declaration"],
+        greedy: true,
+        inside: {
+          "punctuation": /\\/
+        }
+      },
+      {
+        pattern: /\b[a-z_]\w*(?=\s*::)/i,
+        alias: "static-context",
+        greedy: true
+      },
+      {
+        pattern: /(?:\\?\b[a-z_]\w*)+(?=\s*::)/i,
+        alias: ["class-name-fully-qualified", "static-context"],
+        greedy: true,
+        inside: {
+          "punctuation": /\\/
+        }
+      },
+      {
+        pattern: /([(,?]\s*)[a-z_]\w*(?=\s*\$)/i,
+        alias: "type-hint",
+        greedy: true,
+        lookbehind: true
+      },
+      {
+        pattern: /([(,?]\s*)(?:\\?\b[a-z_]\w*)+(?=\s*\$)/i,
+        alias: ["class-name-fully-qualified", "type-hint"],
+        greedy: true,
+        lookbehind: true,
+        inside: {
+          "punctuation": /\\/
+        }
+      },
+      {
+        pattern: /(\)\s*:\s*(?:\?\s*)?)\b[a-z_]\w*(?!\\)\b/i,
+        alias: "return-type",
+        greedy: true,
+        lookbehind: true
+      },
+      {
+        pattern: /(\)\s*:\s*(?:\?\s*)?)(?:\\?\b[a-z_]\w*)+\b(?!\\)/i,
+        alias: ["class-name-fully-qualified", "return-type"],
+        greedy: true,
+        lookbehind: true,
+        inside: {
+          "punctuation": /\\/
+        }
+      }
+    ],
+    "constant": constant,
+    "function": {
+      pattern: /(^|[^\\\w])\\?[a-z_](?:[\w\\]*\w)?(?=\s*\()/i,
+      lookbehind: true,
+      inside: {
+        "punctuation": /\\/
+      }
+    },
+    "property": {
+      pattern: /(->\s*)\w+/,
+      lookbehind: true
+    },
+    "number": number,
+    "operator": operator,
+    "punctuation": punctuation
+  };
+  var string_interpolation = {
+    pattern: /\{\$(?:\{(?:\{[^{}]+\}|[^{}]+)\}|[^{}])+\}|(^|[^\\{])\$+(?:\w+(?:\[[^\r\n\[\]]+\]|->\w+)?)/,
+    lookbehind: true,
+    inside: Prism3.languages.php
+  };
+  var string = [
+    {
+      pattern: /<<<'([^']+)'[\r\n](?:.*[\r\n])*?\1;/,
+      alias: "nowdoc-string",
+      greedy: true,
+      inside: {
+        "delimiter": {
+          pattern: /^<<<'[^']+'|[a-z_]\w*;$/i,
+          alias: "symbol",
+          inside: {
+            "punctuation": /^<<<'?|[';]$/
+          }
+        }
+      }
+    },
+    {
+      pattern: /<<<(?:"([^"]+)"[\r\n](?:.*[\r\n])*?\1;|([a-z_]\w*)[\r\n](?:.*[\r\n])*?\2;)/i,
+      alias: "heredoc-string",
+      greedy: true,
+      inside: {
+        "delimiter": {
+          pattern: /^<<<(?:"[^"]+"|[a-z_]\w*)|[a-z_]\w*;$/i,
+          alias: "symbol",
+          inside: {
+            "punctuation": /^<<<"?|[";]$/
+          }
+        },
+        "interpolation": string_interpolation
+      }
+    },
+    {
+      pattern: /`(?:\\[\s\S]|[^\\`])*`/,
+      alias: "backtick-quoted-string",
+      greedy: true
+    },
+    {
+      pattern: /'(?:\\[\s\S]|[^\\'])*'/,
+      alias: "single-quoted-string",
+      greedy: true
+    },
+    {
+      pattern: /"(?:\\[\s\S]|[^\\"])*"/,
+      alias: "double-quoted-string",
+      greedy: true,
+      inside: {
+        "interpolation": string_interpolation
+      }
+    }
+  ];
+  Prism3.languages.insertBefore("php", "variable", {
+    "string": string,
+    "attribute": {
+      pattern: /#\[(?:[^"'\/#]|\/(?![*/])|\/\/.*$|#(?!\[).*$|\/\*(?:[^*]|\*(?!\/))*\*\/|"(?:\\[\s\S]|[^\\"])*"|'(?:\\[\s\S]|[^\\'])*')+\](?=\s*[a-z$#])/im,
+      greedy: true,
+      inside: {
+        "attribute-content": {
+          pattern: /^(#\[)[\s\S]+(?=\]$)/,
+          lookbehind: true,
+          // inside can appear subset of php
+          inside: {
+            "comment": comment,
+            "string": string,
+            "attribute-class-name": [
+              {
+                pattern: /([^:]|^)\b[a-z_]\w*(?!\\)\b/i,
+                alias: "class-name",
+                greedy: true,
+                lookbehind: true
+              },
+              {
+                pattern: /([^:]|^)(?:\\?\b[a-z_]\w*)+/i,
+                alias: [
+                  "class-name",
+                  "class-name-fully-qualified"
+                ],
+                greedy: true,
+                lookbehind: true,
+                inside: {
+                  "punctuation": /\\/
+                }
+              }
+            ],
+            "constant": constant,
+            "number": number,
+            "operator": operator,
+            "punctuation": punctuation
+          }
+        },
+        "delimiter": {
+          pattern: /^#\[|\]$/,
+          alias: "punctuation"
+        }
+      }
+    }
+  });
+  Prism3.hooks.add("before-tokenize", function(env) {
+    if (!/<\?/.test(env.code)) {
+      return;
+    }
+    var phpPattern = /<\?(?:[^"'/#]|\/(?![*/])|("|')(?:\\[\s\S]|(?!\1)[^\\])*\1|(?:\/\/|#(?!\[))(?:[^?\n\r]|\?(?!>))*(?=$|\?>|[\r\n])|#\[|\/\*(?:[^*]|\*(?!\/))*(?:\*\/|$))*?(?:\?>|$)/g;
+    Prism3.languages["markup-templating"].buildPlaceholders(env, "php", phpPattern);
+  });
+  Prism3.hooks.add("after-tokenize", function(env) {
+    Prism3.languages["markup-templating"].tokenizePlaceholders(env, "php");
+  });
+})(Prism);
+
+// node_modules/prismjs/components/prism-ruby.js
+(function(Prism3) {
+  Prism3.languages.ruby = Prism3.languages.extend("clike", {
+    "comment": {
+      pattern: /#.*|^=begin\s[\s\S]*?^=end/m,
+      greedy: true
+    },
+    "class-name": {
+      pattern: /(\b(?:class|module)\s+|\bcatch\s+\()[\w.\\]+|\b[A-Z_]\w*(?=\s*\.\s*new\b)/,
+      lookbehind: true,
+      inside: {
+        "punctuation": /[.\\]/
+      }
+    },
+    "keyword": /\b(?:BEGIN|END|alias|and|begin|break|case|class|def|define_method|defined|do|each|else|elsif|end|ensure|extend|for|if|in|include|module|new|next|nil|not|or|prepend|private|protected|public|raise|redo|require|rescue|retry|return|self|super|then|throw|undef|unless|until|when|while|yield)\b/,
+    "operator": /\.{2,3}|&\.|===|<?=>|[!=]?~|(?:&&|\|\||<<|>>|\*\*|[+\-*/%<>!^&|=])=?|[?:]/,
+    "punctuation": /[(){}[\].,;]/
+  });
+  Prism3.languages.insertBefore("ruby", "operator", {
+    "double-colon": {
+      pattern: /::/,
+      alias: "punctuation"
+    }
+  });
+  var interpolation = {
+    pattern: /((?:^|[^\\])(?:\\{2})*)#\{(?:[^{}]|\{[^{}]*\})*\}/,
+    lookbehind: true,
+    inside: {
+      "content": {
+        pattern: /^(#\{)[\s\S]+(?=\}$)/,
+        lookbehind: true,
+        inside: Prism3.languages.ruby
+      },
+      "delimiter": {
+        pattern: /^#\{|\}$/,
+        alias: "punctuation"
+      }
+    }
+  };
+  delete Prism3.languages.ruby.function;
+  var percentExpression = "(?:" + [
+    /([^a-zA-Z0-9\s{(\[<=])(?:(?!\1)[^\\]|\\[\s\S])*\1/.source,
+    /\((?:[^()\\]|\\[\s\S]|\((?:[^()\\]|\\[\s\S])*\))*\)/.source,
+    /\{(?:[^{}\\]|\\[\s\S]|\{(?:[^{}\\]|\\[\s\S])*\})*\}/.source,
+    /\[(?:[^\[\]\\]|\\[\s\S]|\[(?:[^\[\]\\]|\\[\s\S])*\])*\]/.source,
+    /<(?:[^<>\\]|\\[\s\S]|<(?:[^<>\\]|\\[\s\S])*>)*>/.source
+  ].join("|") + ")";
+  var symbolName = /(?:"(?:\\.|[^"\\\r\n])*"|(?:\b[a-zA-Z_]\w*|[^\s\0-\x7F]+)[?!]?|\$.)/.source;
+  Prism3.languages.insertBefore("ruby", "keyword", {
+    "regex-literal": [
+      {
+        pattern: RegExp(/%r/.source + percentExpression + /[egimnosux]{0,6}/.source),
+        greedy: true,
+        inside: {
+          "interpolation": interpolation,
+          "regex": /[\s\S]+/
+        }
+      },
+      {
+        pattern: /(^|[^/])\/(?!\/)(?:\[[^\r\n\]]+\]|\\.|[^[/\\\r\n])+\/[egimnosux]{0,6}(?=\s*(?:$|[\r\n,.;})#]))/,
+        lookbehind: true,
+        greedy: true,
+        inside: {
+          "interpolation": interpolation,
+          "regex": /[\s\S]+/
+        }
+      }
+    ],
+    "variable": /[@$]+[a-zA-Z_]\w*(?:[?!]|\b)/,
+    "symbol": [
+      {
+        pattern: RegExp(/(^|[^:]):/.source + symbolName),
+        lookbehind: true,
+        greedy: true
+      },
+      {
+        pattern: RegExp(/([\r\n{(,][ \t]*)/.source + symbolName + /(?=:(?!:))/.source),
+        lookbehind: true,
+        greedy: true
+      }
+    ],
+    "method-definition": {
+      pattern: /(\bdef\s+)\w+(?:\s*\.\s*\w+)?/,
+      lookbehind: true,
+      inside: {
+        "function": /\b\w+$/,
+        "keyword": /^self\b/,
+        "class-name": /^\w+/,
+        "punctuation": /\./
+      }
+    }
+  });
+  Prism3.languages.insertBefore("ruby", "string", {
+    "string-literal": [
+      {
+        pattern: RegExp(/%[qQiIwWs]?/.source + percentExpression),
+        greedy: true,
+        inside: {
+          "interpolation": interpolation,
+          "string": /[\s\S]+/
+        }
+      },
+      {
+        pattern: /("|')(?:#\{[^}]+\}|#(?!\{)|\\(?:\r\n|[\s\S])|(?!\1)[^\\#\r\n])*\1/,
+        greedy: true,
+        inside: {
+          "interpolation": interpolation,
+          "string": /[\s\S]+/
+        }
+      },
+      {
+        pattern: /<<[-~]?([a-z_]\w*)[\r\n](?:.*[\r\n])*?[\t ]*\1/i,
+        alias: "heredoc-string",
+        greedy: true,
+        inside: {
+          "delimiter": {
+            pattern: /^<<[-~]?[a-z_]\w*|\b[a-z_]\w*$/i,
+            inside: {
+              "symbol": /\b\w+/,
+              "punctuation": /^<<[-~]?/
+            }
+          },
+          "interpolation": interpolation,
+          "string": /[\s\S]+/
+        }
+      },
+      {
+        pattern: /<<[-~]?'([a-z_]\w*)'[\r\n](?:.*[\r\n])*?[\t ]*\1/i,
+        alias: "heredoc-string",
+        greedy: true,
+        inside: {
+          "delimiter": {
+            pattern: /^<<[-~]?'[a-z_]\w*'|\b[a-z_]\w*$/i,
+            inside: {
+              "symbol": /\b\w+/,
+              "punctuation": /^<<[-~]?'|'$/
+            }
+          },
+          "string": /[\s\S]+/
+        }
+      }
+    ],
+    "command-literal": [
+      {
+        pattern: RegExp(/%x/.source + percentExpression),
+        greedy: true,
+        inside: {
+          "interpolation": interpolation,
+          "command": {
+            pattern: /[\s\S]+/,
+            alias: "string"
+          }
+        }
+      },
+      {
+        pattern: /`(?:#\{[^}]+\}|#(?!\{)|\\(?:\r\n|[\s\S])|[^\\`#\r\n])*`/,
+        greedy: true,
+        inside: {
+          "interpolation": interpolation,
+          "command": {
+            pattern: /[\s\S]+/,
+            alias: "string"
+          }
+        }
+      }
+    ]
+  });
+  delete Prism3.languages.ruby.string;
+  Prism3.languages.insertBefore("ruby", "number", {
+    "builtin": /\b(?:Array|Bignum|Binding|Class|Continuation|Dir|Exception|FalseClass|File|Fixnum|Float|Hash|IO|Integer|MatchData|Method|Module|NilClass|Numeric|Object|Proc|Range|Regexp|Stat|String|Struct|Symbol|TMS|Thread|ThreadGroup|Time|TrueClass)\b/,
+    "constant": /\b[A-Z][A-Z0-9_]*(?:[?!]|\b)/
+  });
+  Prism3.languages.rb = Prism3.languages.ruby;
+})(Prism);
+
+// node_modules/prismjs/components/prism-go.js
+Prism.languages.go = Prism.languages.extend("clike", {
+  "string": {
+    pattern: /(^|[^\\])"(?:\\.|[^"\\\r\n])*"|`[^`]*`/,
+    lookbehind: true,
+    greedy: true
+  },
+  "keyword": /\b(?:break|case|chan|const|continue|default|defer|else|fallthrough|for|func|go(?:to)?|if|import|interface|map|package|range|return|select|struct|switch|type|var)\b/,
+  "boolean": /\b(?:_|false|iota|nil|true)\b/,
+  "number": [
+    // binary and octal integers
+    /\b0(?:b[01_]+|o[0-7_]+)i?\b/i,
+    // hexadecimal integers and floats
+    /\b0x(?:[a-f\d_]+(?:\.[a-f\d_]*)?|\.[a-f\d_]+)(?:p[+-]?\d+(?:_\d+)*)?i?(?!\w)/i,
+    // decimal integers and floats
+    /(?:\b\d[\d_]*(?:\.[\d_]*)?|\B\.\d[\d_]*)(?:e[+-]?[\d_]+)?i?(?!\w)/i
+  ],
+  "operator": /[*\/%^!=]=?|\+[=+]?|-[=-]?|\|[=|]?|&(?:=|&|\^=?)?|>(?:>=?|=)?|<(?:<=?|=|-)?|:=|\.\.\./,
+  "builtin": /\b(?:append|bool|byte|cap|close|complex|complex(?:64|128)|copy|delete|error|float(?:32|64)|u?int(?:8|16|32|64)?|imag|len|make|new|panic|print(?:ln)?|real|recover|rune|string|uintptr)\b/
+});
+Prism.languages.insertBefore("go", "string", {
+  "char": {
+    pattern: /'(?:\\.|[^'\\\r\n]){0,10}'/,
+    greedy: true
+  }
+});
+delete Prism.languages.go["class-name"];
+
+// node_modules/prismjs/components/prism-rust.js
+(function(Prism3) {
+  var multilineComment = /\/\*(?:[^*/]|\*(?!\/)|\/(?!\*)|<self>)*\*\//.source;
+  for (var i = 0; i < 2; i++) {
+    multilineComment = multilineComment.replace(/<self>/g, function() {
+      return multilineComment;
+    });
+  }
+  multilineComment = multilineComment.replace(/<self>/g, function() {
+    return /[^\s\S]/.source;
+  });
+  Prism3.languages.rust = {
+    "comment": [
+      {
+        pattern: RegExp(/(^|[^\\])/.source + multilineComment),
+        lookbehind: true,
+        greedy: true
+      },
+      {
+        pattern: /(^|[^\\:])\/\/.*/,
+        lookbehind: true,
+        greedy: true
+      }
+    ],
+    "string": {
+      pattern: /b?"(?:\\[\s\S]|[^\\"])*"|b?r(#*)"(?:[^"]|"(?!\1))*"\1/,
+      greedy: true
+    },
+    "char": {
+      pattern: /b?'(?:\\(?:x[0-7][\da-fA-F]|u\{(?:[\da-fA-F]_*){1,6}\}|.)|[^\\\r\n\t'])'/,
+      greedy: true
+    },
+    "attribute": {
+      pattern: /#!?\[(?:[^\[\]"]|"(?:\\[\s\S]|[^\\"])*")*\]/,
+      greedy: true,
+      alias: "attr-name",
+      inside: {
+        "string": null
+        // see below
+      }
+    },
+    // Closure params should not be confused with bitwise OR |
+    "closure-params": {
+      pattern: /([=(,:]\s*|\bmove\s*)\|[^|]*\||\|[^|]*\|(?=\s*(?:\{|->))/,
+      lookbehind: true,
+      greedy: true,
+      inside: {
+        "closure-punctuation": {
+          pattern: /^\||\|$/,
+          alias: "punctuation"
+        },
+        rest: null
+        // see below
+      }
+    },
+    "lifetime-annotation": {
+      pattern: /'\w+/,
+      alias: "symbol"
+    },
+    "fragment-specifier": {
+      pattern: /(\$\w+:)[a-z]+/,
+      lookbehind: true,
+      alias: "punctuation"
+    },
+    "variable": /\$\w+/,
+    "function-definition": {
+      pattern: /(\bfn\s+)\w+/,
+      lookbehind: true,
+      alias: "function"
+    },
+    "type-definition": {
+      pattern: /(\b(?:enum|struct|trait|type|union)\s+)\w+/,
+      lookbehind: true,
+      alias: "class-name"
+    },
+    "module-declaration": [
+      {
+        pattern: /(\b(?:crate|mod)\s+)[a-z][a-z_\d]*/,
+        lookbehind: true,
+        alias: "namespace"
+      },
+      {
+        pattern: /(\b(?:crate|self|super)\s*)::\s*[a-z][a-z_\d]*\b(?:\s*::(?:\s*[a-z][a-z_\d]*\s*::)*)?/,
+        lookbehind: true,
+        alias: "namespace",
+        inside: {
+          "punctuation": /::/
+        }
+      }
+    ],
+    "keyword": [
+      // https://github.com/rust-lang/reference/blob/master/src/keywords.md
+      /\b(?:Self|abstract|as|async|await|become|box|break|const|continue|crate|do|dyn|else|enum|extern|final|fn|for|if|impl|in|let|loop|macro|match|mod|move|mut|override|priv|pub|ref|return|self|static|struct|super|trait|try|type|typeof|union|unsafe|unsized|use|virtual|where|while|yield)\b/,
+      // primitives and str
+      // https://doc.rust-lang.org/stable/rust-by-example/primitives.html
+      /\b(?:bool|char|f(?:32|64)|[ui](?:8|16|32|64|128|size)|str)\b/
+    ],
+    // functions can technically start with an upper-case letter, but this will introduce a lot of false positives
+    // and Rust's naming conventions recommend snake_case anyway.
+    // https://doc.rust-lang.org/1.0.0/style/style/naming/README.html
+    "function": /\b[a-z_]\w*(?=\s*(?:::\s*<|\())/,
+    "macro": {
+      pattern: /\b\w+!/,
+      alias: "property"
+    },
+    "constant": /\b[A-Z_][A-Z_\d]+\b/,
+    "class-name": /\b[A-Z]\w*\b/,
+    "namespace": {
+      pattern: /(?:\b[a-z][a-z_\d]*\s*::\s*)*\b[a-z][a-z_\d]*\s*::(?!\s*<)/,
+      inside: {
+        "punctuation": /::/
+      }
+    },
+    // Hex, oct, bin, dec numbers with visual separators and type suffix
+    "number": /\b(?:0x[\dA-Fa-f](?:_?[\dA-Fa-f])*|0o[0-7](?:_?[0-7])*|0b[01](?:_?[01])*|(?:(?:\d(?:_?\d)*)?\.)?\d(?:_?\d)*(?:[Ee][+-]?\d+)?)(?:_?(?:f32|f64|[iu](?:8|16|32|64|size)?))?\b/,
+    "boolean": /\b(?:false|true)\b/,
+    "punctuation": /->|\.\.=|\.{1,3}|::|[{}[\];(),:]/,
+    "operator": /[-+*\/%!^]=?|=[=>]?|&[&=]?|\|[|=]?|<<?=?|>>?=?|[@?]/
+  };
+  Prism3.languages.rust["closure-params"].inside.rest = Prism3.languages.rust;
+  Prism3.languages.rust["attribute"].inside["string"] = Prism3.languages.rust["string"];
+})(Prism);
+
+// node_modules/prismjs/components/prism-c.js
+Prism.languages.c = Prism.languages.extend("clike", {
+  "comment": {
+    pattern: /\/\/(?:[^\r\n\\]|\\(?:\r\n?|\n|(?![\r\n])))*|\/\*[\s\S]*?(?:\*\/|$)/,
+    greedy: true
+  },
+  "string": {
+    // https://en.cppreference.com/w/c/language/string_literal
+    pattern: /"(?:\\(?:\r\n|[\s\S])|[^"\\\r\n])*"/,
+    greedy: true
+  },
+  "class-name": {
+    pattern: /(\b(?:enum|struct)\s+(?:__attribute__\s*\(\([\s\S]*?\)\)\s*)?)\w+|\b[a-z]\w*_t\b/,
+    lookbehind: true
+  },
+  "keyword": /\b(?:_Alignas|_Alignof|_Atomic|_Bool|_Complex|_Generic|_Imaginary|_Noreturn|_Static_assert|_Thread_local|__attribute__|asm|auto|break|case|char|const|continue|default|do|double|else|enum|extern|float|for|goto|if|inline|int|long|register|return|short|signed|sizeof|static|struct|switch|typedef|typeof|union|unsigned|void|volatile|while)\b/,
+  "function": /\b[a-z_]\w*(?=\s*\()/i,
+  "number": /(?:\b0x(?:[\da-f]+(?:\.[\da-f]*)?|\.[\da-f]+)(?:p[+-]?\d+)?|(?:\b\d+(?:\.\d*)?|\B\.\d+)(?:e[+-]?\d+)?)[ful]{0,4}/i,
+  "operator": />>=?|<<=?|->|([-+&|:])\1|[?:~]|[-+*/%&|^!=<>]=?/
+});
+Prism.languages.insertBefore("c", "string", {
+  "char": {
+    // https://en.cppreference.com/w/c/language/character_constant
+    pattern: /'(?:\\(?:\r\n|[\s\S])|[^'\\\r\n]){0,32}'/,
+    greedy: true
+  }
+});
+Prism.languages.insertBefore("c", "string", {
+  "macro": {
+    // allow for multiline macro definitions
+    // spaces after the # character compile fine with gcc
+    pattern: /(^[\t ]*)#\s*[a-z](?:[^\r\n\\/]|\/(?!\*)|\/\*(?:[^*]|\*(?!\/))*\*\/|\\(?:\r\n|[\s\S]))*/im,
+    lookbehind: true,
+    greedy: true,
+    alias: "property",
+    inside: {
+      "string": [
+        {
+          // highlight the path of the include statement as a string
+          pattern: /^(#\s*include\s*)<[^>]+>/,
+          lookbehind: true
+        },
+        Prism.languages.c["string"]
+      ],
+      "char": Prism.languages.c["char"],
+      "comment": Prism.languages.c["comment"],
+      "macro-name": [
+        {
+          pattern: /(^#\s*define\s+)\w+\b(?!\()/i,
+          lookbehind: true
+        },
+        {
+          pattern: /(^#\s*define\s+)\w+\b(?=\()/i,
+          lookbehind: true,
+          alias: "function"
+        }
+      ],
+      // highlight macro directives as keywords
+      "directive": {
+        pattern: /^(#\s*)[a-z]+/,
+        lookbehind: true,
+        alias: "keyword"
+      },
+      "directive-hash": /^#/,
+      "punctuation": /##|\\(?=[\r\n])/,
+      "expression": {
+        pattern: /\S[\s\S]*/,
+        inside: Prism.languages.c
+      }
+    }
+  }
+});
+Prism.languages.insertBefore("c", "function", {
+  // highlight predefined macros as constants
+  "constant": /\b(?:EOF|NULL|SEEK_CUR|SEEK_END|SEEK_SET|__DATE__|__FILE__|__LINE__|__TIMESTAMP__|__TIME__|__func__|stderr|stdin|stdout)\b/
+});
+delete Prism.languages.c["boolean"];
+
+// node_modules/prismjs/components/prism-cpp.js
+(function(Prism3) {
+  var keyword = /\b(?:alignas|alignof|asm|auto|bool|break|case|catch|char|char16_t|char32_t|char8_t|class|co_await|co_return|co_yield|compl|concept|const|const_cast|consteval|constexpr|constinit|continue|decltype|default|delete|do|double|dynamic_cast|else|enum|explicit|export|extern|final|float|for|friend|goto|if|import|inline|int|int16_t|int32_t|int64_t|int8_t|long|module|mutable|namespace|new|noexcept|nullptr|operator|override|private|protected|public|register|reinterpret_cast|requires|return|short|signed|sizeof|static|static_assert|static_cast|struct|switch|template|this|thread_local|throw|try|typedef|typeid|typename|uint16_t|uint32_t|uint64_t|uint8_t|union|unsigned|using|virtual|void|volatile|wchar_t|while)\b/;
+  var modName = /\b(?!<keyword>)\w+(?:\s*\.\s*\w+)*\b/.source.replace(/<keyword>/g, function() {
+    return keyword.source;
+  });
+  Prism3.languages.cpp = Prism3.languages.extend("c", {
+    "class-name": [
+      {
+        pattern: RegExp(/(\b(?:class|concept|enum|struct|typename)\s+)(?!<keyword>)\w+/.source.replace(/<keyword>/g, function() {
+          return keyword.source;
+        })),
+        lookbehind: true
+      },
+      // This is intended to capture the class name of method implementations like:
+      //   void foo::bar() const {}
+      // However! The `foo` in the above example could also be a namespace, so we only capture the class name if
+      // it starts with an uppercase letter. This approximation should give decent results.
+      /\b[A-Z]\w*(?=\s*::\s*\w+\s*\()/,
+      // This will capture the class name before destructors like:
+      //   Foo::~Foo() {}
+      /\b[A-Z_]\w*(?=\s*::\s*~\w+\s*\()/i,
+      // This also intends to capture the class name of method implementations but here the class has template
+      // parameters, so it can't be a namespace (until C++ adds generic namespaces).
+      /\b\w+(?=\s*<(?:[^<>]|<(?:[^<>]|<[^<>]*>)*>)*>\s*::\s*\w+\s*\()/
+    ],
+    "keyword": keyword,
+    "number": {
+      pattern: /(?:\b0b[01']+|\b0x(?:[\da-f']+(?:\.[\da-f']*)?|\.[\da-f']+)(?:p[+-]?[\d']+)?|(?:\b[\d']+(?:\.[\d']*)?|\B\.[\d']+)(?:e[+-]?[\d']+)?)[ful]{0,4}/i,
+      greedy: true
+    },
+    "operator": />>=?|<<=?|->|--|\+\+|&&|\|\||[?:~]|<=>|[-+*/%&|^!=<>]=?|\b(?:and|and_eq|bitand|bitor|not|not_eq|or|or_eq|xor|xor_eq)\b/,
+    "boolean": /\b(?:false|true)\b/
+  });
+  Prism3.languages.insertBefore("cpp", "string", {
+    "module": {
+      // https://en.cppreference.com/w/cpp/language/modules
+      pattern: RegExp(
+        /(\b(?:import|module)\s+)/.source + "(?:" + // header-name
+        /"(?:\\(?:\r\n|[\s\S])|[^"\\\r\n])*"|<[^<>\r\n]*>/.source + "|" + // module name or partition or both
+        /<mod-name>(?:\s*:\s*<mod-name>)?|:\s*<mod-name>/.source.replace(/<mod-name>/g, function() {
+          return modName;
+        }) + ")"
+      ),
+      lookbehind: true,
+      greedy: true,
+      inside: {
+        "string": /^[<"][\s\S]+/,
+        "operator": /:/,
+        "punctuation": /\./
+      }
+    },
+    "raw-string": {
+      pattern: /R"([^()\\ ]{0,16})\([\s\S]*?\)\1"/,
+      alias: "string",
+      greedy: true
+    }
+  });
+  Prism3.languages.insertBefore("cpp", "keyword", {
+    "generic-function": {
+      pattern: /\b(?!operator\b)[a-z_]\w*\s*<(?:[^<>]|<[^<>]*>)*>(?=\s*\()/i,
+      inside: {
+        "function": /^\w+/,
+        "generic": {
+          pattern: /<[\s\S]+/,
+          alias: "class-name",
+          inside: Prism3.languages.cpp
+        }
+      }
+    }
+  });
+  Prism3.languages.insertBefore("cpp", "operator", {
+    "double-colon": {
+      pattern: /::/,
+      alias: "punctuation"
+    }
+  });
+  Prism3.languages.insertBefore("cpp", "class-name", {
+    // the base clause is an optional list of parent classes
+    // https://en.cppreference.com/w/cpp/language/class
+    "base-clause": {
+      pattern: /(\b(?:class|struct)\s+\w+\s*:\s*)[^;{}"'\s]+(?:\s+[^;{}"'\s]+)*(?=\s*[;{])/,
+      lookbehind: true,
+      greedy: true,
+      inside: Prism3.languages.extend("cpp", {})
+    }
+  });
+  Prism3.languages.insertBefore("inside", "double-colon", {
+    // All untokenized words that are not namespaces should be class names
+    "class-name": /\b[a-z_]\w*\b(?!\s*::)/i
+  }, Prism3.languages.cpp["base-clause"]);
+})(Prism);
+
+// node_modules/prismjs/components/prism-csharp.js
+(function(Prism3) {
+  function replace(pattern, replacements) {
+    return pattern.replace(/<<(\d+)>>/g, function(m, index) {
+      return "(?:" + replacements[+index] + ")";
+    });
+  }
+  function re(pattern, replacements, flags) {
+    return RegExp(replace(pattern, replacements), flags || "");
+  }
+  function nested(pattern, depthLog2) {
+    for (var i = 0; i < depthLog2; i++) {
+      pattern = pattern.replace(/<<self>>/g, function() {
+        return "(?:" + pattern + ")";
+      });
+    }
+    return pattern.replace(/<<self>>/g, "[^\\s\\S]");
+  }
+  var keywordKinds = {
+    // keywords which represent a return or variable type
+    type: "bool byte char decimal double dynamic float int long object sbyte short string uint ulong ushort var void",
+    // keywords which are used to declare a type
+    typeDeclaration: "class enum interface record struct",
+    // contextual keywords
+    // ("var" and "dynamic" are missing because they are used like types)
+    contextual: "add alias and ascending async await by descending from(?=\\s*(?:\\w|$)) get global group into init(?=\\s*;) join let nameof not notnull on or orderby partial remove select set unmanaged value when where with(?=\\s*{)",
+    // all other keywords
+    other: "abstract as base break case catch checked const continue default delegate do else event explicit extern finally fixed for foreach goto if implicit in internal is lock namespace new null operator out override params private protected public readonly ref return sealed sizeof stackalloc static switch this throw try typeof unchecked unsafe using virtual volatile while yield"
+  };
+  function keywordsToPattern(words) {
+    return "\\b(?:" + words.trim().replace(/ /g, "|") + ")\\b";
+  }
+  var typeDeclarationKeywords = keywordsToPattern(keywordKinds.typeDeclaration);
+  var keywords = RegExp(keywordsToPattern(keywordKinds.type + " " + keywordKinds.typeDeclaration + " " + keywordKinds.contextual + " " + keywordKinds.other));
+  var nonTypeKeywords = keywordsToPattern(keywordKinds.typeDeclaration + " " + keywordKinds.contextual + " " + keywordKinds.other);
+  var nonContextualKeywords = keywordsToPattern(keywordKinds.type + " " + keywordKinds.typeDeclaration + " " + keywordKinds.other);
+  var generic = nested(/<(?:[^<>;=+\-*/%&|^]|<<self>>)*>/.source, 2);
+  var nestedRound = nested(/\((?:[^()]|<<self>>)*\)/.source, 2);
+  var name = /@?\b[A-Za-z_]\w*\b/.source;
+  var genericName = replace(/<<0>>(?:\s*<<1>>)?/.source, [name, generic]);
+  var identifier = replace(/(?!<<0>>)<<1>>(?:\s*\.\s*<<1>>)*/.source, [nonTypeKeywords, genericName]);
+  var array = /\[\s*(?:,\s*)*\]/.source;
+  var typeExpressionWithoutTuple = replace(/<<0>>(?:\s*(?:\?\s*)?<<1>>)*(?:\s*\?)?/.source, [identifier, array]);
+  var tupleElement = replace(/[^,()<>[\];=+\-*/%&|^]|<<0>>|<<1>>|<<2>>/.source, [generic, nestedRound, array]);
+  var tuple = replace(/\(<<0>>+(?:,<<0>>+)+\)/.source, [tupleElement]);
+  var typeExpression = replace(/(?:<<0>>|<<1>>)(?:\s*(?:\?\s*)?<<2>>)*(?:\s*\?)?/.source, [tuple, identifier, array]);
+  var typeInside = {
+    "keyword": keywords,
+    "punctuation": /[<>()?,.:[\]]/
+  };
+  var character = /'(?:[^\r\n'\\]|\\.|\\[Uux][\da-fA-F]{1,8})'/.source;
+  var regularString = /"(?:\\.|[^\\"\r\n])*"/.source;
+  var verbatimString = /@"(?:""|\\[\s\S]|[^\\"])*"(?!")/.source;
+  Prism3.languages.csharp = Prism3.languages.extend("clike", {
+    "string": [
+      {
+        pattern: re(/(^|[^$\\])<<0>>/.source, [verbatimString]),
+        lookbehind: true,
+        greedy: true
+      },
+      {
+        pattern: re(/(^|[^@$\\])<<0>>/.source, [regularString]),
+        lookbehind: true,
+        greedy: true
+      }
+    ],
+    "class-name": [
+      {
+        // Using static
+        // using static System.Math;
+        pattern: re(/(\busing\s+static\s+)<<0>>(?=\s*;)/.source, [identifier]),
+        lookbehind: true,
+        inside: typeInside
+      },
+      {
+        // Using alias (type)
+        // using Project = PC.MyCompany.Project;
+        pattern: re(/(\busing\s+<<0>>\s*=\s*)<<1>>(?=\s*;)/.source, [name, typeExpression]),
+        lookbehind: true,
+        inside: typeInside
+      },
+      {
+        // Using alias (alias)
+        // using Project = PC.MyCompany.Project;
+        pattern: re(/(\busing\s+)<<0>>(?=\s*=)/.source, [name]),
+        lookbehind: true
+      },
+      {
+        // Type declarations
+        // class Foo<A, B>
+        // interface Foo<out A, B>
+        pattern: re(/(\b<<0>>\s+)<<1>>/.source, [typeDeclarationKeywords, genericName]),
+        lookbehind: true,
+        inside: typeInside
+      },
+      {
+        // Single catch exception declaration
+        // catch(Foo)
+        // (things like catch(Foo e) is covered by variable declaration)
+        pattern: re(/(\bcatch\s*\(\s*)<<0>>/.source, [identifier]),
+        lookbehind: true,
+        inside: typeInside
+      },
+      {
+        // Name of the type parameter of generic constraints
+        // where Foo : class
+        pattern: re(/(\bwhere\s+)<<0>>/.source, [name]),
+        lookbehind: true
+      },
+      {
+        // Casts and checks via as and is.
+        // as Foo<A>, is Bar<B>
+        // (things like if(a is Foo b) is covered by variable declaration)
+        pattern: re(/(\b(?:is(?:\s+not)?|as)\s+)<<0>>/.source, [typeExpressionWithoutTuple]),
+        lookbehind: true,
+        inside: typeInside
+      },
+      {
+        // Variable, field and parameter declaration
+        // (Foo bar, Bar baz, Foo[,,] bay, Foo<Bar, FooBar<Bar>> bax)
+        pattern: re(/\b<<0>>(?=\s+(?!<<1>>|with\s*\{)<<2>>(?:\s*[=,;:{)\]]|\s+(?:in|when)\b))/.source, [typeExpression, nonContextualKeywords, name]),
+        inside: typeInside
+      }
+    ],
+    "keyword": keywords,
+    // https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/lexical-structure#literals
+    "number": /(?:\b0(?:x[\da-f_]*[\da-f]|b[01_]*[01])|(?:\B\.\d+(?:_+\d+)*|\b\d+(?:_+\d+)*(?:\.\d+(?:_+\d+)*)?)(?:e[-+]?\d+(?:_+\d+)*)?)(?:[dflmu]|lu|ul)?\b/i,
+    "operator": />>=?|<<=?|[-=]>|([-+&|])\1|~|\?\?=?|[-+*/%&|^!=<>]=?/,
+    "punctuation": /\?\.?|::|[{}[\];(),.:]/
+  });
+  Prism3.languages.insertBefore("csharp", "number", {
+    "range": {
+      pattern: /\.\./,
+      alias: "operator"
+    }
+  });
+  Prism3.languages.insertBefore("csharp", "punctuation", {
+    "named-parameter": {
+      pattern: re(/([(,]\s*)<<0>>(?=\s*:)/.source, [name]),
+      lookbehind: true,
+      alias: "punctuation"
+    }
+  });
+  Prism3.languages.insertBefore("csharp", "class-name", {
+    "namespace": {
+      // namespace Foo.Bar {}
+      // using Foo.Bar;
+      pattern: re(/(\b(?:namespace|using)\s+)<<0>>(?:\s*\.\s*<<0>>)*(?=\s*[;{])/.source, [name]),
+      lookbehind: true,
+      inside: {
+        "punctuation": /\./
+      }
+    },
+    "type-expression": {
+      // default(Foo), typeof(Foo<Bar>), sizeof(int)
+      pattern: re(/(\b(?:default|sizeof|typeof)\s*\(\s*(?!\s))(?:[^()\s]|\s(?!\s)|<<0>>)*(?=\s*\))/.source, [nestedRound]),
+      lookbehind: true,
+      alias: "class-name",
+      inside: typeInside
+    },
+    "return-type": {
+      // Foo<Bar> ForBar(); Foo IFoo.Bar() => 0
+      // int this[int index] => 0; T IReadOnlyList<T>.this[int index] => this[index];
+      // int Foo => 0; int Foo { get; set } = 0;
+      pattern: re(/<<0>>(?=\s+(?:<<1>>\s*(?:=>|[({]|\.\s*this\s*\[)|this\s*\[))/.source, [typeExpression, identifier]),
+      inside: typeInside,
+      alias: "class-name"
+    },
+    "constructor-invocation": {
+      // new List<Foo<Bar[]>> { }
+      pattern: re(/(\bnew\s+)<<0>>(?=\s*[[({])/.source, [typeExpression]),
+      lookbehind: true,
+      inside: typeInside,
+      alias: "class-name"
+    },
+    /*'explicit-implementation': {
+    	// int IFoo<Foo>.Bar => 0; void IFoo<Foo<Foo>>.Foo<T>();
+    	pattern: replace(/\b<<0>>(?=\.<<1>>)/, className, methodOrPropertyDeclaration),
+    	inside: classNameInside,
+    	alias: 'class-name'
+    },*/
+    "generic-method": {
+      // foo<Bar>()
+      pattern: re(/<<0>>\s*<<1>>(?=\s*\()/.source, [name, generic]),
+      inside: {
+        "function": re(/^<<0>>/.source, [name]),
+        "generic": {
+          pattern: RegExp(generic),
+          alias: "class-name",
+          inside: typeInside
+        }
+      }
+    },
+    "type-list": {
+      // The list of types inherited or of generic constraints
+      // class Foo<F> : Bar, IList<FooBar>
+      // where F : Bar, IList<int>
+      pattern: re(
+        /\b((?:<<0>>\s+<<1>>|record\s+<<1>>\s*<<5>>|where\s+<<2>>)\s*:\s*)(?:<<3>>|<<4>>|<<1>>\s*<<5>>|<<6>>)(?:\s*,\s*(?:<<3>>|<<4>>|<<6>>))*(?=\s*(?:where|[{;]|=>|$))/.source,
+        [typeDeclarationKeywords, genericName, name, typeExpression, keywords.source, nestedRound, /\bnew\s*\(\s*\)/.source]
+      ),
+      lookbehind: true,
+      inside: {
+        "record-arguments": {
+          pattern: re(/(^(?!new\s*\()<<0>>\s*)<<1>>/.source, [genericName, nestedRound]),
+          lookbehind: true,
+          greedy: true,
+          inside: Prism3.languages.csharp
+        },
+        "keyword": keywords,
+        "class-name": {
+          pattern: RegExp(typeExpression),
+          greedy: true,
+          inside: typeInside
+        },
+        "punctuation": /[,()]/
+      }
+    },
+    "preprocessor": {
+      pattern: /(^[\t ]*)#.*/m,
+      lookbehind: true,
+      alias: "property",
+      inside: {
+        // highlight preprocessor directives as keywords
+        "directive": {
+          pattern: /(#)\b(?:define|elif|else|endif|endregion|error|if|line|nullable|pragma|region|undef|warning)\b/,
+          lookbehind: true,
+          alias: "keyword"
+        }
+      }
+    }
+  });
+  var regularStringOrCharacter = regularString + "|" + character;
+  var regularStringCharacterOrComment = replace(/\/(?![*/])|\/\/[^\r\n]*[\r\n]|\/\*(?:[^*]|\*(?!\/))*\*\/|<<0>>/.source, [regularStringOrCharacter]);
+  var roundExpression = nested(replace(/[^"'/()]|<<0>>|\(<<self>>*\)/.source, [regularStringCharacterOrComment]), 2);
+  var attrTarget = /\b(?:assembly|event|field|method|module|param|property|return|type)\b/.source;
+  var attr = replace(/<<0>>(?:\s*\(<<1>>*\))?/.source, [identifier, roundExpression]);
+  Prism3.languages.insertBefore("csharp", "class-name", {
+    "attribute": {
+      // Attributes
+      // [Foo], [Foo(1), Bar(2, Prop = "foo")], [return: Foo(1), Bar(2)], [assembly: Foo(Bar)]
+      pattern: re(/((?:^|[^\s\w>)?])\s*\[\s*)(?:<<0>>\s*:\s*)?<<1>>(?:\s*,\s*<<1>>)*(?=\s*\])/.source, [attrTarget, attr]),
+      lookbehind: true,
+      greedy: true,
+      inside: {
+        "target": {
+          pattern: re(/^<<0>>(?=\s*:)/.source, [attrTarget]),
+          alias: "keyword"
+        },
+        "attribute-arguments": {
+          pattern: re(/\(<<0>>*\)/.source, [roundExpression]),
+          inside: Prism3.languages.csharp
+        },
+        "class-name": {
+          pattern: RegExp(identifier),
+          inside: {
+            "punctuation": /\./
+          }
+        },
+        "punctuation": /[:,]/
+      }
+    }
+  });
+  var formatString = /:[^}\r\n]+/.source;
+  var mInterpolationRound = nested(replace(/[^"'/()]|<<0>>|\(<<self>>*\)/.source, [regularStringCharacterOrComment]), 2);
+  var mInterpolation = replace(/\{(?!\{)(?:(?![}:])<<0>>)*<<1>>?\}/.source, [mInterpolationRound, formatString]);
+  var sInterpolationRound = nested(replace(/[^"'/()]|\/(?!\*)|\/\*(?:[^*]|\*(?!\/))*\*\/|<<0>>|\(<<self>>*\)/.source, [regularStringOrCharacter]), 2);
+  var sInterpolation = replace(/\{(?!\{)(?:(?![}:])<<0>>)*<<1>>?\}/.source, [sInterpolationRound, formatString]);
+  function createInterpolationInside(interpolation, interpolationRound) {
+    return {
+      "interpolation": {
+        pattern: re(/((?:^|[^{])(?:\{\{)*)<<0>>/.source, [interpolation]),
+        lookbehind: true,
+        inside: {
+          "format-string": {
+            pattern: re(/(^\{(?:(?![}:])<<0>>)*)<<1>>(?=\}$)/.source, [interpolationRound, formatString]),
+            lookbehind: true,
+            inside: {
+              "punctuation": /^:/
+            }
+          },
+          "punctuation": /^\{|\}$/,
+          "expression": {
+            pattern: /[\s\S]+/,
+            alias: "language-csharp",
+            inside: Prism3.languages.csharp
+          }
+        }
+      },
+      "string": /[\s\S]+/
+    };
+  }
+  Prism3.languages.insertBefore("csharp", "string", {
+    "interpolation-string": [
+      {
+        pattern: re(/(^|[^\\])(?:\$@|@\$)"(?:""|\\[\s\S]|\{\{|<<0>>|[^\\{"])*"/.source, [mInterpolation]),
+        lookbehind: true,
+        greedy: true,
+        inside: createInterpolationInside(mInterpolation, mInterpolationRound)
+      },
+      {
+        pattern: re(/(^|[^@\\])\$"(?:\\.|\{\{|<<0>>|[^\\"{])*"/.source, [sInterpolation]),
+        lookbehind: true,
+        greedy: true,
+        inside: createInterpolationInside(sInterpolation, sInterpolationRound)
+      }
+    ],
+    "char": {
+      pattern: RegExp(character),
+      greedy: true
+    }
+  });
+  Prism3.languages.dotnet = Prism3.languages.cs = Prism3.languages.csharp;
+})(Prism);
+
+// node_modules/prismjs/components/prism-swift.js
+Prism.languages.swift = {
+  "comment": {
+    // Nested comments are supported up to 2 levels
+    pattern: /(^|[^\\:])(?:\/\/.*|\/\*(?:[^/*]|\/(?!\*)|\*(?!\/)|\/\*(?:[^*]|\*(?!\/))*\*\/)*\*\/)/,
+    lookbehind: true,
+    greedy: true
+  },
+  "string-literal": [
+    // https://docs.swift.org/swift-book/LanguageGuide/StringsAndCharacters.html
+    {
+      pattern: RegExp(
+        /(^|[^"#])/.source + "(?:" + /"(?:\\(?:\((?:[^()]|\([^()]*\))*\)|\r\n|[^(])|[^\\\r\n"])*"/.source + "|" + /"""(?:\\(?:\((?:[^()]|\([^()]*\))*\)|[^(])|[^\\"]|"(?!""))*"""/.source + ")" + /(?!["#])/.source
+      ),
+      lookbehind: true,
+      greedy: true,
+      inside: {
+        "interpolation": {
+          pattern: /(\\\()(?:[^()]|\([^()]*\))*(?=\))/,
+          lookbehind: true,
+          inside: null
+          // see below
+        },
+        "interpolation-punctuation": {
+          pattern: /^\)|\\\($/,
+          alias: "punctuation"
+        },
+        "punctuation": /\\(?=[\r\n])/,
+        "string": /[\s\S]+/
+      }
+    },
+    {
+      pattern: RegExp(
+        /(^|[^"#])(#+)/.source + "(?:" + /"(?:\\(?:#+\((?:[^()]|\([^()]*\))*\)|\r\n|[^#])|[^\\\r\n])*?"/.source + "|" + /"""(?:\\(?:#+\((?:[^()]|\([^()]*\))*\)|[^#])|[^\\])*?"""/.source + ")\\2"
+      ),
+      lookbehind: true,
+      greedy: true,
+      inside: {
+        "interpolation": {
+          pattern: /(\\#+\()(?:[^()]|\([^()]*\))*(?=\))/,
+          lookbehind: true,
+          inside: null
+          // see below
+        },
+        "interpolation-punctuation": {
+          pattern: /^\)|\\#+\($/,
+          alias: "punctuation"
+        },
+        "string": /[\s\S]+/
+      }
+    }
+  ],
+  "directive": {
+    // directives with conditions
+    pattern: RegExp(
+      /#/.source + "(?:" + (/(?:elseif|if)\b/.source + "(?:[ 	]*" + /(?:![ \t]*)?(?:\b\w+\b(?:[ \t]*\((?:[^()]|\([^()]*\))*\))?|\((?:[^()]|\([^()]*\))*\))(?:[ \t]*(?:&&|\|\|))?/.source + ")+") + "|" + /(?:else|endif)\b/.source + ")"
+    ),
+    alias: "property",
+    inside: {
+      "directive-name": /^#\w+/,
+      "boolean": /\b(?:false|true)\b/,
+      "number": /\b\d+(?:\.\d+)*\b/,
+      "operator": /!|&&|\|\||[<>]=?/,
+      "punctuation": /[(),]/
+    }
+  },
+  "literal": {
+    pattern: /#(?:colorLiteral|column|dsohandle|file(?:ID|Literal|Path)?|function|imageLiteral|line)\b/,
+    alias: "constant"
+  },
+  "other-directive": {
+    pattern: /#\w+\b/,
+    alias: "property"
+  },
+  "attribute": {
+    pattern: /@\w+/,
+    alias: "atrule"
+  },
+  "function-definition": {
+    pattern: /(\bfunc\s+)\w+/,
+    lookbehind: true,
+    alias: "function"
+  },
+  "label": {
+    // https://docs.swift.org/swift-book/LanguageGuide/ControlFlow.html#ID141
+    pattern: /\b(break|continue)\s+\w+|\b[a-zA-Z_]\w*(?=\s*:\s*(?:for|repeat|while)\b)/,
+    lookbehind: true,
+    alias: "important"
+  },
+  "keyword": /\b(?:Any|Protocol|Self|Type|actor|as|assignment|associatedtype|associativity|async|await|break|case|catch|class|continue|convenience|default|defer|deinit|didSet|do|dynamic|else|enum|extension|fallthrough|fileprivate|final|for|func|get|guard|higherThan|if|import|in|indirect|infix|init|inout|internal|is|isolated|lazy|left|let|lowerThan|mutating|none|nonisolated|nonmutating|open|operator|optional|override|postfix|precedencegroup|prefix|private|protocol|public|repeat|required|rethrows|return|right|safe|self|set|some|static|struct|subscript|super|switch|throw|throws|try|typealias|unowned|unsafe|var|weak|where|while|willSet)\b/,
+  "boolean": /\b(?:false|true)\b/,
+  "nil": {
+    pattern: /\bnil\b/,
+    alias: "constant"
+  },
+  "short-argument": /\$\d+\b/,
+  "omit": {
+    pattern: /\b_\b/,
+    alias: "keyword"
+  },
+  "number": /\b(?:[\d_]+(?:\.[\de_]+)?|0x[a-f0-9_]+(?:\.[a-f0-9p_]+)?|0b[01_]+|0o[0-7_]+)\b/i,
+  // A class name must start with an upper-case letter and be either 1 letter long or contain a lower-case letter.
+  "class-name": /\b[A-Z](?:[A-Z_\d]*[a-z]\w*)?\b/,
+  "function": /\b[a-z_]\w*(?=\s*\()/i,
+  "constant": /\b(?:[A-Z_]{2,}|k[A-Z][A-Za-z_]+)\b/,
+  // Operators are generic in Swift. Developers can even create new operators (e.g. +++).
+  // https://docs.swift.org/swift-book/ReferenceManual/zzSummaryOfTheGrammar.html#ID481
+  // This regex only supports ASCII operators.
+  "operator": /[-+*/%=!<>&|^~?]+|\.[.\-+*/%=!<>&|^~?]+/,
+  "punctuation": /[{}[\]();,.:\\]/
+};
+Prism.languages.swift["string-literal"].forEach(function(rule) {
+  rule.inside["interpolation"].inside = Prism.languages.swift;
+});
+
+// node_modules/prismjs/components/prism-kotlin.js
+(function(Prism3) {
+  Prism3.languages.kotlin = Prism3.languages.extend("clike", {
+    "keyword": {
+      // The lookbehind prevents wrong highlighting of e.g. kotlin.properties.get
+      pattern: /(^|[^.])\b(?:abstract|actual|annotation|as|break|by|catch|class|companion|const|constructor|continue|crossinline|data|do|dynamic|else|enum|expect|external|final|finally|for|fun|get|if|import|in|infix|init|inline|inner|interface|internal|is|lateinit|noinline|null|object|open|operator|out|override|package|private|protected|public|reified|return|sealed|set|super|suspend|tailrec|this|throw|to|try|typealias|val|var|vararg|when|where|while)\b/,
+      lookbehind: true
+    },
+    "function": [
+      {
+        pattern: /(?:`[^\r\n`]+`|\b\w+)(?=\s*\()/,
+        greedy: true
+      },
+      {
+        pattern: /(\.)(?:`[^\r\n`]+`|\w+)(?=\s*\{)/,
+        lookbehind: true,
+        greedy: true
+      }
+    ],
+    "number": /\b(?:0[xX][\da-fA-F]+(?:_[\da-fA-F]+)*|0[bB][01]+(?:_[01]+)*|\d+(?:_\d+)*(?:\.\d+(?:_\d+)*)?(?:[eE][+-]?\d+(?:_\d+)*)?[fFL]?)\b/,
+    "operator": /\+[+=]?|-[-=>]?|==?=?|!(?:!|==?)?|[\/*%<>]=?|[?:]:?|\.\.|&&|\|\||\b(?:and|inv|or|shl|shr|ushr|xor)\b/
+  });
+  delete Prism3.languages.kotlin["class-name"];
+  var interpolationInside = {
+    "interpolation-punctuation": {
+      pattern: /^\$\{?|\}$/,
+      alias: "punctuation"
+    },
+    "expression": {
+      pattern: /[\s\S]+/,
+      inside: Prism3.languages.kotlin
+    }
+  };
+  Prism3.languages.insertBefore("kotlin", "string", {
+    // https://kotlinlang.org/spec/expressions.html#string-interpolation-expressions
+    "string-literal": [
+      {
+        pattern: /"""(?:[^$]|\$(?:(?!\{)|\{[^{}]*\}))*?"""/,
+        alias: "multiline",
+        inside: {
+          "interpolation": {
+            pattern: /\$(?:[a-z_]\w*|\{[^{}]*\})/i,
+            inside: interpolationInside
+          },
+          "string": /[\s\S]+/
+        }
+      },
+      {
+        pattern: /"(?:[^"\\\r\n$]|\\.|\$(?:(?!\{)|\{[^{}]*\}))*"/,
+        alias: "singleline",
+        inside: {
+          "interpolation": {
+            pattern: /((?:^|[^\\])(?:\\{2})*)\$(?:[a-z_]\w*|\{[^{}]*\})/i,
+            lookbehind: true,
+            inside: interpolationInside
+          },
+          "string": /[\s\S]+/
+        }
+      }
+    ],
+    "char": {
+      // https://kotlinlang.org/spec/expressions.html#character-literals
+      pattern: /'(?:[^'\\\r\n]|\\(?:.|u[a-fA-F0-9]{0,4}))'/,
+      greedy: true
+    }
+  });
+  delete Prism3.languages.kotlin["string"];
+  Prism3.languages.insertBefore("kotlin", "keyword", {
+    "annotation": {
+      pattern: /\B@(?:\w+:)?(?:[A-Z]\w*|\[[^\]]+\])/,
+      alias: "builtin"
+    }
+  });
+  Prism3.languages.insertBefore("kotlin", "function", {
+    "label": {
+      pattern: /\b\w+@|@\w+\b/,
+      alias: "symbol"
+    }
+  });
+  Prism3.languages.kt = Prism3.languages.kotlin;
+  Prism3.languages.kts = Prism3.languages.kotlin;
+})(Prism);
+
+// node_modules/prismjs/components/prism-scala.js
+Prism.languages.scala = Prism.languages.extend("java", {
+  "triple-quoted-string": {
+    pattern: /"""[\s\S]*?"""/,
+    greedy: true,
+    alias: "string"
+  },
+  "string": {
+    pattern: /("|')(?:\\.|(?!\1)[^\\\r\n])*\1/,
+    greedy: true
+  },
+  "keyword": /<-|=>|\b(?:abstract|case|catch|class|def|derives|do|else|enum|extends|extension|final|finally|for|forSome|given|if|implicit|import|infix|inline|lazy|match|new|null|object|opaque|open|override|package|private|protected|return|sealed|self|super|this|throw|trait|transparent|try|type|using|val|var|while|with|yield)\b/,
+  "number": /\b0x(?:[\da-f]*\.)?[\da-f]+|(?:\b\d+(?:\.\d*)?|\B\.\d+)(?:e\d+)?[dfl]?/i,
+  "builtin": /\b(?:Any|AnyRef|AnyVal|Boolean|Byte|Char|Double|Float|Int|Long|Nothing|Short|String|Unit)\b/,
+  "symbol": /'[^\d\s\\]\w*/
+});
+Prism.languages.insertBefore("scala", "triple-quoted-string", {
+  "string-interpolation": {
+    pattern: /\b[a-z]\w*(?:"""(?:[^$]|\$(?:[^{]|\{(?:[^{}]|\{[^{}]*\})*\}))*?"""|"(?:[^$"\r\n]|\$(?:[^{]|\{(?:[^{}]|\{[^{}]*\})*\}))*")/i,
+    greedy: true,
+    inside: {
+      "id": {
+        pattern: /^\w+/,
+        greedy: true,
+        alias: "function"
+      },
+      "escape": {
+        pattern: /\\\$"|\$[$"]/,
+        greedy: true,
+        alias: "symbol"
+      },
+      "interpolation": {
+        pattern: /\$(?:\w+|\{(?:[^{}]|\{[^{}]*\})*\})/,
+        greedy: true,
+        inside: {
+          "punctuation": /^\$\{?|\}$/,
+          "expression": {
+            pattern: /[\s\S]+/,
+            inside: Prism.languages.scala
+          }
+        }
+      },
+      "string": /[\s\S]+/
+    }
+  }
+});
+delete Prism.languages.scala["class-name"];
+delete Prism.languages.scala["function"];
+delete Prism.languages.scala["constant"];
+
+// node_modules/prismjs/components/prism-groovy.js
+(function(Prism3) {
+  var interpolation = {
+    pattern: /((?:^|[^\\$])(?:\\{2})*)\$(?:\w+|\{[^{}]*\})/,
+    lookbehind: true,
+    inside: {
+      "interpolation-punctuation": {
+        pattern: /^\$\{?|\}$/,
+        alias: "punctuation"
+      },
+      "expression": {
+        pattern: /[\s\S]+/,
+        inside: null
+        // see below
+      }
+    }
+  };
+  Prism3.languages.groovy = Prism3.languages.extend("clike", {
+    "string": {
+      // https://groovy-lang.org/syntax.html#_dollar_slashy_string
+      pattern: /'''(?:[^\\]|\\[\s\S])*?'''|'(?:\\.|[^\\'\r\n])*'/,
+      greedy: true
+    },
+    "keyword": /\b(?:abstract|as|assert|boolean|break|byte|case|catch|char|class|const|continue|def|default|do|double|else|enum|extends|final|finally|float|for|goto|if|implements|import|in|instanceof|int|interface|long|native|new|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|trait|transient|try|void|volatile|while)\b/,
+    "number": /\b(?:0b[01_]+|0x[\da-f_]+(?:\.[\da-f_p\-]+)?|[\d_]+(?:\.[\d_]+)?(?:e[+-]?\d+)?)[glidf]?\b/i,
+    "operator": {
+      pattern: /(^|[^.])(?:~|==?~?|\?[.:]?|\*(?:[.=]|\*=?)?|\.[@&]|\.\.<|\.\.(?!\.)|-[-=>]?|\+[+=]?|!=?|<(?:<=?|=>?)?|>(?:>>?=?|=)?|&[&=]?|\|[|=]?|\/=?|\^=?|%=?)/,
+      lookbehind: true
+    },
+    "punctuation": /\.+|[{}[\];(),:$]/
+  });
+  Prism3.languages.insertBefore("groovy", "string", {
+    "shebang": {
+      pattern: /#!.+/,
+      alias: "comment",
+      greedy: true
+    },
+    "interpolation-string": {
+      // TODO: Slash strings (e.g. /foo/) can contain line breaks but this will cause a lot of trouble with
+      // simple division (see JS regex), so find a fix maybe?
+      pattern: /"""(?:[^\\]|\\[\s\S])*?"""|(["/])(?:\\.|(?!\1)[^\\\r\n])*\1|\$\/(?:[^/$]|\$(?:[/$]|(?![/$]))|\/(?!\$))*\/\$/,
+      greedy: true,
+      inside: {
+        "interpolation": interpolation,
+        "string": /[\s\S]+/
+      }
+    }
+  });
+  Prism3.languages.insertBefore("groovy", "punctuation", {
+    "spock-block": /\b(?:and|cleanup|expect|given|setup|then|when|where):/
+  });
+  Prism3.languages.insertBefore("groovy", "function", {
+    "annotation": {
+      pattern: /(^|[^.])@\w+/,
+      lookbehind: true,
+      alias: "punctuation"
+    }
+  });
+  interpolation.inside.expression.inside = Prism3.languages.groovy;
+})(Prism);
+
+// node_modules/prismjs/components/prism-perl.js
+(function(Prism3) {
+  var brackets = /(?:\((?:[^()\\]|\\[\s\S])*\)|\{(?:[^{}\\]|\\[\s\S])*\}|\[(?:[^[\]\\]|\\[\s\S])*\]|<(?:[^<>\\]|\\[\s\S])*>)/.source;
+  Prism3.languages.perl = {
+    "comment": [
+      {
+        // POD
+        pattern: /(^\s*)=\w[\s\S]*?=cut.*/m,
+        lookbehind: true,
+        greedy: true
+      },
+      {
+        pattern: /(^|[^\\$])#.*/,
+        lookbehind: true,
+        greedy: true
+      }
+    ],
+    // TODO Could be nice to handle Heredoc too.
+    "string": [
+      {
+        pattern: RegExp(
+          /\b(?:q|qq|qw|qx)(?![a-zA-Z0-9])\s*/.source + "(?:" + [
+            // q/.../
+            /([^a-zA-Z0-9\s{(\[<])(?:(?!\1)[^\\]|\\[\s\S])*\1/.source,
+            // q a...a
+            // eslint-disable-next-line regexp/strict
+            /([a-zA-Z0-9])(?:(?!\2)[^\\]|\\[\s\S])*\2/.source,
+            // q(...)
+            // q{...}
+            // q[...]
+            // q<...>
+            brackets
+          ].join("|") + ")"
+        ),
+        greedy: true
+      },
+      // "...", `...`
+      {
+        pattern: /("|`)(?:(?!\1)[^\\]|\\[\s\S])*\1/,
+        greedy: true
+      },
+      // '...'
+      // FIXME Multi-line single-quoted strings are not supported as they would break variables containing '
+      {
+        pattern: /'(?:[^'\\\r\n]|\\.)*'/,
+        greedy: true
+      }
+    ],
+    "regex": [
+      {
+        pattern: RegExp(
+          /\b(?:m|qr)(?![a-zA-Z0-9])\s*/.source + "(?:" + [
+            // m/.../
+            /([^a-zA-Z0-9\s{(\[<])(?:(?!\1)[^\\]|\\[\s\S])*\1/.source,
+            // m a...a
+            // eslint-disable-next-line regexp/strict
+            /([a-zA-Z0-9])(?:(?!\2)[^\\]|\\[\s\S])*\2/.source,
+            // m(...)
+            // m{...}
+            // m[...]
+            // m<...>
+            brackets
+          ].join("|") + ")" + /[msixpodualngc]*/.source
+        ),
+        greedy: true
+      },
+      // The lookbehinds prevent -s from breaking
+      {
+        pattern: RegExp(
+          /(^|[^-])\b(?:s|tr|y)(?![a-zA-Z0-9])\s*/.source + "(?:" + [
+            // s/.../.../
+            // eslint-disable-next-line regexp/strict
+            /([^a-zA-Z0-9\s{(\[<])(?:(?!\2)[^\\]|\\[\s\S])*\2(?:(?!\2)[^\\]|\\[\s\S])*\2/.source,
+            // s a...a...a
+            // eslint-disable-next-line regexp/strict
+            /([a-zA-Z0-9])(?:(?!\3)[^\\]|\\[\s\S])*\3(?:(?!\3)[^\\]|\\[\s\S])*\3/.source,
+            // s(...)(...)
+            // s{...}{...}
+            // s[...][...]
+            // s<...><...>
+            // s(...)[...]
+            brackets + /\s*/.source + brackets
+          ].join("|") + ")" + /[msixpodualngcer]*/.source
+        ),
+        lookbehind: true,
+        greedy: true
+      },
+      // /.../
+      // The look-ahead tries to prevent two divisions on
+      // the same line from being highlighted as regex.
+      // This does not support multi-line regex.
+      {
+        pattern: /\/(?:[^\/\\\r\n]|\\.)*\/[msixpodualngc]*(?=\s*(?:$|[\r\n,.;})&|\-+*~<>!?^]|(?:and|cmp|eq|ge|gt|le|lt|ne|not|or|x|xor)\b))/,
+        greedy: true
+      }
+    ],
+    // FIXME Not sure about the handling of ::, ', and #
+    "variable": [
+      // ${^POSTMATCH}
+      /[&*$@%]\{\^[A-Z]+\}/,
+      // $^V
+      /[&*$@%]\^[A-Z_]/,
+      // ${...}
+      /[&*$@%]#?(?=\{)/,
+      // $foo
+      /[&*$@%]#?(?:(?:::)*'?(?!\d)[\w$]+(?![\w$]))+(?:::)*/,
+      // $1
+      /[&*$@%]\d+/,
+      // $_, @_, %!
+      // The negative lookahead prevents from breaking the %= operator
+      /(?!%=)[$@%][!"#$%&'()*+,\-.\/:;<=>?@[\\\]^_`{|}~]/
+    ],
+    "filehandle": {
+      // <>, <FOO>, _
+      pattern: /<(?![<=])\S*?>|\b_\b/,
+      alias: "symbol"
+    },
+    "v-string": {
+      // v1.2, 1.2.3
+      pattern: /v\d+(?:\.\d+)*|\d+(?:\.\d+){2,}/,
+      alias: "string"
+    },
+    "function": {
+      pattern: /(\bsub[ \t]+)\w+/,
+      lookbehind: true
+    },
+    "keyword": /\b(?:any|break|continue|default|delete|die|do|else|elsif|eval|for|foreach|given|goto|if|last|local|my|next|our|package|print|redo|require|return|say|state|sub|switch|undef|unless|until|use|when|while)\b/,
+    "number": /\b(?:0x[\dA-Fa-f](?:_?[\dA-Fa-f])*|0b[01](?:_?[01])*|(?:(?:\d(?:_?\d)*)?\.)?\d(?:_?\d)*(?:[Ee][+-]?\d+)?)\b/,
+    "operator": /-[rwxoRWXOezsfdlpSbctugkTBMAC]\b|\+[+=]?|-[-=>]?|\*\*?=?|\/\/?=?|=[=~>]?|~[~=]?|\|\|?=?|&&?=?|<(?:=>?|<=?)?|>>?=?|![~=]?|[%^]=?|\.(?:=|\.\.?)?|[\\?]|\bx(?:=|\b)|\b(?:and|cmp|eq|ge|gt|le|lt|ne|not|or|xor)\b/,
+    "punctuation": /[{}[\];(),:]/
+  };
+})(Prism);
+
+// node_modules/prismjs/components/prism-lua.js
+Prism.languages.lua = {
+  "comment": /^#!.+|--(?:\[(=*)\[[\s\S]*?\]\1\]|.*)/m,
+  // \z may be used to skip the following space
+  "string": {
+    pattern: /(["'])(?:(?!\1)[^\\\r\n]|\\z(?:\r\n|\s)|\\(?:\r\n|[^z]))*\1|\[(=*)\[[\s\S]*?\]\2\]/,
+    greedy: true
+  },
+  "number": /\b0x[a-f\d]+(?:\.[a-f\d]*)?(?:p[+-]?\d+)?\b|\b\d+(?:\.\B|(?:\.\d*)?(?:e[+-]?\d+)?\b)|\B\.\d+(?:e[+-]?\d+)?\b/i,
+  "keyword": /\b(?:and|break|do|else|elseif|end|false|for|function|goto|if|in|local|nil|not|or|repeat|return|then|true|until|while)\b/,
+  "function": /(?!\d)\w+(?=\s*(?:[({]))/,
+  "operator": [
+    /[-+*%^&|#]|\/\/?|<[<=]?|>[>=]?|[=~]=?/,
+    {
+      // Match ".." but don't break "..."
+      pattern: /(^|[^.])\.\.(?!\.)/,
+      lookbehind: true
+    }
+  ],
+  "punctuation": /[\[\](){},;]|\.+|:+/
+};
+
+// node_modules/prismjs/components/prism-r.js
+Prism.languages.r = {
+  "comment": /#.*/,
+  "string": {
+    pattern: /(['"])(?:\\.|(?!\1)[^\\\r\n])*\1/,
+    greedy: true
+  },
+  "percent-operator": {
+    // Includes user-defined operators
+    // and %%, %*%, %/%, %in%, %o%, %x%
+    pattern: /%[^%\s]*%/,
+    alias: "operator"
+  },
+  "boolean": /\b(?:FALSE|TRUE)\b/,
+  "ellipsis": /\.\.(?:\.|\d+)/,
+  "number": [
+    /\b(?:Inf|NaN)\b/,
+    /(?:\b0x[\dA-Fa-f]+(?:\.\d*)?|\b\d+(?:\.\d*)?|\B\.\d+)(?:[EePp][+-]?\d+)?[iL]?/
+  ],
+  "keyword": /\b(?:NA|NA_character_|NA_complex_|NA_integer_|NA_real_|NULL|break|else|for|function|if|in|next|repeat|while)\b/,
+  "operator": /->?>?|<(?:=|<?-)?|[>=!]=?|::?|&&?|\|\|?|[+*\/^$@~]/,
+  "punctuation": /[(){}\[\],;]/
+};
+
+// node_modules/prismjs/components/prism-objectivec.js
+Prism.languages.objectivec = Prism.languages.extend("c", {
+  "string": {
+    pattern: /@?"(?:\\(?:\r\n|[\s\S])|[^"\\\r\n])*"/,
+    greedy: true
+  },
+  "keyword": /\b(?:asm|auto|break|case|char|const|continue|default|do|double|else|enum|extern|float|for|goto|if|in|inline|int|long|register|return|self|short|signed|sizeof|static|struct|super|switch|typedef|typeof|union|unsigned|void|volatile|while)\b|(?:@interface|@end|@implementation|@protocol|@class|@public|@protected|@private|@property|@try|@catch|@finally|@throw|@synthesize|@dynamic|@selector)\b/,
+  "operator": /-[->]?|\+\+?|!=?|<<?=?|>>?=?|==?|&&?|\|\|?|[~^%?*\/@]/
+});
+delete Prism.languages.objectivec["class-name"];
+Prism.languages.objc = Prism.languages.objectivec;
+
+// node_modules/prismjs/components/prism-dart.js
+(function(Prism3) {
+  var keywords = [
+    /\b(?:async|sync|yield)\*/,
+    /\b(?:abstract|assert|async|await|break|case|catch|class|const|continue|covariant|default|deferred|do|dynamic|else|enum|export|extends|extension|external|factory|final|finally|for|get|hide|if|implements|import|in|interface|library|mixin|new|null|on|operator|part|rethrow|return|set|show|static|super|switch|sync|this|throw|try|typedef|var|void|while|with|yield)\b/
+  ];
+  var packagePrefix = /(^|[^\w.])(?:[a-z]\w*\s*\.\s*)*(?:[A-Z]\w*\s*\.\s*)*/.source;
+  var className = {
+    pattern: RegExp(packagePrefix + /[A-Z](?:[\d_A-Z]*[a-z]\w*)?\b/.source),
+    lookbehind: true,
+    inside: {
+      "namespace": {
+        pattern: /^[a-z]\w*(?:\s*\.\s*[a-z]\w*)*(?:\s*\.)?/,
+        inside: {
+          "punctuation": /\./
+        }
+      }
+    }
+  };
+  Prism3.languages.dart = Prism3.languages.extend("clike", {
+    "class-name": [
+      className,
+      {
+        // variables and parameters
+        // this to support class names (or generic parameters) which do not contain a lower case letter (also works for methods)
+        pattern: RegExp(packagePrefix + /[A-Z]\w*(?=\s+\w+\s*[;,=()])/.source),
+        lookbehind: true,
+        inside: className.inside
+      }
+    ],
+    "keyword": keywords,
+    "operator": /\bis!|\b(?:as|is)\b|\+\+|--|&&|\|\||<<=?|>>=?|~(?:\/=?)?|[+\-*\/%&^|=!<>]=?|\?/
+  });
+  Prism3.languages.insertBefore("dart", "string", {
+    "string-literal": {
+      pattern: /r?(?:("""|''')[\s\S]*?\1|(["'])(?:\\.|(?!\2)[^\\\r\n])*\2(?!\2))/,
+      greedy: true,
+      inside: {
+        "interpolation": {
+          pattern: /((?:^|[^\\])(?:\\{2})*)\$(?:\w+|\{(?:[^{}]|\{[^{}]*\})*\})/,
+          lookbehind: true,
+          inside: {
+            "punctuation": /^\$\{?|\}$/,
+            "expression": {
+              pattern: /[\s\S]+/,
+              inside: Prism3.languages.dart
+            }
+          }
+        },
+        "string": /[\s\S]+/
+      }
+    },
+    "string": void 0
+  });
+  Prism3.languages.insertBefore("dart", "class-name", {
+    "metadata": {
+      pattern: /@\w+/,
+      alias: "function"
+    }
+  });
+  Prism3.languages.insertBefore("dart", "class-name", {
+    "generics": {
+      pattern: /<(?:[\w\s,.&?]|<(?:[\w\s,.&?]|<(?:[\w\s,.&?]|<[\w\s,.&?]*>)*>)*>)*>/,
+      inside: {
+        "class-name": className,
+        "keyword": keywords,
+        "punctuation": /[<>(),.:]/,
+        "operator": /[?&|]/
+      }
+    }
+  });
+})(Prism);
+
+// node_modules/prismjs/components/prism-erlang.js
+Prism.languages.erlang = {
+  "comment": /%.+/,
+  "string": {
+    pattern: /"(?:\\.|[^\\"\r\n])*"/,
+    greedy: true
+  },
+  "quoted-function": {
+    pattern: /'(?:\\.|[^\\'\r\n])+'(?=\()/,
+    alias: "function"
+  },
+  "quoted-atom": {
+    pattern: /'(?:\\.|[^\\'\r\n])+'/,
+    alias: "atom"
+  },
+  "boolean": /\b(?:false|true)\b/,
+  "keyword": /\b(?:after|begin|case|catch|end|fun|if|of|receive|try|when)\b/,
+  "number": [
+    /\$\\?./,
+    /\b\d+#[a-z0-9]+/i,
+    /(?:\b\d+(?:\.\d*)?|\B\.\d+)(?:e[+-]?\d+)?/i
+  ],
+  "function": /\b[a-z][\w@]*(?=\()/,
+  "variable": {
+    // Look-behind is used to prevent wrong highlighting of atoms containing "@"
+    pattern: /(^|[^@])(?:\b|\?)[A-Z_][\w@]*/,
+    lookbehind: true
+  },
+  "operator": [
+    /[=\/<>:]=|=[:\/]=|\+\+?|--?|[=*\/!]|\b(?:and|andalso|band|bnot|bor|bsl|bsr|bxor|div|not|or|orelse|rem|xor)\b/,
+    {
+      // We don't want to match <<
+      pattern: /(^|[^<])<(?!<)/,
+      lookbehind: true
+    },
+    {
+      // We don't want to match >>
+      pattern: /(^|[^>])>(?!>)/,
+      lookbehind: true
+    }
+  ],
+  "atom": /\b[a-z][\w@]*/,
+  "punctuation": /[()[\]{}:;,.#|]|<<|>>/
+};
+
+// node_modules/prismjs/components/prism-elixir.js
+Prism.languages.elixir = {
+  "doc": {
+    pattern: /@(?:doc|moduledoc)\s+(?:("""|''')[\s\S]*?\1|("|')(?:\\(?:\r\n|[\s\S])|(?!\2)[^\\\r\n])*\2)/,
+    inside: {
+      "attribute": /^@\w+/,
+      "string": /['"][\s\S]+/
+    }
+  },
+  "comment": {
+    pattern: /#.*/,
+    greedy: true
+  },
+  // ~r"""foo""" (multi-line), ~r'''foo''' (multi-line), ~r/foo/, ~r|foo|, ~r"foo", ~r'foo', ~r(foo), ~r[foo], ~r{foo}, ~r<foo>
+  "regex": {
+    pattern: /~[rR](?:("""|''')(?:\\[\s\S]|(?!\1)[^\\])+\1|([\/|"'])(?:\\.|(?!\2)[^\\\r\n])+\2|\((?:\\.|[^\\)\r\n])+\)|\[(?:\\.|[^\\\]\r\n])+\]|\{(?:\\.|[^\\}\r\n])+\}|<(?:\\.|[^\\>\r\n])+>)[uismxfr]*/,
+    greedy: true
+  },
+  "string": [
+    {
+      // ~s"""foo""" (multi-line), ~s'''foo''' (multi-line), ~s/foo/, ~s|foo|, ~s"foo", ~s'foo', ~s(foo), ~s[foo], ~s{foo} (with interpolation care), ~s<foo>
+      pattern: /~[cCsSwW](?:("""|''')(?:\\[\s\S]|(?!\1)[^\\])+\1|([\/|"'])(?:\\.|(?!\2)[^\\\r\n])+\2|\((?:\\.|[^\\)\r\n])+\)|\[(?:\\.|[^\\\]\r\n])+\]|\{(?:\\.|#\{[^}]+\}|#(?!\{)|[^#\\}\r\n])+\}|<(?:\\.|[^\\>\r\n])+>)[csa]?/,
+      greedy: true,
+      inside: {
+        // See interpolation below
+      }
+    },
+    {
+      pattern: /("""|''')[\s\S]*?\1/,
+      greedy: true,
+      inside: {
+        // See interpolation below
+      }
+    },
+    {
+      // Multi-line strings are allowed
+      pattern: /("|')(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/,
+      greedy: true,
+      inside: {
+        // See interpolation below
+      }
+    }
+  ],
+  "atom": {
+    // Look-behind prevents bad highlighting of the :: operator
+    pattern: /(^|[^:]):\w+/,
+    lookbehind: true,
+    alias: "symbol"
+  },
+  "module": {
+    pattern: /\b[A-Z]\w*\b/,
+    alias: "class-name"
+  },
+  // Look-ahead prevents bad highlighting of the :: operator
+  "attr-name": /\b\w+\??:(?!:)/,
+  "argument": {
+    // Look-behind prevents bad highlighting of the && operator
+    pattern: /(^|[^&])&\d+/,
+    lookbehind: true,
+    alias: "variable"
+  },
+  "attribute": {
+    pattern: /@\w+/,
+    alias: "variable"
+  },
+  "function": /\b[_a-zA-Z]\w*[?!]?(?:(?=\s*(?:\.\s*)?\()|(?=\/\d))/,
+  "number": /\b(?:0[box][a-f\d_]+|\d[\d_]*)(?:\.[\d_]+)?(?:e[+-]?[\d_]+)?\b/i,
+  "keyword": /\b(?:after|alias|and|case|catch|cond|def(?:callback|delegate|exception|impl|macro|module|n|np|p|protocol|struct)?|do|else|end|fn|for|if|import|not|or|quote|raise|require|rescue|try|unless|unquote|use|when)\b/,
+  "boolean": /\b(?:false|nil|true)\b/,
+  "operator": [
+    /\bin\b|&&?|\|[|>]?|\\\\|::|\.\.\.?|\+\+?|-[->]?|<[-=>]|>=|!==?|\B!|=(?:==?|[>~])?|[*\/^]/,
+    {
+      // We don't want to match <<
+      pattern: /([^<])<(?!<)/,
+      lookbehind: true
+    },
+    {
+      // We don't want to match >>
+      pattern: /([^>])>(?!>)/,
+      lookbehind: true
+    }
+  ],
+  "punctuation": /<<|>>|[.,%\[\]{}()]/
+};
+Prism.languages.elixir.string.forEach(function(o) {
+  o.inside = {
+    "interpolation": {
+      pattern: /#\{[^}]+\}/,
+      inside: {
+        "delimiter": {
+          pattern: /^#\{|\}$/,
+          alias: "punctuation"
+        },
+        rest: Prism.languages.elixir
+      }
+    }
+  };
+});
+
+// node_modules/prismjs/components/prism-coffeescript.js
+(function(Prism3) {
+  var comment = /#(?!\{).+/;
+  var interpolation = {
+    pattern: /#\{[^}]+\}/,
+    alias: "variable"
+  };
+  Prism3.languages.coffeescript = Prism3.languages.extend("javascript", {
+    "comment": comment,
+    "string": [
+      // Strings are multiline
+      {
+        pattern: /'(?:\\[\s\S]|[^\\'])*'/,
+        greedy: true
+      },
+      {
+        // Strings are multiline
+        pattern: /"(?:\\[\s\S]|[^\\"])*"/,
+        greedy: true,
+        inside: {
+          "interpolation": interpolation
+        }
+      }
+    ],
+    "keyword": /\b(?:and|break|by|catch|class|continue|debugger|delete|do|each|else|extend|extends|false|finally|for|if|in|instanceof|is|isnt|let|loop|namespace|new|no|not|null|of|off|on|or|own|return|super|switch|then|this|throw|true|try|typeof|undefined|unless|until|when|while|window|with|yes|yield)\b/,
+    "class-member": {
+      pattern: /@(?!\d)\w+/,
+      alias: "variable"
+    }
+  });
+  Prism3.languages.insertBefore("coffeescript", "comment", {
+    "multiline-comment": {
+      pattern: /###[\s\S]+?###/,
+      alias: "comment"
+    },
+    // Block regexp can contain comments and interpolation
+    "block-regex": {
+      pattern: /\/{3}[\s\S]*?\/{3}/,
+      alias: "regex",
+      inside: {
+        "comment": comment,
+        "interpolation": interpolation
+      }
+    }
+  });
+  Prism3.languages.insertBefore("coffeescript", "string", {
+    "inline-javascript": {
+      pattern: /`(?:\\[\s\S]|[^\\`])*`/,
+      inside: {
+        "delimiter": {
+          pattern: /^`|`$/,
+          alias: "punctuation"
+        },
+        "script": {
+          pattern: /[\s\S]+/,
+          alias: "language-javascript",
+          inside: Prism3.languages.javascript
+        }
+      }
+    },
+    // Block strings
+    "multiline-string": [
+      {
+        pattern: /'''[\s\S]*?'''/,
+        greedy: true,
+        alias: "string"
+      },
+      {
+        pattern: /"""[\s\S]*?"""/,
+        greedy: true,
+        alias: "string",
+        inside: {
+          interpolation
+        }
+      }
+    ]
+  });
+  Prism3.languages.insertBefore("coffeescript", "keyword", {
+    // Object property
+    "property": /(?!\d)\w+(?=\s*:(?!:))/
+  });
+  delete Prism3.languages.coffeescript["template-string"];
+  Prism3.languages.coffee = Prism3.languages.coffeescript;
+})(Prism);
+
+// node_modules/prismjs/components/prism-latex.js
+(function(Prism3) {
+  var funcPattern = /\\(?:[^a-z()[\]]|[a-z*]+)/i;
+  var insideEqu = {
+    "equation-command": {
+      pattern: funcPattern,
+      alias: "regex"
+    }
+  };
+  Prism3.languages.latex = {
+    "comment": /%.*/,
+    // the verbatim environment prints whitespace to the document
+    "cdata": {
+      pattern: /(\\begin\{((?:lstlisting|verbatim)\*?)\})[\s\S]*?(?=\\end\{\2\})/,
+      lookbehind: true
+    },
+    /*
+     * equations can be between $$ $$ or $ $ or \( \) or \[ \]
+     * (all are multiline)
+     */
+    "equation": [
+      {
+        pattern: /\$\$(?:\\[\s\S]|[^\\$])+\$\$|\$(?:\\[\s\S]|[^\\$])+\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]/,
+        inside: insideEqu,
+        alias: "string"
+      },
+      {
+        pattern: /(\\begin\{((?:align|eqnarray|equation|gather|math|multline)\*?)\})[\s\S]*?(?=\\end\{\2\})/,
+        lookbehind: true,
+        inside: insideEqu,
+        alias: "string"
+      }
+    ],
+    /*
+     * arguments which are keywords or references are highlighted
+     * as keywords
+     */
+    "keyword": {
+      pattern: /(\\(?:begin|cite|documentclass|end|label|ref|usepackage)(?:\[[^\]]+\])?\{)[^}]+(?=\})/,
+      lookbehind: true
+    },
+    "url": {
+      pattern: /(\\url\{)[^}]+(?=\})/,
+      lookbehind: true
+    },
+    /*
+     * section or chapter headlines are highlighted as bold so that
+     * they stand out more
+     */
+    "headline": {
+      pattern: /(\\(?:chapter|frametitle|paragraph|part|section|subparagraph|subsection|subsubparagraph|subsubsection|subsubsubparagraph)\*?(?:\[[^\]]+\])?\{)[^}]+(?=\})/,
+      lookbehind: true,
+      alias: "class-name"
+    },
+    "function": {
+      pattern: funcPattern,
+      alias: "selector"
+    },
+    "punctuation": /[[\]{}&]/
+  };
+  Prism3.languages.tex = Prism3.languages.latex;
+  Prism3.languages.context = Prism3.languages.latex;
+})(Prism);
+
+// node_modules/prismjs/components/prism-rest.js
+Prism.languages.rest = {
+  "table": [
+    {
+      pattern: /(^[\t ]*)(?:\+[=-]+)+\+(?:\r?\n|\r)(?:\1[+|].+[+|](?:\r?\n|\r))+\1(?:\+[=-]+)+\+/m,
+      lookbehind: true,
+      inside: {
+        "punctuation": /\||(?:\+[=-]+)+\+/
+      }
+    },
+    {
+      pattern: /(^[\t ]*)=+ [ =]*=(?:(?:\r?\n|\r)\1.+)+(?:\r?\n|\r)\1=+ [ =]*=(?=(?:\r?\n|\r){2}|\s*$)/m,
+      lookbehind: true,
+      inside: {
+        "punctuation": /[=-]+/
+      }
+    }
+  ],
+  // Directive-like patterns
+  "substitution-def": {
+    pattern: /(^[\t ]*\.\. )\|(?:[^|\s](?:[^|]*[^|\s])?)\| [^:]+::/m,
+    lookbehind: true,
+    inside: {
+      "substitution": {
+        pattern: /^\|(?:[^|\s]|[^|\s][^|]*[^|\s])\|/,
+        alias: "attr-value",
+        inside: {
+          "punctuation": /^\||\|$/
+        }
+      },
+      "directive": {
+        pattern: /( )(?! )[^:]+::/,
+        lookbehind: true,
+        alias: "function",
+        inside: {
+          "punctuation": /::$/
+        }
+      }
+    }
+  },
+  "link-target": [
+    {
+      pattern: /(^[\t ]*\.\. )\[[^\]]+\]/m,
+      lookbehind: true,
+      alias: "string",
+      inside: {
+        "punctuation": /^\[|\]$/
+      }
+    },
+    {
+      pattern: /(^[\t ]*\.\. )_(?:`[^`]+`|(?:[^:\\]|\\.)+):/m,
+      lookbehind: true,
+      alias: "string",
+      inside: {
+        "punctuation": /^_|:$/
+      }
+    }
+  ],
+  "directive": {
+    pattern: /(^[\t ]*\.\. )[^:]+::/m,
+    lookbehind: true,
+    alias: "function",
+    inside: {
+      "punctuation": /::$/
+    }
+  },
+  "comment": {
+    // The two alternatives try to prevent highlighting of blank comments
+    pattern: /(^[\t ]*\.\.)(?:(?: .+)?(?:(?:\r?\n|\r).+)+| .+)(?=(?:\r?\n|\r){2}|$)/m,
+    lookbehind: true
+  },
+  "title": [
+    // Overlined and underlined
+    {
+      pattern: /^(([!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~])\2+)(?:\r?\n|\r).+(?:\r?\n|\r)\1$/m,
+      inside: {
+        "punctuation": /^[!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~]+|[!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~]+$/,
+        "important": /.+/
+      }
+    },
+    // Underlined only
+    {
+      pattern: /(^|(?:\r?\n|\r){2}).+(?:\r?\n|\r)([!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~])\2+(?=\r?\n|\r|$)/,
+      lookbehind: true,
+      inside: {
+        "punctuation": /[!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~]+$/,
+        "important": /.+/
+      }
+    }
+  ],
+  "hr": {
+    pattern: /((?:\r?\n|\r){2})([!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~])\2{3,}(?=(?:\r?\n|\r){2})/,
+    lookbehind: true,
+    alias: "punctuation"
+  },
+  "field": {
+    pattern: /(^[\t ]*):[^:\r\n]+:(?= )/m,
+    lookbehind: true,
+    alias: "attr-name"
+  },
+  "command-line-option": {
+    pattern: /(^[\t ]*)(?:[+-][a-z\d]|(?:--|\/)[a-z\d-]+)(?:[ =](?:[a-z][\w-]*|<[^<>]+>))?(?:, (?:[+-][a-z\d]|(?:--|\/)[a-z\d-]+)(?:[ =](?:[a-z][\w-]*|<[^<>]+>))?)*(?=(?:\r?\n|\r)? {2,}\S)/im,
+    lookbehind: true,
+    alias: "symbol"
+  },
+  "literal-block": {
+    pattern: /::(?:\r?\n|\r){2}([ \t]+)(?![ \t]).+(?:(?:\r?\n|\r)\1.+)*/,
+    inside: {
+      "literal-block-punctuation": {
+        pattern: /^::/,
+        alias: "punctuation"
+      }
+    }
+  },
+  "quoted-literal-block": {
+    pattern: /::(?:\r?\n|\r){2}([!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~]).*(?:(?:\r?\n|\r)\1.*)*/,
+    inside: {
+      "literal-block-punctuation": {
+        pattern: /^(?:::|([!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~])\1*)/m,
+        alias: "punctuation"
+      }
+    }
+  },
+  "list-bullet": {
+    pattern: /(^[\t ]*)(?:[*+\-•‣⁃]|\(?(?:\d+|[a-z]|[ivxdclm]+)\)|(?:\d+|[a-z]|[ivxdclm]+)\.)(?= )/im,
+    lookbehind: true,
+    alias: "punctuation"
+  },
+  "doctest-block": {
+    pattern: /(^[\t ]*)>>> .+(?:(?:\r?\n|\r).+)*/m,
+    lookbehind: true,
+    inside: {
+      "punctuation": /^>>>/
+    }
+  },
+  "inline": [
+    {
+      pattern: /(^|[\s\-:\/'"<(\[{])(?::[^:]+:`.*?`|`.*?`:[^:]+:|(\*\*?|``?|\|)(?!\s)(?:(?!\2).)*\S\2(?=[\s\-.,:;!?\\\/'")\]}]|$))/m,
+      lookbehind: true,
+      inside: {
+        "bold": {
+          pattern: /(^\*\*).+(?=\*\*$)/,
+          lookbehind: true
+        },
+        "italic": {
+          pattern: /(^\*).+(?=\*$)/,
+          lookbehind: true
+        },
+        "inline-literal": {
+          pattern: /(^``).+(?=``$)/,
+          lookbehind: true,
+          alias: "symbol"
+        },
+        "role": {
+          pattern: /^:[^:]+:|:[^:]+:$/,
+          alias: "function",
+          inside: {
+            "punctuation": /^:|:$/
+          }
+        },
+        "interpreted-text": {
+          pattern: /(^`).+(?=`$)/,
+          lookbehind: true,
+          alias: "attr-value"
+        },
+        "substitution": {
+          pattern: /(^\|).+(?=\|$)/,
+          lookbehind: true,
+          alias: "attr-value"
+        },
+        "punctuation": /\*\*?|``?|\|/
+      }
+    }
+  ],
+  "link": [
+    {
+      pattern: /\[[^\[\]]+\]_(?=[\s\-.,:;!?\\\/'")\]}]|$)/,
+      alias: "string",
+      inside: {
+        "punctuation": /^\[|\]_$/
+      }
+    },
+    {
+      pattern: /(?:\b[a-z\d]+(?:[_.:+][a-z\d]+)*_?_|`[^`]+`_?_|_`[^`]+`)(?=[\s\-.,:;!?\\\/'")\]}]|$)/i,
+      alias: "string",
+      inside: {
+        "punctuation": /^_?`|`$|`?_?_$/
+      }
+    }
+  ],
+  // Line block start,
+  // quote attribution,
+  // explicit markup start,
+  // and anonymous hyperlink target shortcut (__)
+  "punctuation": {
+    pattern: /(^[\t ]*)(?:\|(?= |$)|(?:---?|—|\.\.|__)(?= )|\.\.$)/m,
+    lookbehind: true
+  }
+};
+
+// node_modules/prismjs/components/prism-toml.js
+(function(Prism3) {
+  var key = /(?:[\w-]+|'[^'\n\r]*'|"(?:\\.|[^\\"\r\n])*")/.source;
+  function insertKey(pattern) {
+    return pattern.replace(/__/g, function() {
+      return key;
+    });
+  }
+  Prism3.languages.toml = {
+    "comment": {
+      pattern: /#.*/,
+      greedy: true
+    },
+    "table": {
+      pattern: RegExp(insertKey(/(^[\t ]*\[\s*(?:\[\s*)?)__(?:\s*\.\s*__)*(?=\s*\])/.source), "m"),
+      lookbehind: true,
+      greedy: true,
+      alias: "class-name"
+    },
+    "key": {
+      pattern: RegExp(insertKey(/(^[\t ]*|[{,]\s*)__(?:\s*\.\s*__)*(?=\s*=)/.source), "m"),
+      lookbehind: true,
+      greedy: true,
+      alias: "property"
+    },
+    "string": {
+      pattern: /"""(?:\\[\s\S]|[^\\])*?"""|'''[\s\S]*?'''|'[^'\n\r]*'|"(?:\\.|[^\\"\r\n])*"/,
+      greedy: true
+    },
+    "date": [
+      {
+        // Offset Date-Time, Local Date-Time, Local Date
+        pattern: /\b\d{4}-\d{2}-\d{2}(?:[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?)?\b/i,
+        alias: "number"
+      },
+      {
+        // Local Time
+        pattern: /\b\d{2}:\d{2}:\d{2}(?:\.\d+)?\b/,
+        alias: "number"
+      }
+    ],
+    "number": /(?:\b0(?:x[\da-zA-Z]+(?:_[\da-zA-Z]+)*|o[0-7]+(?:_[0-7]+)*|b[10]+(?:_[10]+)*))\b|[-+]?\b\d+(?:_\d+)*(?:\.\d+(?:_\d+)*)?(?:[eE][+-]?\d+(?:_\d+)*)?\b|[-+]?\b(?:inf|nan)\b/,
+    "boolean": /\b(?:false|true)\b/,
+    "punctuation": /[.,=[\]{}]/
+  };
+})(Prism);
+
+// node_modules/prismjs/components/prism-ini.js
+Prism.languages.ini = {
+  /**
+   * The component mimics the behavior of the Win32 API parser.
+   *
+   * @see {@link https://github.com/PrismJS/prism/issues/2775#issuecomment-787477723}
+   */
+  "comment": {
+    pattern: /(^[ \f\t\v]*)[#;][^\n\r]*/m,
+    lookbehind: true
+  },
+  "section": {
+    pattern: /(^[ \f\t\v]*)\[[^\n\r\]]*\]?/m,
+    lookbehind: true,
+    inside: {
+      "section-name": {
+        pattern: /(^\[[ \f\t\v]*)[^ \f\t\v\]]+(?:[ \f\t\v]+[^ \f\t\v\]]+)*/,
+        lookbehind: true,
+        alias: "selector"
+      },
+      "punctuation": /\[|\]/
+    }
+  },
+  "key": {
+    pattern: /(^[ \f\t\v]*)[^ \f\n\r\t\v=]+(?:[ \f\t\v]+[^ \f\n\r\t\v=]+)*(?=[ \f\t\v]*=)/m,
+    lookbehind: true,
+    alias: "attr-name"
+  },
+  "value": {
+    pattern: /(=[ \f\t\v]*)[^ \f\n\r\t\v]+(?:[ \f\t\v]+[^ \f\n\r\t\v]+)*/,
+    lookbehind: true,
+    alias: "attr-value",
+    inside: {
+      "inner-value": {
+        pattern: /^("|').+(?=\1$)/,
+        lookbehind: true
+      }
+    }
+  },
+  "punctuation": /=/
+};
+
+// node_modules/prismjs/components/prism-properties.js
+Prism.languages.properties = {
+  "comment": /^[ \t]*[#!].*$/m,
+  "value": {
+    pattern: /(^[ \t]*(?:\\(?:\r\n|[\s\S])|[^\\\s:=])+(?: *[=:] *(?! )| ))(?:\\(?:\r\n|[\s\S])|[^\\\r\n])+/m,
+    lookbehind: true,
+    alias: "attr-value"
+  },
+  "key": {
+    pattern: /^[ \t]*(?:\\(?:\r\n|[\s\S])|[^\\\s:=])+(?= *[=:]| )/m,
+    alias: "attr-name"
+  },
+  "punctuation": /[=:]/
+};
+
+// node_modules/prismjs/components/prism-makefile.js
+Prism.languages.makefile = {
+  "comment": {
+    pattern: /(^|[^\\])#(?:\\(?:\r\n|[\s\S])|[^\\\r\n])*/,
+    lookbehind: true
+  },
+  "string": {
+    pattern: /(["'])(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/,
+    greedy: true
+  },
+  "builtin-target": {
+    pattern: /\.[A-Z][^:#=\s]+(?=\s*:(?!=))/,
+    alias: "builtin"
+  },
+  "target": {
+    pattern: /^(?:[^:=\s]|[ \t]+(?![\s:]))+(?=\s*:(?!=))/m,
+    alias: "symbol",
+    inside: {
+      "variable": /\$+(?:(?!\$)[^(){}:#=\s]+|(?=[({]))/
+    }
+  },
+  "variable": /\$+(?:(?!\$)[^(){}:#=\s]+|\([@*%<^+?][DF]\)|(?=[({]))/,
+  // Directives
+  "keyword": /-include\b|\b(?:define|else|endef|endif|export|ifn?def|ifn?eq|include|override|private|sinclude|undefine|unexport|vpath)\b/,
+  "function": {
+    pattern: /(\()(?:abspath|addsuffix|and|basename|call|dir|error|eval|file|filter(?:-out)?|findstring|firstword|flavor|foreach|guile|if|info|join|lastword|load|notdir|or|origin|patsubst|realpath|shell|sort|strip|subst|suffix|value|warning|wildcard|word(?:list|s)?)(?=[ \t])/,
+    lookbehind: true
+  },
+  "operator": /(?:::|[?:+!])?=|[|@]/,
+  "punctuation": /[:;(){}]/
+};
+
+// src/services/CodeRenderer.ts
+var EXT_TO_LANG = {
+  java: "java",
+  py: "python",
+  js: "javascript",
+  mjs: "javascript",
+  cjs: "javascript",
+  ts: "typescript",
+  tsx: "typescript",
+  jsx: "jsx",
+  json: "json",
+  xml: "markup",
+  html: "markup",
+  htm: "markup",
+  vue: "markup",
+  yaml: "yaml",
+  yml: "yaml",
+  css: "css",
+  scss: "scss",
+  sass: "scss",
+  less: "less",
+  styl: "stylus",
+  sql: "sql",
+  sh: "bash",
+  bash: "bash",
+  zsh: "bash",
+  ps1: "powershell",
+  psm1: "powershell",
+  psd1: "powershell",
+  bat: "batch",
+  cmd: "batch",
+  php: "php",
+  php3: "php",
+  php4: "php",
+  php5: "php",
+  phtml: "php",
+  rb: "ruby",
+  go: "go",
+  rs: "rust",
+  c: "c",
+  h: "c",
+  cpp: "cpp",
+  cc: "cpp",
+  cxx: "cpp",
+  hpp: "cpp",
+  hxx: "cpp",
+  cs: "csharp",
+  swift: "swift",
+  kt: "kotlin",
+  kts: "kotlin",
+  scala: "scala",
+  groovy: "groovy",
+  gradle: "groovy",
+  pl: "perl",
+  pm: "perl",
+  lua: "lua",
+  r: "r",
+  R: "r",
+  rmd: "r",
+  m: "objectivec",
+  mm: "objectivec",
+  dart: "dart",
+  erl: "erlang",
+  ex: "elixir",
+  exs: "elixir",
+  coffee: "coffeescript",
+  tex: "latex",
+  sty: "latex",
+  cls: "latex",
+  ltx: "latex",
+  rst: "rest",
+  toml: "toml",
+  ini: "ini",
+  cfg: "ini",
+  conf: "ini",
+  env: "ini",
+  properties: "properties",
+  makefile: "makefile",
+  Makefile: "makefile"
+};
+var MAX_BYTES = 500 * 1024;
+var MAX_LINES = 2e3;
+function extensionToLanguage(ext) {
+  var _a;
+  return (_a = EXT_TO_LANG[ext.toLowerCase()]) != null ? _a : "";
+}
+function highlight2(content, extension) {
+  if (!content) return "";
+  const lang = extensionToLanguage(extension);
+  let truncated = false;
+  const encoder = new TextEncoder();
+  if (encoder.encode(content).length > MAX_BYTES) {
+    const lines = content.split("\n");
+    if (lines.length > MAX_LINES) {
+      content = lines.slice(0, MAX_LINES).join("\n");
+      truncated = true;
+    }
+  }
+  try {
+    if (lang && Prism2.languages[lang]) {
+      const html = Prism2.highlight(content, Prism2.languages[lang], lang);
+      return truncated ? html + `<p class="code-truncated">(File truncated, showing first ${MAX_LINES} lines)</p>` : html;
+    }
+  } catch (e) {
+  }
+  const escaped = content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return truncated ? escaped + `<p class="code-truncated">(File truncated, showing first ${MAX_LINES} lines)</p>` : escaped;
+}
+var SUPPORTED_EXTENSIONS = new Set(Object.keys(EXT_TO_LANG));
+
+// src/views/CodeView.ts
+var VIEW_TYPE_CODE = "vault-viewer-code";
+var CodeView = class extends import_obsidian5.ItemView {
+  constructor(leaf) {
+    super(leaf);
+    this.file = null;
+  }
+  getViewType() {
+    return VIEW_TYPE_CODE;
+  }
+  getDisplayText() {
+    var _a, _b;
+    return (_b = (_a = this.file) == null ? void 0 : _a.name) != null ? _b : "Code";
+  }
+  getIcon() {
+    return "code";
+  }
+  getState() {
+    var _a, _b;
+    return { filePath: (_b = (_a = this.file) == null ? void 0 : _a.path) != null ? _b : "" };
+  }
+  async setState(state, result) {
+    await super.setState(state, result);
+    const filePath = state.filePath;
+    if (filePath) {
+      const file = this.app.vault.getAbstractFileByPath(filePath);
+      if (file instanceof import_obsidian5.TFile) {
+        this.file = file;
+        if (this.contentEl.hasClass("code-view-container")) {
+          void this.renderContent();
+        }
+      }
+    }
+  }
+  async onOpen() {
+    var _a;
+    if (!this.file) {
+      const viewState = this.leaf.getViewState();
+      const filePath = (_a = viewState == null ? void 0 : viewState.state) == null ? void 0 : _a.filePath;
+      if (filePath) {
+        const file = this.app.vault.getAbstractFileByPath(filePath);
+        if (file instanceof import_obsidian5.TFile) {
+          this.file = file;
+        }
+      }
+    }
+    void this.renderContent();
+  }
+  async renderContent() {
+    const container = this.contentEl;
+    container.empty();
+    container.addClass("code-view-container");
+    if (!this.file) {
+      container.createEl("p", { text: t("code.parseError"), cls: "code-view-error" });
+      const closeBtn = container.createEl("button", { cls: "code-view-btn", text: `\u2190 ${t("code.back")}` });
+      closeBtn.addEventListener("click", () => this.leaf.detach());
+      return;
+    }
+    const ext = this.file.extension.toLowerCase();
+    const actionBar = container.createDiv({ cls: "code-view-actions" });
+    const backBtn = actionBar.createEl("button", { cls: "code-view-btn", text: `\u2190 ${t("code.back")}` });
+    backBtn.addEventListener("click", () => this.leaf.detach());
+    const langId = extensionToLanguage(ext);
+    const langBadge = actionBar.createSpan({ cls: "code-view-lang-badge" });
+    const langIcon = getFileIcon(ext);
+    if (langIcon) {
+      const iconEl = langBadge.createSpan({ cls: "code-view-lang-icon" });
+      iconEl.innerHTML = langIcon.svg;
+      const svg = iconEl.querySelector("svg");
+      if (svg) {
+        svg.style.setProperty("color", langIcon.color);
+        svg.setAttribute("width", "16");
+        svg.setAttribute("height", "16");
+      }
+    }
+    langBadge.createSpan({ text: langId || ext, cls: "code-view-lang-name" });
+    actionBar.createSpan({ text: this.file.name, cls: "code-view-filename" });
+    const openBtn = actionBar.createEl("button", { cls: "code-view-btn external" });
+    setLucideIcon(openBtn.createSpan(), "Paperclip", 14);
+    openBtn.createSpan({ text: ` ${t("code.openExternal")}` });
+    openBtn.addEventListener("click", () => this.openExternally());
+    const statusEl = container.createDiv({ cls: "code-view-status" });
+    statusEl.setText(t("code.parsing"));
+    const codeWrapper = container.createDiv({ cls: "code-view-wrapper" });
+    try {
+      const content = await this.app.vault.read(this.file);
+      statusEl.setText("");
+      const rendered = highlight2(content, ext);
+      const pre = codeWrapper.createEl("pre", { cls: "code-view-pre" });
+      const code = pre.createEl("code", {
+        cls: langId ? `language-${langId}` : "language-none"
+      });
+      if (langId) {
+        code.innerHTML = rendered;
+      } else {
+        code.setText(content);
+      }
+      pre.addClass("code-view-line-numbers");
+    } catch (err) {
+      statusEl.setText("");
+      codeWrapper.createEl("p", { text: t("code.parseError"), cls: "code-view-error" });
+    }
+  }
+  async openExternally() {
+    if (!this.file) return;
+    const adapter = this.app.vault.adapter;
+    const basePath = adapter instanceof import_obsidian5.FileSystemAdapter ? adapter.getBasePath() : "";
+    const fullPath = `${basePath}/${this.file.path}`;
+    try {
+      const win = window;
+      const electron = win.require("electron");
+      if (electron == null ? void 0 : electron.shell) {
+        await electron.shell.openPath(fullPath);
+        return;
+      }
+    } catch (e) {
+    }
+    void this.app.workspace.openLinkText(this.file.path, "/", false);
+  }
+  async onClose() {
+    this.contentEl.empty();
+  }
+};
+
+// src/views/OfficeView.ts
+var import_obsidian6 = require("obsidian");
 var VIEW_TYPE_OFFICE = "vault-viewer-office";
-var OfficeView = class extends import_obsidian5.ItemView {
+var OfficeView = class extends import_obsidian6.ItemView {
   constructor(leaf, renderer) {
     super(leaf);
     this.file = null;
@@ -4371,7 +10232,7 @@ var OfficeView = class extends import_obsidian5.ItemView {
     const filePath = state.filePath;
     if (filePath) {
       const file = this.app.vault.getAbstractFileByPath(filePath);
-      if (file instanceof import_obsidian5.TFile) {
+      if (file instanceof import_obsidian6.TFile) {
         this.file = file;
         if (this.contentEl.hasClass("office-view-container")) {
           void this.renderContent();
@@ -4386,7 +10247,7 @@ var OfficeView = class extends import_obsidian5.ItemView {
       const filePath = (_a = viewState == null ? void 0 : viewState.state) == null ? void 0 : _a.filePath;
       if (filePath) {
         const file = this.app.vault.getAbstractFileByPath(filePath);
-        if (file instanceof import_obsidian5.TFile) {
+        if (file instanceof import_obsidian6.TFile) {
           this.file = file;
         }
       }
@@ -4452,7 +10313,7 @@ var OfficeView = class extends import_obsidian5.ItemView {
   async openExternally() {
     if (!this.file) return;
     const adapter = this.app.vault.adapter;
-    const basePath = adapter instanceof import_obsidian5.FileSystemAdapter ? adapter.getBasePath() : "";
+    const basePath = adapter instanceof import_obsidian6.FileSystemAdapter ? adapter.getBasePath() : "";
     const fullPath = `${basePath}/${this.file.path}`;
     try {
       const _window = window;
@@ -46999,11 +52860,6 @@ var OfficeRenderer = class {
   }
 };
 
-// src/utils/extensions.ts
-function isTreeExtension(filename, treeExtensions) {
-  return treeExtensions.some((ext) => filename.endsWith(ext));
-}
-
 // src/services/FileService.ts
 var FileService = class {
   constructor(vault) {
@@ -47127,7 +52983,7 @@ var LinkService = class {
 };
 
 // src/main.ts
-var VaultViewerPlugin = class extends import_obsidian6.Plugin {
+var VaultViewerPlugin = class extends import_obsidian7.Plugin {
   async onload() {
     await this.loadSettings();
     setIconTheme(this.settings.theme);
@@ -47136,6 +52992,10 @@ var VaultViewerPlugin = class extends import_obsidian6.Plugin {
     this.linkService = new LinkService(this.app.metadataCache);
     this.officeRenderer = new OfficeRenderer(this.app.vault);
     this.addSettingTab(new VaultViewerSettingTab(this.app, this));
+    this.registerView(
+      VIEW_TYPE_CODE,
+      (leaf) => new CodeView(leaf)
+    );
     this.registerView(
       VIEW_TYPE_OFFICE,
       (leaf) => new OfficeView(leaf, this.officeRenderer)
@@ -47202,10 +53062,40 @@ var VaultViewerPlugin = class extends import_obsidian6.Plugin {
     });
     workspace.setActiveLeaf(leaf);
   }
+  async openCodeFile(file) {
+    var _a;
+    const { workspace } = this.app;
+    const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE_CODE);
+    for (const leaf2 of existingLeaves) {
+      const view = leaf2.view;
+      if (view instanceof CodeView && ((_a = view.file) == null ? void 0 : _a.path) === file.path) {
+        workspace.setActiveLeaf(leaf2);
+        return;
+      }
+    }
+    const leaf = workspace.getLeaf(true);
+    if (!leaf) return;
+    await leaf.setViewState({
+      type: VIEW_TYPE_CODE,
+      active: true,
+      state: { filePath: file.path }
+    });
+    workspace.setActiveLeaf(leaf);
+  }
   onunload() {
   }
 };
 /*! Bundled license information:
+
+prismjs/prism.js:
+  (**
+   * Prism: Lightweight, robust, elegant syntax highlighting
+   *
+   * @license MIT <https://opensource.org/licenses/MIT>
+   * @author Lea Verou <https://lea.verou.me>
+   * @namespace
+   * @public
+   *)
 
 jszip/dist/jszip.min.js:
   (*!
