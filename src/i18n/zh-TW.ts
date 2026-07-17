@@ -73,6 +73,10 @@ const zhTW: Record<string, string | ((...args: any[]) => string)> = {
   "notice.filePasted": (name: string) => `已貼上檔案: ${name}`,
   "notice.pasteFailed": "貼上檔案失敗",
   "notice.noFileInClipboard": "剪貼簿中沒有檔案",
+  "code.back": "返回",
+  "code.openExternal": "在外部開啟",
+  "code.parsing": "正在載入檔案...",
+  "code.parseError": "無法讀取此檔案",
 };
 
 export default zhTW;
