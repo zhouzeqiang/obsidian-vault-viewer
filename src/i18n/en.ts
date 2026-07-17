@@ -77,6 +77,9 @@ const en: Record<string, string | ((...args: any[]) => string)> = {
   "code.openExternal": "Open externally",
   "code.parsing": "Loading file...",
   "code.parseError": "Could not read this file.",
+  "code.copyAll": "Copy All",
+  "code.copied": "Copied!",
+  "code.copyFailed": "Copy failed: {0}",
 };
 
 export default en;

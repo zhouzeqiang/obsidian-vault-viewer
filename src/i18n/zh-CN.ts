@@ -77,6 +77,9 @@ const zhCN: Record<string, string | ((...args: any[]) => string)> = {
   "code.openExternal": "在外部打开",
   "code.parsing": "正在加载文件...",
   "code.parseError": "无法读取此文件",
+  "code.copyAll": "全选复制",
+  "code.copied": "已复制！",
+  "code.copyFailed": "复制失败: {0}",
 };
 
 export default zhCN;

@@ -77,6 +77,9 @@ const zhTW: Record<string, string | ((...args: any[]) => string)> = {
   "code.openExternal": "在外部開啟",
   "code.parsing": "正在載入檔案...",
   "code.parseError": "無法讀取此檔案",
+  "code.copyAll": "全選複製",
+  "code.copied": "已複製！",
+  "code.copyFailed": "複製失敗: {0}",
 };
 
 export default zhTW;
