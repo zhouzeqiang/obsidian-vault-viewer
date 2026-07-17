@@ -103,6 +103,8 @@ export class CodeView extends ItemView {
 
     // Code content
     const codeWrapper = container.createDiv({ cls: "code-view-wrapper" });
+    codeWrapper.style.setProperty("user-select", "text");
+    codeWrapper.style.setProperty("-webkit-user-select", "text");
 
     try {
       const content = await this.app.vault.read(this.file);
@@ -110,9 +112,13 @@ export class CodeView extends ItemView {
 
       const rendered = highlight(content, ext);
       const pre = codeWrapper.createEl("pre", { cls: "code-view-pre" });
+      pre.style.setProperty("user-select", "text");
+      pre.style.setProperty("-webkit-user-select", "text");
       const code = pre.createEl("code", {
         cls: langId ? `language-${langId}` : "language-none",
       });
+      code.style.setProperty("user-select", "text");
+      code.style.setProperty("-webkit-user-select", "text");
 
       if (langId) {
         code.innerHTML = rendered;
