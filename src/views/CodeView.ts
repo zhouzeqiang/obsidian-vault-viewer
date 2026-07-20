@@ -2,6 +2,7 @@ import { ItemView, WorkspaceLeaf, TFile, FileSystemAdapter, ViewStateResult, Not
 import { highlight, extensionToLanguage } from "../services/CodeRenderer";
 import { getFileIcon } from "../utils/file-icons";
 import { setLucideIcon } from "../utils/lucide-icons";
+import { setSvgContent } from "../utils/html-utils";
 import { t } from "../i18n";
 
 export const VIEW_TYPE_CODE = "vault-viewer-code";
@@ -82,7 +83,7 @@ export class CodeView extends ItemView {
     const langIcon = getFileIcon(ext);
     if (langIcon) {
       const iconEl = langBadge.createSpan({ cls: "code-view-lang-icon" });
-      iconEl.insertAdjacentHTML("beforeend", langIcon.svg);
+      setSvgContent(iconEl, langIcon.svg);
       const svg = iconEl.querySelector("svg");
       if (svg) {
         svg.setAttribute("width", "16");
@@ -146,7 +147,7 @@ export class CodeView extends ItemView {
       });
 
       if (langId) {
-        code.insertAdjacentHTML("beforeend", rendered);
+        setSvgContent(code, rendered);
       } else {
         code.setText(content);
       }

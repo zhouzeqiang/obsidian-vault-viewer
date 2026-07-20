@@ -4624,6 +4624,16 @@ function getFileIcon(extension) {
   return (_a = FILE_ICONS[key]) != null ? _a : null;
 }
 
+// src/utils/html-utils.ts
+function setSvgContent(el, html) {
+  el.empty();
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const body = doc.body;
+  while (body.firstChild) {
+    el.appendChild(body.firstChild);
+  }
+}
+
 // src/views/VaultViewerView.ts
 var VIEW_TYPE_VAULT_VIEWER = "vault-viewer-view";
 var VaultViewerView = class extends import_obsidian4.ItemView {
@@ -5185,7 +5195,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       const fileIcon = row.createSpan({ cls: "vault-viewer-file-icon" });
       const deviconIcon = getFileIcon(file.extension);
       if (deviconIcon) {
-        fileIcon.insertAdjacentHTML("beforeend", deviconIcon.svg);
+        setSvgContent(fileIcon, deviconIcon.svg);
         fileIcon.style.color = deviconIcon.color;
         fileIcon.addClass("vv-file-icon--devicon");
         const svg = fileIcon.querySelector("svg");
@@ -5372,7 +5382,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       const iconSpan = nameTd.createSpan({ cls: "vault-viewer-list-icon" });
       const deviconIcon = getFileIcon(file.extension);
       if (deviconIcon) {
-        iconSpan.insertAdjacentHTML("beforeend", deviconIcon.svg);
+        setSvgContent(iconSpan, deviconIcon.svg);
         iconSpan.style.color = deviconIcon.color;
         iconSpan.addClass("vv-file-icon--devicon");
         const svg = iconSpan.querySelector("svg");
@@ -5446,7 +5456,7 @@ var VaultViewerView = class extends import_obsidian4.ItemView {
       } else {
         const deviconIcon = getFileIcon(link.file.extension);
         if (deviconIcon) {
-          iconSpan.innerHTML = deviconIcon.svg;
+          setSvgContent(iconSpan, deviconIcon.svg);
           iconSpan.style.color = deviconIcon.color;
           iconSpan.addClass("vv-file-icon--devicon");
           const svg = iconSpan.querySelector("svg");
@@ -10167,7 +10177,7 @@ var CodeView = class extends import_obsidian5.ItemView {
     const langIcon = getFileIcon(ext);
     if (langIcon) {
       const iconEl = langBadge.createSpan({ cls: "code-view-lang-icon" });
-      iconEl.insertAdjacentHTML("beforeend", langIcon.svg);
+      setSvgContent(iconEl, langIcon.svg);
       const svg = iconEl.querySelector("svg");
       if (svg) {
         svg.setAttribute("width", "16");
@@ -10220,7 +10230,7 @@ var CodeView = class extends import_obsidian5.ItemView {
         cls: langId ? `language-${langId}` : "language-none"
       });
       if (langId) {
-        code.insertAdjacentHTML("beforeend", rendered);
+        setSvgContent(code, rendered);
       } else {
         code.setText(content);
       }

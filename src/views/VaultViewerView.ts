@@ -7,6 +7,7 @@ import { t } from "../i18n";
 import { ResolvedLink } from "../services/LinkService";
 import { isCodeExtension } from "../utils/extensions";
 import { getFileIcon as getDeviconIcon } from "../utils/file-icons";
+import { setSvgContent } from "../utils/html-utils";
 
 export const VIEW_TYPE_VAULT_VIEWER = "vault-viewer-view";
 
@@ -655,7 +656,7 @@ export class VaultViewerView extends ItemView {
       const fileIcon = row.createSpan({ cls: "vault-viewer-file-icon" });
       const deviconIcon = getDeviconIcon(file.extension);
       if (deviconIcon) {
-        fileIcon.insertAdjacentHTML("beforeend", deviconIcon.svg);
+        setSvgContent(fileIcon, deviconIcon.svg);
         fileIcon.style.color = deviconIcon.color;
         fileIcon.addClass("vv-file-icon--devicon");
         const svg = fileIcon.querySelector("svg");
@@ -869,7 +870,7 @@ export class VaultViewerView extends ItemView {
       const iconSpan = nameTd.createSpan({ cls: "vault-viewer-list-icon" });
       const deviconIcon = getDeviconIcon(file.extension);
       if (deviconIcon) {
-        iconSpan.insertAdjacentHTML("beforeend", deviconIcon.svg);
+        setSvgContent(iconSpan, deviconIcon.svg);
         iconSpan.style.color = deviconIcon.color;
         iconSpan.addClass("vv-file-icon--devicon");
         const svg = iconSpan.querySelector("svg");
@@ -962,7 +963,7 @@ export class VaultViewerView extends ItemView {
       } else {
         const deviconIcon = getDeviconIcon(link.file.extension);
         if (deviconIcon) {
-          iconSpan.innerHTML = deviconIcon.svg;
+          setSvgContent(iconSpan, deviconIcon.svg);
           iconSpan.style.color = deviconIcon.color;
           iconSpan.addClass("vv-file-icon--devicon");
           const svg = iconSpan.querySelector("svg");

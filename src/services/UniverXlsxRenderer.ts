@@ -1,5 +1,4 @@
 // src/services/UniverXlsxRenderer.ts
-declare const activeDocument: Document;
 import { getLanguage } from "obsidian";
 import {
 	createUniver,
